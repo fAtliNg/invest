@@ -6,7 +6,7 @@ import {
   CardContent,
   Divider,
   Grid,
-  TextField
+  TextField,
 } from '@mui/material';
 
 const periods = [
@@ -70,6 +70,8 @@ export const CalcForm = (props) => {
                 required
                 value={values.initialAmount}
                 variant="outlined"
+                type="number"
+                autoFocus
               />
             </Grid>
             <Grid
@@ -85,6 +87,7 @@ export const CalcForm = (props) => {
                 required
                 value={values.replenishmentAmount}
                 variant="outlined"
+                type="number"
               />
             </Grid>
             <Grid
@@ -126,6 +129,7 @@ export const CalcForm = (props) => {
                 required
                 value={values.interestCalculation}
                 variant="outlined"
+                type="number"
               />
             </Grid>
             <Grid
@@ -167,6 +171,7 @@ export const CalcForm = (props) => {
                 required
                 value={values.nomberOfYears}
                 variant="outlined"
+                type="number"
               />
             </Grid>
           </Grid>
