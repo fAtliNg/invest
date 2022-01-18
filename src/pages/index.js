@@ -43,12 +43,6 @@ const Calc = () => {
         }}
       >
         <Container maxWidth="lg">
-          <Typography
-            sx={{ mb: 3 }}
-            variant="h4"
-          >
-            Сложный процент
-          </Typography>
           <Grid
             container
             spacing={3}
