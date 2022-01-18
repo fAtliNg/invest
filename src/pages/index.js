@@ -20,6 +20,8 @@ const Calc = () => {
 
   const onSubmit = (values) => {
     console.log(values);
+    const resultElement = document.getElementById('result');
+    resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setResult({
       finalBalance: 10000,
       contribution: 7000,
@@ -65,8 +67,13 @@ const Calc = () => {
               lg={7}
               md={6}
               xs={12}
+              id="result"
             >
-              <PieChart finalBalance={result.finalBalance} contribution={result.contribution} percentAmount={result.percentAmount}/>
+              <PieChart
+                finalBalance={result.finalBalance}
+                contribution={result.contribution}
+                percentAmount={result.percentAmount}
+              />
             </Grid>
           </Grid>
         </Container>
