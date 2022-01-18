@@ -9,6 +9,7 @@ import {
 import { DashboardLayout } from '../components/dashboard-layout';
 import { CalcForm } from '../components/calc/calc-form';
 import { useState } from 'react';
+import { PieChart } from '../components/PieChart';
 
 const Calc = () => {
   const [result, setResult] = useState({
@@ -65,88 +66,7 @@ const Calc = () => {
               md={6}
               xs={12}
             >
-              <Card>
-                <CardContent>
-                  <Box
-                    sx={{
-                      alignItems: 'center',
-                      display: 'flex',
-                      flexDirection: 'column'
-                    }}
-                  >
-                    <Typography
-                      color="textPrimary"
-                      gutterBottom
-                      variant="h5"
-                    >
-                      {result.finalBalance}
-                    </Typography>
-                    <Typography
-                      color="textSecondary"
-                      variant="body2"
-                    >
-                      Итоговый баланс
-                    </Typography>
-                  </Box>
-                  <Grid
-                    container
-                    spacing={3}
-                  >
-                    <Grid
-                      item
-                      xs={6}
-                    >
-                      <Box
-                        sx={{
-                          alignItems: 'center',
-                          display: 'flex',
-                          flexDirection: 'column'
-                        }}
-                      >
-                        <Typography
-                          color="textPrimary"
-                          gutterBottom
-                          variant="h5"
-                        >
-                          {result.contribution}
-                        </Typography>
-                        <Typography
-                          color="textSecondary"
-                          variant="body2"
-                        >
-                          Всего пополнений
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid
-                      item
-                      xs={6}
-                    >
-                      <Box
-                        sx={{
-                          alignItems: 'center',
-                          display: 'flex',
-                          flexDirection: 'column'
-                        }}
-                      >
-                        <Typography
-                          color="textPrimary"
-                          gutterBottom
-                          variant="h5"
-                        >
-                          {result.percentAmount}
-                        </Typography>
-                        <Typography
-                          color="textSecondary"
-                          variant="body2"
-                        >
-                          Всего процентов
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </CardContent>
-              </Card>
+              <PieChart finalBalance={result.finalBalance} contribution={result.contribution} percentAmount={result.percentAmount}/>
             </Grid>
           </Grid>
         </Container>

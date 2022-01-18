@@ -3,10 +3,10 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
+  CardContent, CardHeader,
   Divider,
   Grid,
-  TextField,
+  TextField
 } from '@mui/material';
 
 const periods = [
@@ -52,6 +52,8 @@ export const CalcForm = (props) => {
       {...props}
     >
       <Card>
+        <CardHeader title="Данные для расчета" />
+        <Divider />
         <CardContent>
           <Grid
             container
@@ -193,7 +195,7 @@ export const CalcForm = (props) => {
               initialAmount: parseInt(values.periodAmount)
             })}
           >
-            Расчитать
+            Рассчитать
           </Button>
         </Box>
       </Card>
