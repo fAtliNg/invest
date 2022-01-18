@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { resolve } from '../business/calculator'
 import {
   Box, Card,
   CardContent,
@@ -13,20 +14,18 @@ import { PieChart } from '../components/PieChart';
 
 const Calc = () => {
   const [result, setResult] = useState({
-    finalBalance: 0, // итоговый баланс
-    contribution: 0, // сумма пополнений
-    percentAmount: 0, // всего процентов
+    initialAmount: 0, // стартовый капитал
+    totalReplenishmentAmount: 0, // всего пополнений
+    totalPercentAmount: 0, // всего процентов
   });
 
   const onSubmit = (values) => {
     console.log(values);
     const resultElement = document.getElementById('result');
     resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setResult({
-      finalBalance: 10000,
-      contribution: 7000,
-      percentAmount: 3000,
-    });
+    const results = resolve(values);
+    console.log(results);
+    setResult(results);
   }
 
   return (
@@ -70,9 +69,10 @@ const Calc = () => {
               id="result"
             >
               <PieChart
-                finalBalance={result.finalBalance}
-                contribution={result.contribution}
-                percentAmount={result.percentAmount}
+                totalBalance={result.totalBalance}
+                initialAmount={result.initialAmount}
+                totalReplenishmentAmount={result.totalReplenishmentAmount}
+                totalPercentAmount={result.totalPercentAmount}
               />
             </Grid>
           </Grid>

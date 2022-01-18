@@ -33,9 +33,8 @@ export const CalcForm = (props) => {
     initialAmount: 100000,
     replenishmentAmount: 10000,
     periodAmount: 12,
-    periodPercent: 12,
-    interestCalculation: 12,
-    nomberOfYears: 10,
+    percentAmountPerYear: 12,
+    numberOfYears: 10,
   });
 
   const handleChange = (event) => {
@@ -125,11 +124,12 @@ export const CalcForm = (props) => {
             >
               <TextField
                 fullWidth
-                label="Начисление процентов"
-                name="interestCalculation"
+                helperText="% годовых"
+                label="Доходность"
+                name="percentAmountPerYear"
                 onChange={handleChange}
                 required
-                value={values.interestCalculation}
+                value={values.percentAmountPerYear}
                 variant="outlined"
                 type="number"
               />
@@ -141,37 +141,12 @@ export const CalcForm = (props) => {
             >
               <TextField
                 fullWidth
-                label="Периодичность"
-                name="periodPercent"
+                helperText="Количество лет"
+                label="Продолжительность"
+                name="numberOfYears"
                 onChange={handleChange}
                 required
-                select
-                SelectProps={{ native: true }}
-                value={values.period}
-                variant="outlined"
-              >
-                {periods.map((option) => (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </option>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid
-              item
-              xs={12}
-            >
-              <TextField
-                fullWidth
-                helperText="Время в течении которого вы будете инвестировать"
-                label="Количество лет"
-                name="nomberOfYears"
-                onChange={handleChange}
-                required
-                value={values.nomberOfYears}
+                value={values.numberOfYears}
                 variant="outlined"
                 type="number"
               />
@@ -191,8 +166,7 @@ export const CalcForm = (props) => {
             variant="contained"
             onClick={() => props.onSubmit({
               ...values,
-              periodPercent: parseInt(values.periodPercent),
-              initialAmount: parseInt(values.periodAmount)
+              periodAmount: parseInt(values.periodAmount)
             })}
           >
             Рассчитать

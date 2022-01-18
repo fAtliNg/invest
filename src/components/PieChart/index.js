@@ -4,20 +4,20 @@ import LaptopMacIcon from '@mui/icons-material/LaptopMac';
 import PhoneIcon from '@mui/icons-material/Phone';
 import TabletIcon from '@mui/icons-material/Tablet';
 
-export const PieChart = ({finalBalance, contribution, percentAmount}) => {
+export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount, totalPercentAmount}) => {
   const theme = useTheme();
 
   const data = {
     datasets: [
       {
-        data: [finalBalance, percentAmount, contribution],
+        data: [initialAmount, totalReplenishmentAmount, totalPercentAmount],
         backgroundColor: ['#3F51B5', '#D14343', '#FFB020'],
         borderWidth: 8,
         borderColor: '#FFFFFF',
         hoverBorderColor: '#FFFFFF'
       }
     ],
-    labels: ['Итоговый баланс', 'Всего процентов', 'Всего пополнений']
+    labels: ['Стартовый капитал', 'Всего пополнений', 'Всего процентов']
   };
 
   const options = {
@@ -44,20 +44,20 @@ export const PieChart = ({finalBalance, contribution, percentAmount}) => {
 
   const devices = [
     {
-      title: 'Итоговый баланс',
-      value: finalBalance,
+      title: 'Стартовый капитал',
+      value: initialAmount,
       icon: LaptopMacIcon,
       color: '#3F51B5'
     },
     {
       title: 'Всего пополнений',
-      value: contribution,
+      value: totalReplenishmentAmount,
       icon: TabletIcon,
       color: '#E53935'
     },
     {
       title: 'Всего процентов',
-      value: percentAmount,
+      value: totalPercentAmount,
       icon: PhoneIcon,
       color: '#FB8C00'
     }
@@ -65,7 +65,8 @@ export const PieChart = ({finalBalance, contribution, percentAmount}) => {
 
   return (
     <Card>
-      <CardHeader title="Результат" />
+      <CardHeader title="Результат"/>
+       {totalBalance}
       <Divider />
       <CardContent>
         <Box
