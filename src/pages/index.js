@@ -28,7 +28,7 @@ const Calc = () => {
   }
 
   const controls = (
-    <Box width="100%" justifyContent="end" display="flex">
+    <Box width="100%" justifyContent="flex-end" display="flex">
       <Button
         color="primary"
         variant="contained"
