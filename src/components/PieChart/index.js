@@ -63,15 +63,23 @@ export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount,
     }
   ];
 
+  const renderResultTitle = (totalBalance) => {
+    return <Typography
+      color="textPrimary"
+      variant="h6"
+    >
+      {`Общий баланс: ${totalBalance || 0}`}
+    </Typography>
+  }
+
   return (
     <Card>
-      <CardHeader title="Результат"/>
-       {totalBalance}
+      <CardHeader title={renderResultTitle(totalBalance)}/>
       <Divider />
       <CardContent>
         <Box
           sx={{
-            height: 314,
+            height: 235,
             position: 'relative'
           }}
         >
@@ -83,6 +91,7 @@ export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount,
         <Box
           sx={{
             display: 'flex',
+            flexWrap: 'wrap',
             justifyContent: 'center',
             pt: 2
           }}
