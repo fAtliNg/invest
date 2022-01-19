@@ -22,7 +22,9 @@ const Calc = () => {
 
   const onSubmit = () => {
     const resultElement = document.getElementById('result');
-    resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const offsetTop = resultElement.offsetTop - 50;
+    window.scrollTo({ top: offsetTop, behavior: 'smooth' });
+    // resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const results = resolve(values);
     setResult(results);
   }
