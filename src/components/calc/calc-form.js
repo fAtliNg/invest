@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -28,7 +28,7 @@ const periods = [
   }
 ];
 
-export const CalcForm = (props) => {
+export const CalcForm = ({ onChangeValues, ...props }) => {
   const [values, setValues] = useState({
     initialAmount: 100000,
     replenishmentAmount: 10000,
@@ -37,11 +37,17 @@ export const CalcForm = (props) => {
     numberOfYears: 10,
   });
 
+  useEffect(() => {
+    onChangeValues(values);
+  }, []);
+
   const handleChange = (event) => {
-    setValues({
+    const newValues = {
       ...values,
       [event.target.name]: event.target.value
-    });
+    };
+    setValues(newValues);
+    onChangeValues(newValues);
   };
 
   return (
@@ -153,10 +159,10 @@ export const CalcForm = (props) => {
             </Grid>
           </Grid>
         </CardContent>
-        <Divider />
+        <Divider sx={{ display: { xs: 'none', lg: 'block' }}}/>
         <Box
           sx={{
-            display: 'flex',
+            display: { xs: 'none', lg: 'flex' },
             justifyContent: 'flex-end',
             p: 2
           }}

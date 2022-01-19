@@ -68,7 +68,7 @@ export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount,
       color="textPrimary"
       variant="h6"
     >
-      {`Общий баланс: ${totalBalance || 0}`}
+      {`Итоговая сумма: ${totalBalance || 0}`}
     </Typography>
   }
 

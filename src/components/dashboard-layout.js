@@ -8,14 +8,14 @@ const DashboardLayoutRoot = styled('div')(({ theme }) => ({
   display: 'flex',
   flex: '1 1 auto',
   maxWidth: '100%',
-  paddingTop: 64,
+  paddingTop: 16,
   [theme.breakpoints.up('lg')]: {
     paddingLeft: 280
   }
 }));
 
 export const DashboardLayout = (props) => {
-  const { children } = props;
+  const { children, controls } = props;
   const [isSidebarOpen, setSidebarOpen] = useState(true);
 
   return (
@@ -32,7 +32,7 @@ export const DashboardLayout = (props) => {
           {children}
         </Box>
       </DashboardLayoutRoot>
-      <DashboardNavbar onSidebarOpen={() => setSidebarOpen(true)} />
+      <DashboardNavbar sx={{ display: { lg: 'none' }}} onSidebarOpen={() => setSidebarOpen(true)} controls={controls} />
       <DashboardSidebar
         onClose={() => setSidebarOpen(false)}
         open={isSidebarOpen}

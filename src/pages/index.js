@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import { resolve } from '../business/calculator'
 import {
-  Box, Card,
+  Box, Button, Card,
   CardContent,
   Container,
   Grid,
@@ -13,23 +13,34 @@ import { useState } from 'react';
 import { PieChart } from '../components/PieChart';
 
 const Calc = () => {
+  const [values, setValues] = useState({});
   const [result, setResult] = useState({
     initialAmount: 0, // стартовый капитал
     totalReplenishmentAmount: 0, // всего пополнений
     totalPercentAmount: 0, // всего процентов
   });
 
-  const onSubmit = (values) => {
-    console.log(values);
+  const onSubmit = () => {
     const resultElement = document.getElementById('result');
     resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const results = resolve(values);
-    console.log(results);
     setResult(results);
   }
 
+  const controls = (
+    <Box width="100%" justifyContent="end" display="flex">
+      <Button
+        color="primary"
+        variant="contained"
+        onClick={onSubmit}
+      >
+        Рассчитать
+      </Button>
+    </Box>
+  )
+
   return (
-    <>
+    <DashboardLayout controls={controls}>
       <Head>
         <title>
           Сложный процент
@@ -53,7 +64,7 @@ const Calc = () => {
               md={6}
               xs={12}
             >
-              <CalcForm onSubmit={onSubmit}/>
+              <CalcForm onSubmit={onSubmit} onChangeValues={(data) => {setValues(data)}} />
             </Grid>
             <Grid
               item
@@ -72,14 +83,8 @@ const Calc = () => {
           </Grid>
         </Container>
       </Box>
-    </>
+    </DashboardLayout>
   )
 };
-
-Calc.getLayout = (page) => (
-  <DashboardLayout>
-    {page}
-  </DashboardLayout>
-);
 
 export default Calc;
