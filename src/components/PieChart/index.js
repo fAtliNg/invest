@@ -64,7 +64,7 @@ export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount,
   ];
 
   const renderResultTitle = (totalBalance) => {
-    return <Box display="flex">
+    return <Box display="flex" alignItems="center">
       <Typography
         color="textPrimary"
         variant="h6"
