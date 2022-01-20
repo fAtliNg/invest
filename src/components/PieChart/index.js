@@ -75,7 +75,7 @@ export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount,
         style={{ color: '#10B981', marginLeft: 16, lineHeight: 0.78 }}
         variant="h4"
       >
-        {totalBalance || 0}
+        {(totalBalance || 0).toLocaleString()}₽
       </Typography>
     </Box>
   }
@@ -127,7 +127,7 @@ export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount,
                 style={{ color }}
                 variant="h4"
               >
-                {value}
+                {value.toLocaleString()}₽
               </Typography>
             </Box>
           ))}
