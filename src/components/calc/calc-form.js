@@ -6,7 +6,8 @@ import {
   CardContent, CardHeader,
   Divider,
   Grid,
-  TextField
+  TextField,
+  InputAdornment
 } from '@mui/material';
 
 const periods = [
@@ -78,6 +79,9 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                 value={values.initialAmount}
                 variant="outlined"
                 type="number"
+                InputProps={{
+                  endAdornment: <InputAdornment position="start">₽</InputAdornment>,
+                }}
                 autoFocus
               />
             </Grid>
@@ -95,6 +99,9 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                 value={values.replenishmentAmount}
                 variant="outlined"
                 type="number"
+                InputProps={{
+                  endAdornment: <InputAdornment position="start">₽</InputAdornment>,
+                }}
               />
             </Grid>
             <Grid
@@ -138,6 +145,9 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                 value={values.percentAmountPerYear}
                 variant="outlined"
                 type="number"
+                InputProps={{
+                  endAdornment: <InputAdornment position="start">%</InputAdornment>,
+                }}
               />
             </Grid>
             <Grid

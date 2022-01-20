@@ -1,11 +1,10 @@
 import Head from 'next/head';
 import { resolve } from '../business/calculator'
 import {
-  Box, Button, Card,
-  CardContent,
+  Box,
+  Button,
   Container,
   Grid,
-  Typography
 } from '@mui/material';
 import { DashboardLayout } from '../components/dashboard-layout';
 import { CalcForm } from '../components/calc/calc-form';

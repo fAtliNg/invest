@@ -64,12 +64,20 @@ export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount,
   ];
 
   const renderResultTitle = (totalBalance) => {
-    return <Typography
-      color="textPrimary"
-      variant="h6"
-    >
-      {`Итоговая сумма: ${totalBalance || 0}`}
-    </Typography>
+    return <Box display="flex">
+      <Typography
+        color="textPrimary"
+        variant="h6"
+      >
+        Итоговая сумма:
+      </Typography>
+      <Typography
+        style={{ color: '#10B981', marginLeft: 16, lineHeight: 0.78 }}
+        variant="h4"
+      >
+        {totalBalance || 0}
+      </Typography>
+    </Box>
   }
 
   return (
