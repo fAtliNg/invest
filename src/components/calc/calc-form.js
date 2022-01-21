@@ -80,7 +80,6 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                   onChange: handleChange,
                   required: true,
                   variant: "outlined",
-                  type: "number",
                   InputProps: {
                     endAdornment: <InputAdornment position="start">₽</InputAdornment>,
                   },
@@ -109,7 +108,6 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                   onChange: handleChange,
                   required: true,
                   variant: "outlined",
-                  type: "number",
                   InputProps: {
                     endAdornment: <InputAdornment position="start">₽</InputAdornment>,
                   }
@@ -163,9 +161,8 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                   onChange: handleChange,
                   required: true,
                   variant: "outlined",
-                  type: "number",
                   InputProps: {
-                    endAdornment: <InputAdornment position="start">₽</InputAdornment>,
+                    endAdornment: <InputAdornment position="start">%</InputAdornment>,
                   }
                 }}
                 sliderProps={{
@@ -191,7 +188,9 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                   onChange: handleChange,
                   required: true,
                   variant: "outlined",
-                  type: "number",
+                  InputProps: {
+                    endAdornment: <InputAdornment position="start">лет</InputAdornment>,
+                  }
                 }}
                 sliderProps={{
                   onChange: handleChange,
