@@ -9,6 +9,7 @@ import {
   TextField,
   InputAdornment
 } from '@mui/material';
+import { InputSlider } from '../../components/inputslider';
 
 const periods = [
   {
@@ -69,20 +70,28 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
               item
               xs={12}
             >
-              <TextField
-                fullWidth
-                helperText="Сумма денег с которой вы хотели бы начать"
-                label="Первоначальная сумма"
-                name="initialAmount"
-                onChange={handleChange}
-                required
+              <InputSlider
                 value={values.initialAmount}
-                variant="outlined"
-                type="number"
-                InputProps={{
-                  endAdornment: <InputAdornment position="start">₽</InputAdornment>,
+                name="initialAmount"
+                textFieldProps={{
+                  fullWidth: true,
+                  helperText: "Сумма денег с которой вы хотели бы начать",
+                  label: "Первоначальная сумма",
+                  onChange: handleChange,
+                  required: true,
+                  variant: "outlined",
+                  type: "number",
+                  InputProps: {
+                    endAdornment: <InputAdornment position="start">₽</InputAdornment>,
+                  },
+                  autoFocus: true,
                 }}
-                autoFocus
+                sliderProps={{
+                  onChange: handleChange,
+                  min: 0,
+                  max: 1000000,
+                  step: 1000,
+                }}
               />
             </Grid>
             <Grid
@@ -90,17 +99,26 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
               md={6}
               xs={12}
             >
-              <TextField
-                fullWidth
-                label="Сумма пополнения"
-                name="replenishmentAmount"
-                onChange={handleChange}
-                required
+              <InputSlider
                 value={values.replenishmentAmount}
-                variant="outlined"
-                type="number"
-                InputProps={{
-                  endAdornment: <InputAdornment position="start">₽</InputAdornment>,
+                name="replenishmentAmount"
+                textFieldProps={{
+                  fullWidth: true,
+                  label: "Сумма пополнения",
+                  helperText: "В указанный период",
+                  onChange: handleChange,
+                  required: true,
+                  variant: "outlined",
+                  type: "number",
+                  InputProps: {
+                    endAdornment: <InputAdornment position="start">₽</InputAdornment>,
+                  }
+                }}
+                sliderProps={{
+                  onChange: handleChange,
+                  min: 0,
+                  max: 100000,
+                  step: 1000,
                 }}
               />
             </Grid>
@@ -135,18 +153,26 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
               md={6}
               xs={12}
             >
-              <TextField
-                fullWidth
-                helperText="% годовых"
-                label="Доходность"
-                name="percentAmountPerYear"
-                onChange={handleChange}
-                required
+              <InputSlider
                 value={values.percentAmountPerYear}
-                variant="outlined"
-                type="number"
-                InputProps={{
-                  endAdornment: <InputAdornment position="start">%</InputAdornment>,
+                name="percentAmountPerYear"
+                textFieldProps={{
+                  fullWidth: true,
+                  label: "Доходность",
+                  helperText: "% годовых",
+                  onChange: handleChange,
+                  required: true,
+                  variant: "outlined",
+                  type: "number",
+                  InputProps: {
+                    endAdornment: <InputAdornment position="start">₽</InputAdornment>,
+                  }
+                }}
+                sliderProps={{
+                  onChange: handleChange,
+                  min: 0,
+                  max: 100,
+                  step: 1,
                 }}
               />
             </Grid>
@@ -155,16 +181,24 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
               md={6}
               xs={12}
             >
-              <TextField
-                fullWidth
-                helperText="Количество лет"
-                label="Продолжительность"
-                name="numberOfYears"
-                onChange={handleChange}
-                required
+              <InputSlider
                 value={values.numberOfYears}
-                variant="outlined"
-                type="number"
+                name="numberOfYears"
+                textFieldProps={{
+                  fullWidth: true,
+                  label: "Продолжительность",
+                  helperText: "Количество лет",
+                  onChange: handleChange,
+                  required: true,
+                  variant: "outlined",
+                  type: "number",
+                }}
+                sliderProps={{
+                  onChange: handleChange,
+                  min: 0,
+                  max: 100,
+                  step: 1,
+                }}
               />
             </Grid>
           </Grid>
