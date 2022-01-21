@@ -20,6 +20,13 @@ const Calc = () => {
     totalPercentAmount: 0, // всего процентов
     passiveIncomePerMonth: 0, // пассивный доход
   });
+  const [barGraphValues, setBarGraphValues] = useState({
+    initialAmounts: [], // стартовый капитал
+    totalReplenishmentAmounts: [], // всего пополнений
+    totalPercentAmounts: [], // всего процентов
+    passiveIncomePerMonths: [], // пассивный доход
+    labels: [],
+  });
 
   const onSubmit = () => {
     const resultElement = document.getElementById('result');
@@ -28,6 +35,12 @@ const Calc = () => {
     // resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const results = resolve(values);
     setResult(results);
+    setBarGraphValues({
+      initialAmounts: [100000, 100000, 100000, 100000, 100000, 100000, 100000],
+      totalPercentAmounts: [10000, 20000, 30000, 40000, 50000, 60000, 70000],
+      totalReplenishmentAmounts: [8000, 16000, 24000, 32000, 40000, 48000, 56000],
+      labels: ['Год #1', 'Год #2', 'Год #3', 'Год #4', 'Год #5', 'Год #6', 'Год #7'],
+    });
   }
 
   const controls = (
@@ -86,7 +99,12 @@ const Calc = () => {
             </Grid>
           </Grid>
           <Grid style={{ marginTop: 16 }}>
-            <BarGraph />
+            <BarGraph
+              initialAmounts={barGraphValues.initialAmounts}
+              totalPercentAmounts={barGraphValues.totalPercentAmounts}
+              totalReplenishmentAmounts={barGraphValues.totalReplenishmentAmounts}
+              labels={barGraphValues.labels}
+            />
           </Grid>
         </Container>
       </Box>

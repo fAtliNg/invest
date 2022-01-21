@@ -12,22 +12,32 @@ export const BarGraph = (props) => {
         barThickness: 12,
         borderRadius: 4,
         categoryPercentage: 0.5,
-        data: [18, 5, 19, 27, 29, 19, 20],
-        label: 'This year',
+        data: props.initialAmounts,
+        label: 'Стартовый капитал',
         maxBarThickness: 10
       },
       {
-        backgroundColor: '#EEEEEE',
+        backgroundColor: '#E53935',
         barPercentage: 0.5,
         barThickness: 12,
         borderRadius: 4,
         categoryPercentage: 0.5,
-        data: [11, 20, 12, 29, 30, 25, 13],
-        label: 'Last year',
+        data: props.totalPercentAmounts,
+        label: 'Всего пополнений',
+        maxBarThickness: 10
+      },
+      {
+        backgroundColor: '#FB8C00',
+        barPercentage: 0.5,
+        barThickness: 12,
+        borderRadius: 4,
+        categoryPercentage: 0.5,
+        data: props.totalReplenishmentAmounts,
+        label: 'Всего процентов',
         maxBarThickness: 10
       }
     ],
-    labels: ['1 Aug', '2 Aug', '3 Aug', '4 Aug', '5 Aug', '6 Aug', '7 aug']
+    labels: props.labels,
   };
 
   const options = {
@@ -37,6 +47,14 @@ export const BarGraph = (props) => {
     legend: { display: false },
     maintainAspectRatio: false,
     responsive: true,
+    scales: {
+      x: {
+        stacked: true
+      },
+      y: {
+        stacked: true
+      }
+    },
     xAxes: [
       {
         ticks: {
@@ -81,7 +99,7 @@ export const BarGraph = (props) => {
 
   return (
     <Card>
-      <CardHeader title="Гистограмма (придумать заголовок)" />
+      <CardHeader title="Динамика роста" />
       <Divider />
       <CardContent>
         <Box
