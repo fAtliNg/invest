@@ -35,7 +35,7 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
     initialAmount: 250000,
     replenishmentAmount: 10000,
     periodAmount: 1,
-    percentAmountPerYear: 12,
+    percentAmountPerYear: 9,
     numberOfYears: 5,
   });
 
