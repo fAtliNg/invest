@@ -17,7 +17,7 @@ export const InputSlider = (props) => {
         {...props.textFieldProps}
         onChange={onChangeWrap}
         name={props.name}
-        style={{ marginBottom: -34 }}
+        style={{ marginBottom: -12 }}
         value={props.value}
       />
       <Box style={{ marginLeft: 8, marginRight: 8, paddingBottom: 11 }}>

@@ -17,6 +17,7 @@ const Calc = () => {
     initialAmount: 0, // стартовый капитал
     totalReplenishmentAmount: 0, // всего пополнений
     totalPercentAmount: 0, // всего процентов
+    passiveIncomePerMonth: 0, // пассивный доход
   });
 
   const onSubmit = () => {
@@ -79,6 +80,7 @@ const Calc = () => {
                 initialAmount={result.initialAmount}
                 totalReplenishmentAmount={result.totalReplenishmentAmount}
                 totalPercentAmount={result.totalPercentAmount}
+                passiveIncomePerMonth={result.passiveIncomePerMonth}
               />
             </Grid>
           </Grid>

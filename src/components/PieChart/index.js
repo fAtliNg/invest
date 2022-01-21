@@ -4,7 +4,13 @@ import LaptopMacIcon from '@mui/icons-material/LaptopMac';
 import PhoneIcon from '@mui/icons-material/Phone';
 import TabletIcon from '@mui/icons-material/Tablet';
 
-export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount, totalPercentAmount}) => {
+export const PieChart = ({
+  totalBalance,
+  initialAmount,
+  totalReplenishmentAmount,
+  totalPercentAmount,
+  passiveIncomePerMonth,
+}) => {
   const theme = useTheme();
 
   const data = {
@@ -68,20 +74,20 @@ export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount,
         color="textPrimary"
         variant="h6"
       >
-        Итоговая сумма:
+        Итого:
       </Typography>
       <Typography
         style={{ color: '#10B981', marginLeft: 16, lineHeight: 0.78, wordBreak: "break-word" }}
         variant="h5"
       >
-        {(totalBalance || 0).toLocaleString()}₽
+        {`${(totalBalance || 0).toLocaleString()} ₽`}
       </Typography>
     </Box>
   }
 
   return (
     <Card>
-      <CardHeader title={renderResultTitle(totalBalance)}/>
+      <CardHeader title={renderResultTitle(totalBalance)} style={{ padding: "20px 24px" }}/>
       <Divider />
       <CardContent>
         <Box
@@ -126,7 +132,7 @@ export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount,
                 style={{ color, wordBreak: "break-word" }}
                 variant="h5"
               >
-                {value.toLocaleString()}₽
+                {`${value.toLocaleString()} ₽`}
               </Typography>
             </Box>
           ))}
