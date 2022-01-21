@@ -12,7 +12,6 @@ export const PieChart = ({totalBalance, initialAmount, totalReplenishmentAmount,
       {
         data: [initialAmount, totalReplenishmentAmount, totalPercentAmount],
         backgroundColor: ['#3F51B5', '#D14343', '#FFB020'],
-        borderWidth: 8,
         borderColor: '#FFFFFF',
         hoverBorderColor: '#FFFFFF'
       }
