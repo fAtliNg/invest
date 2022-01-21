@@ -10,6 +10,7 @@ import { DashboardLayout } from '../components/dashboard-layout';
 import { CalcForm } from '../components/calc/calc-form';
 import { useState } from 'react';
 import { PieChart } from '../components/PieChart';
+import { BarGraph } from '../components/BarGraph/BarGraph';
 
 const Calc = () => {
   const [values, setValues] = useState({});
@@ -83,6 +84,9 @@ const Calc = () => {
                 passiveIncomePerMonth={result.passiveIncomePerMonth}
               />
             </Grid>
+          </Grid>
+          <Grid style={{ marginTop: 16 }}>
+            <BarGraph />
           </Grid>
         </Container>
       </Box>
