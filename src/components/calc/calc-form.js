@@ -32,11 +32,11 @@ const periods = [
 
 export const CalcForm = ({ onChangeValues, ...props }) => {
   const [values, setValues] = useState({
-    initialAmount: 100000,
+    initialAmount: 250000,
     replenishmentAmount: 10000,
-    periodAmount: 12,
+    periodAmount: 1,
     percentAmountPerYear: 12,
-    numberOfYears: 10,
+    numberOfYears: 5,
   });
 
   useEffect(() => {
@@ -75,8 +75,7 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                 name="initialAmount"
                 textFieldProps={{
                   fullWidth: true,
-                  helperText: "Сумма денег с которой вы хотели бы начать",
-                  label: "Первоначальная сумма",
+                  label: "Стартовый капитал",
                   onChange: handleChange,
                   required: true,
                   variant: "outlined",
@@ -104,7 +103,6 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                 textFieldProps={{
                   fullWidth: true,
                   label: "Сумма пополнения",
-                  helperText: "В указанный период",
                   onChange: handleChange,
                   required: true,
                   variant: "outlined",
@@ -156,8 +154,7 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                 name="percentAmountPerYear"
                 textFieldProps={{
                   fullWidth: true,
-                  label: "Доходность",
-                  helperText: "% годовых",
+                  label: "Доходность в год",
                   onChange: handleChange,
                   required: true,
                   variant: "outlined",
@@ -184,7 +181,6 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                 textFieldProps={{
                   fullWidth: true,
                   label: "Продолжительность",
-                  helperText: "Количество лет",
                   onChange: handleChange,
                   required: true,
                   variant: "outlined",
