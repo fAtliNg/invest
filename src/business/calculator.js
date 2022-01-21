@@ -25,6 +25,7 @@ export const resolve = (values) => {
 
   return {
     totalBalance: totalBalance,
+    passiveIncomePerMonth: Math.floor(totalBalance * percentAmountPerMonth),
     initialAmount: initialAmount,
     totalReplenishmentAmount: totalReplenishment,
     totalPercentAmount: totalBalance - initialAmount - totalReplenishment,
