@@ -22,7 +22,7 @@ export const BarGraph = (props) => {
         barThickness: 12,
         borderRadius: 4,
         categoryPercentage: 0.5,
-        data: props.totalPercentAmounts,
+        data: props.totalReplenishmentAmounts,
         label: 'Всего пополнений',
         maxBarThickness: 10
       },
@@ -32,7 +32,7 @@ export const BarGraph = (props) => {
         barThickness: 12,
         borderRadius: 4,
         categoryPercentage: 0.5,
-        data: props.totalReplenishmentAmounts,
+        data: props.totalPercentAmounts,
         label: 'Всего процентов',
         maxBarThickness: 10
       }

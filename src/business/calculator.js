@@ -12,6 +12,13 @@ export const resolve = (values) => {
   const investMonthCount = numberOfYears * MONTH_IN_YEAR_COUNT;
   const percentAmountPerMonth = (percentAmountPerYear / MONTH_IN_YEAR_COUNT) / 100;
 
+  const details = {
+       initialAmounts: [],
+       totalPercentAmounts: [],
+       totalReplenishmentAmounts: [],
+       labels: [],
+  }
+
   for (let month = 0; month < investMonthCount; ++month) {
     totalBalance += totalBalance * percentAmountPerMonth;
 
@@ -19,15 +26,24 @@ export const resolve = (values) => {
       totalBalance += replenishmentAmount;
       totalReplenishment += replenishmentAmount;
     }
+
+    if((month + 1) % MONTH_IN_YEAR_COUNT === 0){
+      details.initialAmounts.push(initialAmount);
+      details.totalPercentAmounts.push(totalBalance - totalReplenishment - initialAmount);
+      details.totalReplenishmentAmounts.push(totalReplenishment);
+      details.labels.push('Год #' + (details.labels.length + 1));
+    }
   }
 
   totalBalance = Math.floor(totalBalance);
 
   return {
-    totalBalance: totalBalance,
-    passiveIncomePerMonth: Math.floor(totalBalance * percentAmountPerMonth),
-    initialAmount: initialAmount,
-    totalReplenishmentAmount: totalReplenishment,
-    totalPercentAmount: totalBalance - initialAmount - totalReplenishment,
+    summary : {
+      totalBalance: totalBalance,
+      initialAmount: initialAmount,
+      totalReplenishmentAmount: totalReplenishment,
+      totalPercentAmount: totalBalance - initialAmount - totalReplenishment,
+    },
+    details : details,
   }
 }

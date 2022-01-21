@@ -34,13 +34,9 @@ const Calc = () => {
     window.scrollTo({ top: offsetTop, behavior: 'smooth' });
     // resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const results = resolve(values);
-    setResult(results);
-    setBarGraphValues({
-      initialAmounts: [100000, 100000, 100000, 100000, 100000, 100000, 100000],
-      totalPercentAmounts: [10000, 20000, 30000, 40000, 50000, 60000, 70000],
-      totalReplenishmentAmounts: [8000, 16000, 24000, 32000, 40000, 48000, 56000],
-      labels: ['Год #1', 'Год #2', 'Год #3', 'Год #4', 'Год #5', 'Год #6', 'Год #7'],
-    });
+    console.log(results);
+    setResult(results.summary);
+    setBarGraphValues(results.details);
   }
 
   const controls = (
