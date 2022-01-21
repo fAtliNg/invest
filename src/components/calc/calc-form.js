@@ -14,7 +14,7 @@ import { InputSlider } from '../../components/inputslider';
 const periods = [
   {
     value: 12,
-    label: 'Каждый год'т
+    label: 'Каждый год'
   },
   {
     value: 6,
