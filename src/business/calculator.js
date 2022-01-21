@@ -29,7 +29,7 @@ export const resolve = (values) => {
 
     if((month + 1) % MONTH_IN_YEAR_COUNT === 0){
       details.initialAmounts.push(initialAmount);
-      details.totalPercentAmounts.push(totalBalance - totalReplenishment - initialAmount);
+      details.totalPercentAmounts.push(Math.floor(totalBalance) - totalReplenishment - initialAmount);
       details.totalReplenishmentAmounts.push(totalReplenishment);
       details.labels.push('Год #' + (details.labels.length + 1));
     }
