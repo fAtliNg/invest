@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { DashboardLayout } from '../components/dashboard-layout';
 import { CalcForm } from '../components/calc/calc-form';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PieChart } from '../components/PieChart';
 import { BarGraph } from '../components/BarGraph/BarGraph';
 
@@ -39,6 +39,10 @@ const Calc = () => {
     setBarGraphValues(results.details);
   }
 
+  useEffect(() => {
+    onSubmit();
+  }, [values]);
+
   const controls = (
     <Box width="100%" justifyContent="flex-end" display="flex">
       <Button
@@ -46,7 +50,7 @@ const Calc = () => {
         variant="contained"
         onClick={onSubmit}
       >
-        Рассчитать
+        Результат
       </Button>
     </Box>
   )

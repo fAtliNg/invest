@@ -54,27 +54,29 @@ export const DashboardSidebar = (props) => {
         }}
       >
         <div>
-          <Box sx={{ p: 3 }}>
-            <NextLink
-              href="/"
-              passHref
-            >
-              <a>
-                <Logo
-                  sx={{
-                    height: 42,
-                    width: 42
-                  }}
-                />
-              </a>
-            </NextLink>
-          </Box>
-          <Box sx={{ px: 2 }}>
+          {/*<Box sx={{ p: 3 }}>*/}
+          {/*  <NextLink*/}
+          {/*    href="/"*/}
+          {/*    passHref*/}
+          {/*  >*/}
+          {/*    <a>*/}
+          {/*      <Logo*/}
+          {/*        sx={{*/}
+          {/*          height: 42,*/}
+          {/*          width: 42*/}
+          {/*        }}*/}
+          {/*      />*/}
+          {/*    </a>*/}
+          {/*  </NextLink>*/}
+          {/*</Box>*/}
+          <Box sx={{ px: 3 }} marginTop={3}>
             <Typography
               color="inherit"
               variant="subtitle1"
+              display="flex"
+              justifyContent="flex-center"
             >
-              LOGO
+              PROFIT-CASE.RU
             </Typography>
           </Box>
         </div>
@@ -105,7 +107,7 @@ export const DashboardSidebar = (props) => {
             color="neutral.100"
             variant="subtitle2"
           >
-            Реклама
+            © 2022 Profit Case
           </Typography>
         </Box>
       </Box>

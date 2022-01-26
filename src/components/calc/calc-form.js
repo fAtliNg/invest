@@ -59,7 +59,7 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
       {...props}
     >
       <Card>
-        <CardHeader title="Данные для расчета" />
+        <CardHeader title="Данные для расчета" style={{ padding: "20px 32px" }} />
         <Divider />
         <CardContent>
           <Grid
@@ -191,32 +191,13 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
                 sliderProps={{
                   onChange: handleChange,
                   min: 0,
-                  max: 100,
+                  max: 30,
                   step: 1,
                 }}
               />
             </Grid>
           </Grid>
         </CardContent>
-        <Divider sx={{ display: { xs: 'none', lg: 'block' }}}/>
-        <Box
-          sx={{
-            display: { xs: 'none', lg: 'flex' },
-            justifyContent: 'flex-end',
-            p: 2
-          }}
-        >
-          <Button
-            color="primary"
-            variant="contained"
-            onClick={() => props.onSubmit({
-              ...values,
-              periodAmount: parseInt(values.periodAmount)
-            })}
-          >
-            Рассчитать
-          </Button>
-        </Box>
       </Card>
     </form>
   );

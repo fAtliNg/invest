@@ -87,12 +87,12 @@ export const PieChart = ({
 
   return (
     <Card>
-      <CardHeader title={renderResultTitle(totalBalance)} style={{ padding: "20px 24px" }}/>
+      <CardHeader title={renderResultTitle(totalBalance)} style={{ padding: "20px 32px" }} />
       <Divider />
       <CardContent>
         <Box
           sx={{
-            height: 235,
+            height: 197,
             position: 'relative'
           }}
         >
