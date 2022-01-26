@@ -30,17 +30,18 @@ const Calc = () => {
 
   const onSubmit = () => {
     const resultElement = document.getElementById('result');
-    const offsetTop = resultElement.offsetTop - 50;
-    window.scrollTo({ top: offsetTop, behavior: 'smooth' });
-    // resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    onCalc();
+  }
+
+  const onCalc = () => {
     const results = resolve(values);
-    console.log(results);
     setResult(results.summary);
     setBarGraphValues(results.details);
   }
 
   useEffect(() => {
-    onSubmit();
+    onCalc();
   }, [values]);
 
   const controls = (
