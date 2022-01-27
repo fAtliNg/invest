@@ -1,6 +1,6 @@
 export const ROUTES = {
   MAIN: "/",
-  AUTHORS: "/authors",
+  ABOUT: "/about",
   CALC: "/calc",
   STRATEGY: "/strategy",
 }

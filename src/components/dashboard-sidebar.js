@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import PropTypes from 'prop-types';
 import { Box, Divider, Drawer, Typography, useMediaQuery } from '@mui/material';
 import { ChartBar as ChartBarIcon } from '../icons/chart-bar';
-import { User as UserIcon } from '../icons/user';
+import { Info as InfoIcon } from '../icons/info';
 import { Logo } from './logo';
 import { NavItem } from './nav-item';
 import { ROUTES } from '../constants';
@@ -16,9 +16,9 @@ const items = [
     title: 'Сложный процент'
   },
   {
-    href: ROUTES.AUTHORS,
-    icon: (<UserIcon fontSize="small" />),
-    title: 'Авторы'
+    href: ROUTES.ABOUT,
+    icon: (<InfoIcon fontSize="small" />),
+    title: 'О проекте'
   },
 ];
 

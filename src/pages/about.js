@@ -2,11 +2,11 @@ import Head from 'next/head';
 import { Box, Container, Grid, Typography } from '@mui/material';
 import { DashboardLayout } from '../components/dashboard-layout';
 
-const Authors = () => (
+const About = () => (
   <>
     <Head>
       <title>
-        Авторы
+        О проекте
       </title>
     </Head>
     <Box
@@ -21,17 +21,17 @@ const Authors = () => (
           sx={{ mb: 3 }}
           variant="h4"
         >
-          Авторы
+          О проекте
         </Typography>
       </Container>
     </Box>
   </>
 );
 
-Authors.getLayout = (page) => (
+About.getLayout = (page) => (
   <DashboardLayout>
     {page}
   </DashboardLayout>
 );
 
-export default Authors;
+export default About;
