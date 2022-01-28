@@ -103,12 +103,14 @@ export const DashboardSidebar = (props) => {
             py: 3
           }}
         >
-          <Typography
-            color="neutral.100"
-            variant="subtitle2"
-          >
-            © 2022 Profit Case
-          </Typography>
+          <a href="mailto:support@profit-case.ru" style={{ textDecoration: "none" }}>
+            <Typography
+              color="neutral.100"
+              variant="subtitle2"
+            >
+              support@profit-case.ru
+            </Typography>
+          </a>
         </Box>
       </Box>
     </>
