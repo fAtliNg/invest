@@ -8,40 +8,40 @@ export const BarGraph = (props) => {
     datasets: [
       {
         backgroundColor: '#3F51B5',
-        barPercentage: 0.5,
-        barThickness: 12,
+        barPercentage: 0.7,
+        // barThickness: 12,
         borderRadius: 4,
-        categoryPercentage: 0.5,
+        // categoryPercentage: 0.5,
         data: props.initialAmounts,
         label: 'Стартовый капитал',
-        maxBarThickness: 10
+        // maxBarThickness: 10,
       },
       {
         backgroundColor: '#E53935',
-        barPercentage: 0.5,
-        barThickness: 12,
+        barPercentage: 0.7,
+        // barThickness: 12,
         borderRadius: 4,
-        categoryPercentage: 0.5,
+        // categoryPercentage: 0.5,
         data: props.totalReplenishmentAmounts,
         label: 'Всего пополнений',
-        maxBarThickness: 10
+        // maxBarThickness: 10
       },
       {
         backgroundColor: '#FB8C00',
-        barPercentage: 0.5,
-        barThickness: 12,
+        barPercentage: 0.7,
+        // barThickness: 12,
         borderRadius: 4,
-        categoryPercentage: 0.5,
+        // categoryPercentage: 0.5,
         data: props.totalPercentAmounts,
         label: 'Всего процентов',
-        maxBarThickness: 10
+        // maxBarThickness: 10
       }
     ],
     labels: props.labels,
   };
 
   const options = {
-    animation: false,
+    animation: true,
     cornerRadius: 20,
     layout: { padding: 0 },
     legend: { display: false },
