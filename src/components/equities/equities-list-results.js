@@ -25,13 +25,13 @@ export const EquitiesListResults = ({ equities }) => {
                 <TableCell>
                   Цена
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
                   Макс.
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
                   Мин.
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
                   Изм.
                 </TableCell>
                 <TableCell>
@@ -59,17 +59,17 @@ export const EquitiesListResults = ({ equities }) => {
                       {equity.price}
                     </Typography>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
                     <Typography variant="body1" >
                       {equity.maxPrice}
                     </Typography>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
                     <Typography variant="body1" >
                       {equity.minPrice}
                     </Typography>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
                     <Typography variant="body1" color={ equity.diff >= 0 ? "rgb(16, 185, 129)" : "rgb(229, 57, 53)" }>
                       {equity.diff}
                     </Typography>
