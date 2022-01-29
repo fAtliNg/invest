@@ -1,9 +1,9 @@
 import Head from 'next/head';
 import { Box, Container } from '@mui/material';
-import { CustomerListResults } from '../components/customer/customer-list-results';
-import { CustomerListToolbar } from '../components/customer/customer-list-toolbar';
+import { EquitiesListResults } from '../components/equities/customer-list-results';
+import { EquitiesListToolbar } from '../components/equities/customer-list-toolbar';
 import { DashboardLayout } from '../components/dashboard-layout';
-import { customers } from '../__mocks__/customers';
+import { equities } from '../__mocks__/customers';
 
 const Customers = () => (
   <>
@@ -20,9 +20,9 @@ const Customers = () => (
       }}
     >
       <Container maxWidth={false}>
-        <CustomerListToolbar />
+        <EquitiesListToolbar />
         <Box sx={{ mt: 3 }}>
-          <CustomerListResults customers={customers} />
+          <EquitiesListResults customers={equities} />
         </Box>
       </Container>
     </Box>

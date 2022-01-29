@@ -1,11 +1,10 @@
 import { useEffect } from 'react';
-import NextLink from 'next/link';
 import { useRouter } from 'next/router';
 import PropTypes from 'prop-types';
 import { Box, Divider, Drawer, Typography, useMediaQuery } from '@mui/material';
 import { ChartBar as ChartBarIcon } from '../icons/chart-bar';
 import { Info as InfoIcon } from '../icons/info';
-import { Logo } from './logo';
+import { Moving as MovingIcon } from '../icons/moving';
 import { NavItem } from './nav-item';
 import { ROUTES } from '../constants';
 
@@ -14,6 +13,11 @@ const items = [
     href: ROUTES.MAIN,
     icon: (<ChartBarIcon fontSize="small" />),
     title: 'Сложный процент'
+  },
+  {
+    href: ROUTES.EQUITIES,
+    icon: (<MovingIcon fontSize="small" />),
+    title: 'Котировки'
   },
   {
     href: ROUTES.ABOUT,
