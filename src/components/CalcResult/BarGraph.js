@@ -1,5 +1,5 @@
 import { Bar } from 'react-chartjs-2';
-import { Box, Card, CardContent, CardHeader, Divider, useTheme } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 
 export const BarGraph = (props) => {
   const theme = useTheme();
@@ -98,22 +98,16 @@ export const BarGraph = (props) => {
   };
 
   return (
-    <Card>
-      <CardHeader title="Динамика роста" style={{ padding: "20px 32px" }} />
-      <Divider />
-      <CardContent>
-        <Box
-          sx={{
-            height: 400,
-            position: 'relative'
-          }}
-        >
-          <Bar
-            data={data}
-            options={options}
-          />
-        </Box>
-      </CardContent>
-    </Card>
+    <Box
+      sx={{
+        height: 190,
+        position: 'relative'
+      }}
+    >
+      <Bar
+        data={data}
+        options={options}
+      />
+    </Box>
   );
 };

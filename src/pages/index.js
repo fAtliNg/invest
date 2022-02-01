@@ -5,16 +5,18 @@ import {
   Button,
   Container,
   Grid,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { DashboardLayout } from '../components/dashboard-layout';
 import { CalcForm } from '../components/calc/calc-form';
 import { useState, useEffect } from 'react';
-import { PieChart } from '../components/PieChart';
-import { BarGraph } from '../components/BarGraph/BarGraph';
+import { BarGraph } from '../components/CalcResult/BarGraph';
+import { CalcResult } from '../components/CalcResult';
 
 const Calc = () => {
   const [values, setValues] = useState({});
-  const [result, setResult] = useState({
+  const [pieChartResult, setPieChartResult] = useState({
     initialAmount: 0, // стартовый капитал
     totalReplenishmentAmount: 0, // всего пополнений
     totalPercentAmount: 0, // всего процентов
@@ -36,7 +38,7 @@ const Calc = () => {
 
   const onCalc = () => {
     const results = resolve(values);
-    setResult(results.summary);
+    setPieChartResult(results.summary);
     setBarGraphValues(results.details);
   }
 
@@ -90,23 +92,25 @@ const Calc = () => {
               xs={12}
               id="result"
             >
-              <PieChart
-                totalBalance={result.totalBalance}
-                initialAmount={result.initialAmount}
-                totalReplenishmentAmount={result.totalReplenishmentAmount}
-                totalPercentAmount={result.totalPercentAmount}
-                passiveIncomePerMonth={result.passiveIncomePerMonth}
+              <CalcResult
+                pieChartResult={pieChartResult}
+                barGraphValues={barGraphValues}
+                // totalBalance={pieChartResult.totalBalance}
+                // initialAmount={pieChartResult.initialAmount}
+                // totalReplenishmentAmount={pieChartResult.totalReplenishmentAmount}
+                // totalPercentAmount={pieChartResult.totalPercentAmount}
+                // passiveIncomePerMonth={pieChartResult.passiveIncomePerMonth}
               />
             </Grid>
           </Grid>
-          <Grid style={{ marginTop: 16 }}>
-            <BarGraph
-              initialAmounts={barGraphValues.initialAmounts}
-              totalPercentAmounts={barGraphValues.totalPercentAmounts}
-              totalReplenishmentAmounts={barGraphValues.totalReplenishmentAmounts}
-              labels={barGraphValues.labels}
-            />
-          </Grid>
+          {/*<Grid style={{ marginTop: 16 }}>*/}
+          {/*  <BarGraph*/}
+          {/*    initialAmounts={barGraphValues.initialAmounts}*/}
+          {/*    totalPercentAmounts={barGraphValues.totalPercentAmounts}*/}
+          {/*    totalReplenishmentAmounts={barGraphValues.totalReplenishmentAmounts}*/}
+          {/*    labels={barGraphValues.labels}*/}
+          {/*  />*/}
+          {/*</Grid>*/}
         </Container>
       </Box>
     </DashboardLayout>
