@@ -14,11 +14,11 @@ const items = [
     icon: (<ChartBarIcon fontSize="small" />),
     title: 'Сложный процент'
   },
-  {
-    href: ROUTES.EQUITIES,
-    icon: (<MovingIcon fontSize="small" />),
-    title: 'Котировки'
-  },
+  // {
+  //   href: ROUTES.EQUITIES,
+  //   icon: (<MovingIcon fontSize="small" />),
+  //   title: 'Котировки'
+  // },
   {
     href: ROUTES.ABOUT,
     icon: (<InfoIcon fontSize="small" />),
