@@ -28,7 +28,7 @@ const About = () => (
           sx={{ mb: 2 }}
           variant="body1"
         >
-          <Link ml={4} href="https://profit-case.ru">Profit-case.ru</Link> - это сервис для планирования и
+          <Link ml={4} href="https://profit-case.ru">Profit Case</Link> - это сервис для планирования и
           тестирования инвестиционных стратегий. Он помогает спрогнозировать рост капитала на основе:
         </Typography>
         <Box ml={6} mb={2}>
@@ -44,7 +44,7 @@ const About = () => (
             sx={{ mb: 2 }}
             variant="body1"
           >
-            Profit Case предоставляет
+            <Link ml={4} href="https://profit-case.ru">Profit Case</Link> предоставляет
             реализацию калькулятора сложного процента с удобной визуализацией результатов расчета и
             динамики роста капитала.
           </Typography>
