@@ -6,6 +6,7 @@ import { ChartBar as ChartBarIcon } from '../icons/chart-bar';
 import { Info as InfoIcon } from '../icons/info';
 import { NavItem } from './nav-item';
 import { ROUTES } from '../constants';
+import EmailIcon from '@mui/icons-material/Email';
 
 const items = [
   {
@@ -95,9 +96,12 @@ export const DashboardSidebar = (props) => {
 
           <a href="mailto:support@profit-case.ru" style={{ textDecoration: "none" }}>
             <Typography
+              display="flex"
               color="neutral.100"
               variant="subtitle2"
+              style={{ textDecoration: "underline" }}
             >
+              <EmailIcon style={{ marginRight: 8 }}/>
               support@profit-case.ru
             </Typography>
           </a>
