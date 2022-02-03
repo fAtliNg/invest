@@ -107,6 +107,7 @@ export const DashboardSidebar = (props) => {
             py: 3
           }}
         >
+
           <a href="mailto:support@profit-case.ru" style={{ textDecoration: "none" }}>
             <Typography
               display="flex"
@@ -118,6 +119,19 @@ export const DashboardSidebar = (props) => {
               support@profit-case.ru
             </Typography>
           </a>
+        </Box>
+        <Box
+          sx={{
+            px: 2,
+            py: 3
+          }}
+        >
+            <Typography
+              color="neutral.100"
+              variant="subtitle2"
+            >
+              Build: 1.0.0
+            </Typography>
         </Box>
       </Box>
     </>
