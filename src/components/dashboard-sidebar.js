@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import PropTypes from 'prop-types';
-import { Box, Divider, Drawer, Typography, useMediaQuery } from '@mui/material';
+import { Box, Divider, Drawer, Typography, useMediaQuery, Chip } from '@mui/material';
 import { ChartBar as ChartBarIcon } from '../icons/chart-bar';
 import { Info as InfoIcon } from '../icons/info';
-import { Moving as MovingIcon } from '../icons/moving';
 import { NavItem } from './nav-item';
 import { ROUTES } from '../constants';
 
@@ -58,30 +57,16 @@ export const DashboardSidebar = (props) => {
         }}
       >
         <div>
-          {/*<Box sx={{ p: 3 }}>*/}
-          {/*  <NextLink*/}
-          {/*    href="/"*/}
-          {/*    passHref*/}
-          {/*  >*/}
-          {/*    <a>*/}
-          {/*      <Logo*/}
-          {/*        sx={{*/}
-          {/*          height: 42,*/}
-          {/*          width: 42*/}
-          {/*        }}*/}
-          {/*      />*/}
-          {/*    </a>*/}
-          {/*  </NextLink>*/}
-          {/*</Box>*/}
-          <Box sx={{ px: 3 }} marginTop={3}>
+          <Box sx={{ px: 3 }} marginTop={3} display="flex" justifyContent="space-between" >
             <Typography
               color="inherit"
-              variant="subtitle1"
+              variant="h5"
               display="flex"
               justifyContent="flex-center"
             >
-              PROFIT-CASE.RU
+              Profit Case
             </Typography>
+            <Chip label="v1.0.0" variant="outlined" style={{ color: "#F3F4F6" }} />
           </Box>
         </div>
         <Divider
@@ -116,19 +101,6 @@ export const DashboardSidebar = (props) => {
               support@profit-case.ru
             </Typography>
           </a>
-        </Box>
-        <Box
-          sx={{
-            px: 2,
-            py: 3
-          }}
-        >
-            <Typography
-              color="neutral.100"
-              variant="subtitle2"
-            >
-              Build: 1.0.0
-            </Typography>
         </Box>
       </Box>
     </>
