@@ -80,7 +80,7 @@ export const DashboardSidebar = (props) => {
               display="flex"
               justifyContent="flex-center"
             >
-              PROFIT-CASE.RU
+              PROFIT CASE
             </Typography>
           </Box>
         </div>
