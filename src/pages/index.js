@@ -6,8 +6,8 @@ import {
   Container,
   Grid,
 } from '@mui/material';
-import { DashboardLayout } from '../components/dashboard-layout';
-import { CalcForm } from '../components/calc/calc-form';
+import { DashboardLayout } from '../components/DashboardLayout';
+import { CalcForm } from '../components/Calc/CalcForm';
 import { useState, useEffect } from 'react';
 import { PieChart } from '../components/PieChart';
 import { BarGraph } from '../components/BarGraph/BarGraph';

@@ -9,7 +9,7 @@ import {
   TextField,
   InputAdornment
 } from '@mui/material';
-import { InputSlider } from '../../components/inputslider';
+import { InputSlider } from '../InputSlider';
 
 const periods = [
   {

@@ -1,6 +1,6 @@
 import Head from 'next/head';
 import { Box, Container, Link, Typography, Alert } from '@mui/material';
-import { DashboardLayout } from '../components/dashboard-layout';
+import { DashboardLayout } from '../components/DashboardLayout';
 
 
 const About = () => (

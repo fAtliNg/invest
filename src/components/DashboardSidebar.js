@@ -4,9 +4,10 @@ import PropTypes from 'prop-types';
 import { Box, Divider, Drawer, Typography, useMediaQuery, Chip } from '@mui/material';
 import { ChartBar as ChartBarIcon } from '../icons/chart-bar';
 import { Info as InfoIcon } from '../icons/info';
-import { NavItem } from './nav-item';
+import { NavItem } from './NavItem';
 import { ROUTES } from '../constants';
 import EmailIcon from '@mui/icons-material/Email';
+import MovingIcon from '@mui/icons-material/Moving';
 
 const items = [
   {
@@ -14,11 +15,11 @@ const items = [
     icon: (<ChartBarIcon fontSize="small" />),
     title: 'Сложный процент'
   },
-  // {
-  //   href: ROUTES.EQUITIES,
-  //   icon: (<MovingIcon fontSize="small" />),
-  //   title: 'Котировки'
-  // },
+  {
+    href: ROUTES.EQUITIES,
+    icon: (<MovingIcon fontSize="small" />),
+    title: 'Проверка стратегии'
+  },
   {
     href: ROUTES.ABOUT,
     icon: (<InfoIcon fontSize="small" />),
@@ -67,7 +68,7 @@ export const DashboardSidebar = (props) => {
             >
               Profit Case
             </Typography>
-            <Chip label="v1.0.0" variant="outlined" style={{ color: "#F3F4F6" }} />
+            <Chip label="v1.0.1" variant="outlined" style={{ color: "#F3F4F6" }} />
           </Box>
         </div>
         <Divider
