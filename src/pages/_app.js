@@ -6,11 +6,21 @@ import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { createEmotionCache } from '../utils/create-emotion-cache';
 import { theme } from '../theme';
+import TagManager from 'react-gtm-module'
+import { useEffect } from 'react';
+
+const tagManagerArgs = {
+  gtmId: 'GTM-KSWNJ4R',
+}
 
 const clientSideEmotionCache = createEmotionCache();
 
 const App = (props) => {
   const { Component, emotionCache = clientSideEmotionCache, pageProps } = props;
+
+  useEffect(() => {
+    TagManager.initialize(tagManagerArgs);
+  }, []);
 
   const getLayout = Component.getLayout ?? ((page) => page);
 
