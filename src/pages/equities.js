@@ -1,32 +1,65 @@
+import { useState } from 'react';
 import Head from 'next/head';
-import { Box, Container } from '@mui/material';
+import { Box, Card, CardContent, CardHeader, Container, Divider, Grid } from '@mui/material';
+import TabContext from '@mui/lab/TabContext';
 import { EquitiesListResults } from '../components/Equities/EquitiesListResults';
 import { EquitiesListToolbar } from '../components/Equities/EquitiesListToolbar';
 import { DashboardLayout } from '../components/DashboardLayout';
-// import { equities } from '../__mocks__/equities';
+import { russian } from '../mock/equities';
 
 const Equities = () => {
+  const [activeTab, setActiveTab] = useState('1');
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+
   return (
     <DashboardLayout>
       <Head>
         <title>
-          Котировки
+          Profit Case | Мои портфели
         </title>
       </Head>
-      <Box
-        component="main"
+      <Grid
+        container
+        display="flex"
         sx={{
           flexGrow: 1,
           py: 8
         }}
       >
-        <Container maxWidth={false}>
-          <EquitiesListToolbar />
-          <Box sx={{ mt: 3 }}>
-            <EquitiesListResults equities={[]} />
-          </Box>
-        </Container>
-      </Box>
+        <Grid item xs={8}>
+          <Container maxWidth={false}>
+            <TabContext value={activeTab}>
+              <EquitiesListToolbar handleTabChange={handleTabChange}/>
+              <Box sx={{ mt: 3 }}>
+                <EquitiesListResults equities={russian} />
+              </Box>
+            </TabContext>
+          </Container>
+        </Grid>
+        <Grid item xs={4}>
+          <Card>
+            <CardHeader title="Портфель" style={{ padding: "20px 32px" }} />
+            <Divider />
+            <CardContent>
+              <Grid
+                container
+                spacing={3}
+              >
+                <Grid
+                  item
+                  xs={12}
+                >
+                  sdfsdf
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
     </DashboardLayout>
   );
 }

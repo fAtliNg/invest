@@ -60,7 +60,7 @@ const Calc = () => {
     <DashboardLayout controls={controls}>
       <Head>
         <title>
-          Profit Case
+          Profit Case | Сложный процент
         </title>
       </Head>
       <Box

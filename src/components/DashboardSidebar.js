@@ -7,7 +7,7 @@ import { Info as InfoIcon } from '../icons/info';
 import { NavItem } from './NavItem';
 import { ROUTES } from '../constants';
 import EmailIcon from '@mui/icons-material/Email';
-import MovingIcon from '@mui/icons-material/Moving';
+import WorkIcon from '@mui/icons-material/Work';
 
 const items = [
   {
@@ -17,8 +17,8 @@ const items = [
   },
   {
     href: ROUTES.EQUITIES,
-    icon: (<MovingIcon fontSize="small" />),
-    title: 'Проверка стратегии'
+    icon: (<WorkIcon fontSize="small" />),
+    title: 'Мои портфели'
   },
   {
     href: ROUTES.ABOUT,

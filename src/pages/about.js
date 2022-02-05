@@ -7,7 +7,7 @@ const About = () => (
   <DashboardLayout>
     <Head>
       <title>
-        Profit Case
+        Profit Case | О проекте
       </title>
     </Head>
     <Box

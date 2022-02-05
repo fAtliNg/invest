@@ -5,14 +5,14 @@ import {
   CardContent,
   TextField,
   InputAdornment,
-  SvgIcon, Typography
+  SvgIcon, Typography,
+  Tab,
 } from '@mui/material';
+import TabList from '@mui/lab/TabList';
 import { Search as SearchIcon } from '../../icons/search';
-import { Upload as UploadIcon } from '../../icons/upload';
-import { Download as DownloadIcon } from '../../icons/download';
 
-export const EquitiesListToolbar = (props) => (
-  <Box {...props}>
+export const EquitiesListToolbar = ({ handleTabChange }) => (
+  <Box>
     <Box
       sx={{
         alignItems: 'center',
@@ -22,12 +22,14 @@ export const EquitiesListToolbar = (props) => (
         m: -1
       }}
     >
-      <Typography
-        sx={{ m: 1 }}
-        variant="h4"
-      >
-        Котировки
-      </Typography>
+      <TabList onChange={handleTabChange} aria-label="lab API tabs example">
+        <Tab label="Акции России" value="1" />
+        <Tab label="Акции США" value="2" />
+        <Tab label="Облигации" value="3" />
+        <Tab label="Еврооблигации" value="4" />
+        <Tab label="Фонды" value="5" />
+        <Tab label="Валюта" value="6" />
+      </TabList>
       <Box sx={{ m: 1 }}>
         <TextField
           fullWidth
