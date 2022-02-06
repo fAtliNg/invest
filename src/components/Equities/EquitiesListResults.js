@@ -2,6 +2,7 @@ import PerfectScrollbar from 'react-perfect-scrollbar';
 import PropTypes from 'prop-types';
 import {
   Box,
+  Button,
   Card,
   Table,
   TableBody,
@@ -11,12 +12,24 @@ import {
   Typography
 } from '@mui/material';
 
-export const EquitiesListResults = ({ equities }) => {
+export const EquitiesListResults = ({
+  equities,
+  addedSecurities,
+  onAddSecurity,
+  onRemoveSecurity,
+}) => {
+  const isAdded = (item) => {
+    console.log(111, addedSecurities);
+    console.log(222, item);
+    // console.log(333, addedSecurities.some((i) => {item.id === i.id}));
+    return addedSecurities.some((i) => item.id === i.id);
+  }
+
   return (
     <Card>
       <PerfectScrollbar>
         <Box>
-          <Table>
+          <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>
@@ -25,18 +38,7 @@ export const EquitiesListResults = ({ equities }) => {
                 <TableCell>
                   Цена
                 </TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
-                  Макс.
-                </TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
-                  Мин.
-                </TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
-                  Изм.
-                </TableCell>
-                <TableCell>
-                  Изм %.
-                </TableCell>
+                <TableCell />
               </TableRow>
             </TableHead>
             <TableBody>
@@ -46,38 +48,49 @@ export const EquitiesListResults = ({ equities }) => {
                   key={equity.id}
                 >
                   <TableCell>
-                    <Typography
-                      color="rgb(63, 81, 181)"
-                      variant="body1"
-                      style={{ fontWeight: "bold" }}
+                    <Box>
+                      <Typography
+                        color="rgb(63, 81, 181)"
+                        variant="body1"
+                        style={{ fontWeight: "bold" }}
+                      >
+                        {equity.name}
+                      </Typography>
+                      <Typography variant="body1" color={ equity.diffPercent >= 0 ? "rgb(16, 185, 129)" : "rgb(229, 57, 53)" }>
+                        {`${equity.diffPercent}%`}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body1" style={{ fontWeight: "bold" }}>
+                        {`${equity.price} ₽`}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body1" color={ equity.diff >= 0 ? "rgb(16, 185, 129)" : "rgb(229, 57, 53)" }>
+                        {`${equity.diff} ₽`}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell align="right" width={150}>
+                    {isAdded(equity) && <Button
+                      fullWidth
+                      key={equity.id}
+                      color="inherit"
+                      variant="contained"
+                      onClick={() => onRemoveSecurity(equity)}
                     >
-                      {equity.name}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body1" >
-                      {equity.price}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
-                    <Typography variant="body1" >
-                      {equity.maxPrice}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
-                    <Typography variant="body1" >
-                      {equity.minPrice}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
-                    <Typography variant="body1" color={ equity.diff >= 0 ? "rgb(16, 185, 129)" : "rgb(229, 57, 53)" }>
-                      {equity.diff}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body1" color={ equity.diffPercent >= 0 ? "rgb(16, 185, 129)" : "rgb(229, 57, 53)" }>
-                      {equity.diffPercent}
-                    </Typography>
+                      Удалить
+                    </Button>}
+                    {!isAdded(equity) && <Button
+                      fullWidth
+                      key={equity.id}
+                      variant="contained"
+                      onClick={() => onAddSecurity(equity)}
+                    >
+                      Добавить
+                    </Button>}
                   </TableCell>
                 </TableRow>
               ))}

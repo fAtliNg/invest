@@ -9,6 +9,15 @@ import { russian } from '../mock/equities';
 
 const Equities = () => {
   const [activeTab, setActiveTab] = useState('1');
+  const [addedSecurities, setAddedSecurities] = useState([]);
+
+  const addSecurity = (item) => {
+    setAddedSecurities(addedSecurities.concat(item));
+  }
+
+  const removeSecurity = (item) => {
+    setAddedSecurities(addedSecurities.filter(i => i.name !== item.name));
+  }
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -35,7 +44,12 @@ const Equities = () => {
             <TabContext value={activeTab}>
               <EquitiesListToolbar handleTabChange={handleTabChange}/>
               <Box sx={{ mt: 3 }}>
-                <EquitiesListResults equities={russian} />
+                <EquitiesListResults
+                  equities={russian}
+                  addedSecurities={addedSecurities}
+                  onAddSecurity={addSecurity}
+                  onRemoveSecurity={removeSecurity}
+                />
               </Box>
             </TabContext>
           </Container>
