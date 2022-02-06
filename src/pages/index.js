@@ -60,8 +60,13 @@ const Calc = () => {
     <DashboardLayout controls={controls}>
       <Head>
         <title>
-          Profit Case
+          Инвестиционный калькулятор сложного процента онлайн Profit Case
         </title>
+        <meta
+          name="description"
+          content="Инвестиционный калькулятор позволяет выполнить бесплатный расчет динамики роста
+          капитала онлайн. Калькулятор сложного процента Profit Case с удобной визуализацией."
+        />
       </Head>
       <Box
         component="main"

@@ -7,8 +7,13 @@ const About = () => (
   <DashboardLayout>
     <Head>
       <title>
-        Profit Case
+        Сервис для инвесторов онлайн Profit Case
       </title>
+      <meta
+        name="description"
+        content="Сервисы для планирования и тестирования инвестиционных стратегий онлайн.
+        Калькуляторы для инвесторов Profit Case с удобной визуализацией."
+      />
     </Head>
     <Box
       component="main"
