@@ -34,6 +34,7 @@
     "react-dom": "^17.0.2",
     "react-gtm-module": "^2.0.11",
     "react-perfect-scrollbar": "^1.5.8",
+    "string-to-color": "^2.2.2",
     "uuid": "^8.3.0",
     "yup": "^0.32.9"
   },
