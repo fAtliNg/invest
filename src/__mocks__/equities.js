@@ -1,8 +1,8 @@
-import { v4 as uuid } from 'uuid';
+// import { v4 as uuid } from 'uuid';
 
 export const equities = [
   {
-    id: uuid(),
+    id: 1,
     name: 'Globaltrans Inv',
     price: 524,
     maxPrice: 533.05,
@@ -11,7 +11,7 @@ export const equities = [
     diffPercent: 0.4,
   },
   {
-    id: uuid(),
+    id: 2,
     name: 'HeadHunter ADR',
     price: 3306,
     maxPrice: 3360,
@@ -20,7 +20,7 @@ export const equities = [
     diffPercent: 1.16,
   },
   {
-    id: uuid(),
+    id: 3,
     name: 'OK Rusal MKPAO',
     price: 72.09,
     maxPrice: 73.385,
@@ -29,7 +29,7 @@ export const equities = [
     diffPercent: -0.76,
   },
   {
-    id: uuid(),
+    id: 4,
     name: 'Ozon',
     price: 1393.5,
     maxPrice: 1494,
@@ -38,7 +38,7 @@ export const equities = [
     diffPercent: -2.04,
   },
   {
-    id: uuid(),
+    id: 5,
     name: 'Petropavlovsk',
     price: 15.48,
     maxPrice: 16.13,

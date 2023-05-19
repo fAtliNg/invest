@@ -4,4 +4,5 @@ export const ROUTES = {
   CALC: "/calc",
   EQUITIES: "/equities",
   STRATEGY: "/strategy",
+  DIVIDEND_CALENDAR: "/dividends",
 }

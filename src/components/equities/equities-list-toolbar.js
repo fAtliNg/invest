@@ -26,7 +26,7 @@ export const EquitiesListToolbar = (props) => (
         sx={{ m: 1 }}
         variant="h4"
       >
-        Котировки
+        Календарь дивидендов
       </Typography>
       <Box sx={{ m: 1 }}>
         <TextField
