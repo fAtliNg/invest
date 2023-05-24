@@ -14,11 +14,11 @@ const items = [
     icon: (<ChartBarIcon fontSize="small" />),
     title: 'Сложный процент'
   },
-  {
-    href: ROUTES.DIVIDEND_CALENDAR,
-    // icon: (<ChartBarIcon fontSize="small" />),
-    title: 'Календарь дивидендов'
-  },
+  // {
+  //   href: ROUTES.DIVIDEND_CALENDAR,
+  //   // icon: (<ChartBarIcon fontSize="small" />),
+  //   title: 'Календарь дивидендов'
+  // },
   // {
   //   href: ROUTES.EQUITIES,
   //   icon: (<MovingIcon fontSize="small" />),

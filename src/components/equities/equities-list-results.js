@@ -23,27 +23,18 @@ export const EquitiesListResults = ({ equities }) => {
                   Название
                 </TableCell>
                 <TableCell>
+                  Дата фиксации
+                </TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
                   Цена
-                </TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
-                  Макс.
-                </TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
-                  Мин.
-                </TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
-                  Изм.
-                </TableCell>
-                <TableCell>
-                  Изм %.
                 </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {equities.map((equity) => (
+              {equities.map((equity, index) => (
                 <TableRow
                   hover
-                  key={equity.id}
+                  key={index}
                 >
                   <TableCell>
                     <Typography
@@ -51,32 +42,17 @@ export const EquitiesListResults = ({ equities }) => {
                       variant="body1"
                       style={{ fontWeight: "bold" }}
                     >
-                      {equity.name}
+                      {equity.instrumentName}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body1" >
-                      {equity.price}
+                      {new Date(equity.payDate).toLocaleDateString()}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
                     <Typography variant="body1" >
-                      {equity.maxPrice}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
-                    <Typography variant="body1" >
-                      {equity.minPrice}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }}}>
-                    <Typography variant="body1" color={ equity.diff >= 0 ? "rgb(16, 185, 129)" : "rgb(229, 57, 53)" }>
-                      {equity.diff}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body1" color={ equity.diffPercent >= 0 ? "rgb(16, 185, 129)" : "rgb(229, 57, 53)" }>
-                      {equity.diffPercent}
+                      {equity.payValue} ₽
                     </Typography>
                   </TableCell>
                 </TableRow>
