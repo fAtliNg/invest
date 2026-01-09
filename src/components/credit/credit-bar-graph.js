@@ -4,23 +4,38 @@ import { Box, Card, CardContent, CardHeader, Divider, useTheme } from '@mui/mate
 export const CreditBarGraph = (props) => {
   const theme = useTheme();
 
+  const datasets = [
+    {
+      backgroundColor: '#3F51B5',
+      barPercentage: 0.7,
+      borderRadius: 4,
+      data: props.principalPayments,
+      label: 'Основной долг',
+    }
+  ];
+
+  const hasEarlyRepayment = props.earlyRepaymentPayments && props.earlyRepaymentPayments.some(v => v > 0);
+
+  if (hasEarlyRepayment) {
+    datasets.push({
+      backgroundColor: '#FB8C00',
+      barPercentage: 0.7,
+      borderRadius: 4,
+      data: props.earlyRepaymentPayments,
+      label: 'Досрочное погашение',
+    });
+  }
+
+  datasets.push({
+    backgroundColor: '#E53935',
+    barPercentage: 0.7,
+    borderRadius: 4,
+    data: props.interestPayments,
+    label: 'Переплата',
+  });
+
   const data = {
-    datasets: [
-      {
-        backgroundColor: '#3F51B5',
-        barPercentage: 0.7,
-        borderRadius: 4,
-        data: props.principalPayments,
-        label: 'Основной долг',
-      },
-      {
-        backgroundColor: '#E53935',
-        barPercentage: 0.7,
-        borderRadius: 4,
-        data: props.interestPayments,
-        label: 'Переплата',
-      }
-    ],
+    datasets,
     labels: props.labels,
   };
 

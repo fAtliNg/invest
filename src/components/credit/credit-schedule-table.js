@@ -8,14 +8,17 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  IconButton,
+  Typography
 } from '@mui/material';
 import { format } from 'date-fns';
 import DownloadIcon from '@mui/icons-material/Download';
+import DeleteIcon from '@mui/icons-material/Delete';
 import * as XLSX from 'xlsx';
 
-export const CreditScheduleTable = ({ payments = [], summary, ...props }) => {
+export const CreditScheduleTable = ({ payments = [], summary, onDeleteEarlyRepayment, ...props }) => {
   const handleDownload = () => {
-    const monthlyPayment = payments.length > 0 ? payments[0].amount : 0;
+    const monthlyPayment = payments.length > 0 ? payments.find(p => p.type === 'regular')?.amount || 0 : 0;
     const totalPayment = summary?.totalPayment || 0;
     const totalPrincipal = summary?.totalPrincipal || 0;
     const totalInterest = summary?.totalInterest || 0;
@@ -36,14 +39,27 @@ export const CreditScheduleTable = ({ payments = [], summary, ...props }) => {
     ];
 
     payments.forEach(p => {
-      data.push([
-        p.number,
-        format(p.date, 'dd.MM.yyyy'),
-        roundTwo(p.amount) + ' ₽',
-        roundTwo(p.principal) + ' ₽',
-        roundTwo(p.interest) + ' ₽',
-        roundTwo(p.balance) + ' ₽'
-      ]);
+      let row = [];
+      if (p.type === 'regular') {
+        row = [
+          p.number,
+          format(p.date, 'dd.MM.yyyy'),
+          roundTwo(p.amount) + ' ₽',
+          roundTwo(p.principal) + ' ₽',
+          roundTwo(p.interest) + ' ₽',
+          roundTwo(p.balance) + ' ₽'
+        ];
+      } else {
+         row = [
+          'Досрочно',
+          format(p.date, 'dd.MM.yyyy'),
+          roundTwo(p.amount) + ' ₽',
+          roundTwo(p.principal) + ' ₽',
+          '-',
+          roundTwo(p.balance) + ' ₽'
+        ];
+      }
+      data.push(row);
     });
 
     const wb = XLSX.utils.book_new();
@@ -115,16 +131,26 @@ export const CreditScheduleTable = ({ payments = [], summary, ...props }) => {
                 <TableCell>
                   Остаток
                 </TableCell>
+                <TableCell>
+                  
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {payments.map((payment) => (
+              {payments.map((payment, index) => (
                 <TableRow
                   hover
-                  key={payment.number}
+                  key={index}
+                  sx={{
+                    backgroundColor: payment.type === 'early_repayment' ? 'action.hover' : 'inherit'
+                  }}
                 >
                   <TableCell>
-                    {payment.number}
+                    {payment.type === 'regular' ? payment.number : (
+                        <Typography variant="body2" color="textSecondary">
+                            —
+                        </Typography>
+                    )}
                   </TableCell>
                   <TableCell>
                     {format(payment.date, 'dd.MM.yyyy')}
@@ -140,6 +166,17 @@ export const CreditScheduleTable = ({ payments = [], summary, ...props }) => {
                   </TableCell>
                   <TableCell>
                     {payment.balance.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
+                  </TableCell>
+                  <TableCell>
+                    {payment.type === 'early_repayment' && (
+                      <IconButton 
+                        size="small" 
+                        onClick={() => onDeleteEarlyRepayment(payment.earlyRepaymentId)}
+                        title="Удалить досрочное погашение"
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

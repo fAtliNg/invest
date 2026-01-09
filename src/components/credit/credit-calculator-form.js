@@ -8,6 +8,7 @@ import {
   Grid,
   TextField,
   InputAdornment,
+  Button
 } from '@mui/material';
 import { InputSlider } from '../../components/inputslider';
 import { DatePicker } from '@mui/lab';
@@ -26,7 +27,7 @@ const periodTypes = [
   }
 ];
 
-export const CreditCalculatorForm = ({ onChangeValues, ...props }) => {
+export const CreditCalculatorForm = ({ onChangeValues, onOpenEarlyRepayment, ...props }) => {
   const [values, setValues] = useState({
     amount: 1000000,
     term: 5,
@@ -64,9 +65,22 @@ export const CreditCalculatorForm = ({ onChangeValues, ...props }) => {
       autoComplete="off"
       noValidate
       {...props}
+      style={{ height: '100%' }}
     >
-      <Card>
-        <CardHeader title="Параметры кредита" style={{ padding: "20px 32px" }} />
+      <Card style={{ height: '100%' }}>
+        <CardHeader
+          title="Параметры кредита"
+          style={{ padding: "20px 32px" }}
+          action={(
+            <Button
+              variant="outlined"
+              onClick={onOpenEarlyRepayment}
+              size="small"
+            >
+              Досрочное погашение
+            </Button>
+          )}
+        />
         <Divider />
         <CardContent>
           <Grid

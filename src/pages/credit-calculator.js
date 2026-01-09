@@ -5,6 +5,7 @@ import { CreditCalculatorForm } from '../components/credit/credit-calculator-for
 import { CreditScheduleTable } from '../components/credit/credit-schedule-table';
 import { CreditSummary } from '../components/credit/credit-summary';
 import { CreditBarGraph } from '../components/credit/credit-bar-graph';
+import { EarlyRepaymentModal } from '../components/credit/early-repayment-modal';
 import { calculateCredit } from '../business/credit-calculator';
 import { useState, useEffect } from 'react';
 import { getYear } from 'date-fns';
@@ -24,6 +25,8 @@ const CreditCalculator = () => {
     interestPayments: [],
     labels: []
   });
+  const [earlyRepayments, setEarlyRepayments] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -42,20 +45,23 @@ const CreditCalculator = () => {
         Number(values.term),
         values.termType,
         Number(values.rate),
-        values.startDate
+        values.startDate,
+        earlyRepayments
       );
 
       const totalPrincipal = Number(values.amount);
       const totalInterest = schedule.reduce((sum, p) => sum + p.interest, 0);
+      const totalEarlyRepayment = schedule.filter(p => p.type === 'early_repayment').reduce((sum, p) => sum + p.amount, 0);
       
       setSummary({
         totalAmount: schedule.length,
         totalPayment: totalPrincipal + totalInterest,
         totalPrincipal: totalPrincipal,
-        totalInterest: totalInterest
+        totalInterest: totalInterest,
+        totalEarlyRepayment: totalEarlyRepayment
       });
     }
-  }, [values]);
+  }, [values, earlyRepayments]);
 
   useEffect(() => {
     if (Object.keys(debouncedValues).length > 0) {
@@ -64,7 +70,8 @@ const CreditCalculator = () => {
         Number(debouncedValues.term),
         debouncedValues.termType,
         Number(debouncedValues.rate),
-        debouncedValues.startDate
+        debouncedValues.startDate,
+        earlyRepayments
       );
       setPayments(schedule);
 
@@ -72,54 +79,87 @@ const CreditCalculator = () => {
       let labels = [];
       let principalPayments = [];
       let interestPayments = [];
+      let earlyRepaymentPayments = [];
       
-      const totalMonths = schedule.length;
+      const lastRegular = schedule.filter(p => p.type === 'regular').pop();
+      const maxNumber = lastRegular ? lastRegular.number : 0;
       
-      if (totalMonths <= 12) {
-        // По месяцам
+      if (maxNumber <= 12) {
+        // По месяцам - агрегация
+        const groups = {};
         schedule.forEach(p => {
-          labels.push(p.number);
-          principalPayments.push(p.principal);
-          interestPayments.push(p.interest);
+            const key = format(p.date, 'yyyy-MM');
+            if (!groups[key]) {
+                groups[key] = {
+                    principal: 0,
+                    interest: 0,
+                    earlyRepayment: 0,
+                    label: p.type === 'regular' ? p.number : null,
+                    date: p.date
+                };
+            }
+            if (p.type === 'regular') {
+                groups[key].principal += p.principal;
+                groups[key].label = p.number;
+            } else {
+                groups[key].earlyRepayment += p.amount;
+            }
+            groups[key].interest += p.interest;
+        });
+
+        const sortedKeys = Object.keys(groups).sort();
+        sortedKeys.forEach(key => {
+            const g = groups[key];
+            labels.push(g.label || format(g.date, 'MM.yyyy'));
+            principalPayments.push(g.principal);
+            interestPayments.push(g.interest);
+            earlyRepaymentPayments.push(g.earlyRepayment);
         });
       } else {
-        // По годам
-        let currentYear = getYear(debouncedValues.startDate);
-        let yearPrincipal = 0;
-        let yearInterest = 0;
-        let lastYear = getYear(schedule[0].date);
-
-        schedule.forEach((p, index) => {
-          const paymentYear = getYear(p.date);
-          
-          if (paymentYear !== lastYear) {
-            labels.push(lastYear);
-            principalPayments.push(yearPrincipal);
-            interestPayments.push(yearInterest);
-            
-            lastYear = paymentYear;
-            yearPrincipal = 0;
-            yearInterest = 0;
-          }
-          
-          yearPrincipal += p.principal;
-          yearInterest += p.interest;
-          
-          if (index === schedule.length - 1) {
-            labels.push(lastYear);
-            principalPayments.push(yearPrincipal);
-            interestPayments.push(yearInterest);
-          }
+        // По годам - агрегация
+        const groups = {};
+        schedule.forEach(p => {
+            const year = getYear(p.date);
+            if (!groups[year]) {
+                groups[year] = {
+                    principal: 0,
+                    interest: 0,
+                    earlyRepayment: 0
+                };
+            }
+            if (p.type === 'regular') {
+                groups[year].principal += p.principal;
+            } else {
+                groups[year].earlyRepayment += p.amount;
+            }
+            groups[year].interest += p.interest;
+        });
+        
+        Object.keys(groups).sort().forEach(year => {
+            labels.push(year);
+            principalPayments.push(groups[year].principal);
+            interestPayments.push(groups[year].interest);
+            earlyRepaymentPayments.push(groups[year].earlyRepayment);
         });
       }
       
       setGraphData({
         labels,
         principalPayments,
-        interestPayments
+        interestPayments,
+        earlyRepaymentPayments
       });
     }
-  }, [debouncedValues]);
+  }, [debouncedValues, earlyRepayments]);
+
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+  const handleAddEarlyRepayment = (repayment) => {
+    setEarlyRepayments([...earlyRepayments, repayment]);
+  };
+  const handleDeleteEarlyRepayment = (id) => {
+    setEarlyRepayments(earlyRepayments.filter(item => item.id !== id));
+  };
 
   const handleScrollToResult = () => {
     const resultElement = document.getElementById('credit-result-table');
@@ -171,7 +211,10 @@ const CreditCalculator = () => {
               md={6}
               xs={12}
             >
-              <CreditCalculatorForm onChangeValues={setValues} />
+              <CreditCalculatorForm 
+                onChangeValues={setValues} 
+                onOpenEarlyRepayment={handleOpenModal}
+              />
             </Grid>
             <Grid
               item
@@ -184,6 +227,7 @@ const CreditCalculator = () => {
                 totalPayment={summary.totalPayment}
                 totalPrincipal={summary.totalPrincipal}
                 totalInterest={summary.totalInterest}
+                totalEarlyRepayment={summary.totalEarlyRepayment}
               />
             </Grid>
             <Grid
@@ -194,6 +238,7 @@ const CreditCalculator = () => {
                 labels={graphData.labels}
                 principalPayments={graphData.principalPayments}
                 interestPayments={graphData.interestPayments}
+                earlyRepaymentPayments={graphData.earlyRepaymentPayments}
               />
             </Grid>
             <Grid
@@ -202,10 +247,20 @@ const CreditCalculator = () => {
               id="credit-result-table"
               sx={{ scrollMarginTop: '100px' }}
             >
-              <CreditScheduleTable payments={payments} summary={summary} />
+              <CreditScheduleTable 
+                payments={payments} 
+                summary={summary} 
+                onDeleteEarlyRepayment={handleDeleteEarlyRepayment}
+              />
             </Grid>
           </Grid>
         </Container>
+        <EarlyRepaymentModal
+          open={isModalOpen}
+          onClose={handleCloseModal}
+          onApply={handleAddEarlyRepayment}
+          initialDate={values.startDate || new Date()}
+        />
       </Box>
     </DashboardLayout>
   );

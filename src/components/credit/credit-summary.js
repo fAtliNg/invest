@@ -6,19 +6,37 @@ export const CreditSummary = ({
   totalPayment,
   totalPrincipal,
   totalInterest,
+  totalEarlyRepayment = 0,
+  ...props
 }) => {
   const theme = useTheme();
+
+  const regularPrincipal = Math.max(0, totalPrincipal - totalEarlyRepayment);
+
+  const chartData = [regularPrincipal];
+  const chartColors = ['#3F51B5'];
+  const chartLabels = ['Основной долг'];
+
+  if (totalEarlyRepayment > 0) {
+    chartData.push(totalEarlyRepayment);
+    chartColors.push('#FB8C00');
+    chartLabels.push('Досрочное погашение');
+  }
+
+  chartData.push(totalInterest);
+  chartColors.push('#D14343');
+  chartLabels.push('Переплата');
 
   const data = {
     datasets: [
       {
-        data: [totalPrincipal, totalInterest],
-        backgroundColor: ['#3F51B5', '#D14343'],
+        data: chartData,
+        backgroundColor: chartColors,
         borderColor: '#FFFFFF',
         hoverBorderColor: '#FFFFFF'
       }
     ],
-    labels: ['Основной долг', 'Переплата']
+    labels: chartLabels
   };
 
   const options = {
@@ -46,15 +64,24 @@ export const CreditSummary = ({
   const items = [
     {
       title: 'Основной долг',
-      value: totalPrincipal,
+      value: regularPrincipal,
       color: '#3F51B5'
-    },
-    {
-      title: 'Переплата',
-      value: totalInterest,
-      color: '#E53935'
     }
   ];
+
+  if (totalEarlyRepayment > 0) {
+    items.push({
+      title: 'Досрочно',
+      value: totalEarlyRepayment,
+      color: '#FB8C00'
+    });
+  }
+
+  items.push({
+    title: 'Переплата',
+    value: totalInterest,
+    color: '#E53935'
+  });
 
   const renderResultTitle = (totalPayment) => {
     return <Box display="flex" alignItems="center">
@@ -74,7 +101,7 @@ export const CreditSummary = ({
   }
 
   return (
-    <Card>
+    <Card style={{ height: '100%' }} {...props}>
       <CardHeader 
         title={renderResultTitle(totalPayment)} 
         style={{ padding: "20px 32px" }} 
