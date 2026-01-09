@@ -7,12 +7,18 @@ import { Info as InfoIcon } from '../icons/info';
 import { NavItem } from './nav-item';
 import { ROUTES } from '../constants';
 import EmailIcon from '@mui/icons-material/Email';
+import CalculateIcon from '@mui/icons-material/Calculate';
 
 const items = [
   {
     href: ROUTES.MAIN,
     icon: (<ChartBarIcon fontSize="small" />),
     title: 'Сложный процент'
+  },
+  {
+    href: ROUTES.CREDIT_CALCULATOR,
+    icon: (<CalculateIcon fontSize="small" />),
+    title: 'Кредитный калькулятор'
   },
   // {
   //   href: ROUTES.DIVIDEND_CALENDAR,
