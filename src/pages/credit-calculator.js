@@ -8,7 +8,7 @@ import { CreditBarGraph } from '../components/credit/credit-bar-graph';
 import { EarlyRepaymentModal } from '../components/credit/early-repayment-modal';
 import { calculateCredit } from '../business/credit-calculator';
 import { useState, useEffect } from 'react';
-import { getYear } from 'date-fns';
+import { getYear, format } from 'date-fns';
 
 const CreditCalculator = () => {
   const [values, setValues] = useState({});
