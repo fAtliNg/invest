@@ -2,12 +2,27 @@ import React  from 'react';
 import { TextField, Slider, Box } from '@mui/material';
 
 export const InputSlider = (props) => {
-  const availableCharacters = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
   const onChangeWrap = (e) => {
-    const newValue = e.target.value.split('')
-      .map((c) => availableCharacters.includes(c.toString()) ? c : '')
-      .join('').toString().replace(/^0+/, '');
-    e.target.value = newValue || 0;
+    let val = e.target.value.replace(/,/g, '.');
+    
+    val = val.replace(/[^0-9.]/g, '');
+    
+    const parts = val.split('.');
+    if (parts.length > 2) {
+       val = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    val = val.replace(/^0+(?=\d)/, '');
+    
+    if (val === '') {
+        val = '0';
+    }
+    
+    if (val === '.') {
+        val = '0.';
+    }
+
+    e.target.value = val;
     props.textFieldProps.onChange(e);
   }
 

@@ -3,7 +3,7 @@ import { Box, Container } from '@mui/material';
 // import { EquitiesListResults } from '../components/equities/customer-list-results';
 // import { EquitiesListToolbar } from '../components/equities/customer-list-toolbar';
 import { DashboardLayout } from '../components/dashboard-layout';
-import { equities } from '../__mocks__/customers';
+// import { equities } from '../__mocks__/customers';
 
 const Customers = () => (
   <>
