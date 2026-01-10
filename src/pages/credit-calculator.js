@@ -1,5 +1,16 @@
 import Head from 'next/head';
-import { Box, Container, Typography, Grid, Button } from '@mui/material';
+import { 
+  Box, 
+  Container, 
+  Typography, 
+  Grid, 
+  Button,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Paper
+} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { DashboardLayout } from '../components/dashboard-layout';
 import { CreditCalculatorForm } from '../components/credit/credit-calculator-form';
 import { CreditScheduleTable } from '../components/credit/credit-schedule-table';
@@ -121,7 +132,7 @@ const CreditCalculator = () => {
         const sortedKeys = Object.keys(groups).sort();
         sortedKeys.forEach(key => {
             const g = groups[key];
-            labels.push(g.label || format(g.date, 'MM.yyyy'));
+            labels.push(g.label || format(g.date, 'LLLL yyyy', { locale: require('date-fns/locale/ru') }));
             principalPayments.push(g.principal);
             interestPayments.push(g.interest);
             earlyRepaymentPayments.push(g.earlyRepayment);
@@ -191,12 +202,38 @@ const CreditCalculator = () => {
     </Box>
   );
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FinancialProduct",
+    "name": "Кредитный калькулятор Profit Case",
+    "description": "Онлайн калькулятор кредита с расчетом досрочного погашения, графика платежей и переплаты.",
+    "brand": {
+      "@type": "Brand",
+      "name": "Profit Case"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "RUB"
+    },
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web"
+  };
+
   return (
     <DashboardLayout controls={controls}>
       <Head>
         <title>
-          Кредитный калькулятор | Profit Case
+          Кредитный калькулятор онлайн с досрочным погашением | Profit Case
         </title>
+        <meta
+          name="description"
+          content="Бесплатный кредитный калькулятор онлайн. Рассчитайте ежемесячный платеж, переплату и график выплат с учетом досрочных погашений. Удобный и точный расчет."
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </Head>
       <Box
         component="main"
@@ -208,7 +245,8 @@ const CreditCalculator = () => {
         <Container maxWidth="lg">
           <Typography
             sx={{ mb: 3 }}
-            variant="h4"
+            variant="h1"
+            style={{ fontSize: '2rem', fontWeight: 600 }}
           >
             Кредитный калькулятор
           </Typography>
@@ -266,6 +304,47 @@ const CreditCalculator = () => {
               />
             </Grid>
           </Grid>
+
+          <Box sx={{ mt: 8 }}>
+            <Typography variant="h4" gutterBottom>
+              Полезная информация
+            </Typography>
+            <Accordion>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls="panel1a-content"
+                id="panel1a-header"
+              >
+                <Typography variant="h6">Как работает досрочное погашение?</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography paragraph>
+                  <strong>Досрочное погашение</strong> позволяет значительно уменьшить общую переплату по кредиту. Вы можете вносить дополнительные суммы сверх ежемесячного платежа, которые пойдут напрямую на погашение основного долга.
+                </Typography>
+                <Typography paragraph>
+                  Существует два основных типа досрочного погашения:
+                </Typography>
+                <ul>
+                  <li><Typography><strong>Уменьшение срока</strong> — позволяет быстрее закрыть кредит, сохраняя размер платежа.</Typography></li>
+                  <li><Typography><strong>Уменьшение суммы платежа</strong> — снижает ежемесячную финансовую нагрузку, сохраняя срок кредита.</Typography></li>
+                </ul>
+              </AccordionDetails>
+            </Accordion>
+            <Accordion>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls="panel2a-content"
+                id="panel2a-header"
+              >
+                <Typography variant="h6">Что такое аннуитетный платеж?</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography paragraph>
+                  Аннуитетный платеж — это вариант выплат, при котором вы каждый месяц платите одинаковую сумму. В начале срока большую часть платежа составляют проценты, а к концу — основной долг. Это наиболее распространенный вид платежей в российских банках.
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
+          </Box>
         </Container>
         <EarlyRepaymentModal
           open={isModalOpen}

@@ -2,25 +2,53 @@ import Head from 'next/head';
 import { Box, Container, Typography, Card, CardContent, Chip } from '@mui/material';
 import { DashboardLayout } from '../components/dashboard-layout';
 
-const Changelog = () => (
-  <DashboardLayout>
-    <Head>
-      <title>История изменений | Profit Case</title>
-    </Head>
-    <Box
-      component="main"
-      sx={{
-        flexGrow: 1,
-        py: 8
-      }}
-    >
-      <Container maxWidth="lg">
-        <Typography
-          sx={{ mb: 3 }}
-          variant="h4"
-        >
-          История изменений
-        </Typography>
+const Changelog = () => {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "История изменений Profit Case",
+    "description": "Хронология обновлений сервиса: новые калькуляторы, функции и улучшения.",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "v1.0.1 - Кредитный калькулятор",
+        "description": "Добавлен полноценный кредитный калькулятор с расчетом переплаты и графиками."
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "v1.0.0 - MVP",
+        "description": "Официальный запуск MVP. Калькулятор сложного процента."
+      }
+    ]
+  };
+
+  return (
+    <DashboardLayout>
+      <Head>
+        <title>История изменений и обновлений | Profit Case</title>
+        <meta name="description" content="Полная история изменений сервиса Profit Case. Узнайте о новых функциях, улучшенных калькуляторах и инструментах для инвестора в нашем changelog." />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </Head>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          py: 8
+        }}
+      >
+        <Container maxWidth="lg">
+          <Typography
+            sx={{ mb: 3 }}
+            variant="h4"
+            component="h1"
+          >
+            История изменений
+          </Typography>
 
         <Card sx={{ mb: 3 }}>
           <CardContent>
@@ -53,6 +81,7 @@ const Changelog = () => (
       </Container>
     </Box>
   </DashboardLayout>
-);
+  );
+};
 
 export default Changelog;

@@ -3,30 +3,49 @@ import { Box, Container, Link, Typography, Alert } from '@mui/material';
 import { DashboardLayout } from '../components/dashboard-layout';
 
 
-const About = () => (
-  <DashboardLayout>
-    <Head>
-      <title>
-        Сервис для инвесторов онлайн Profit Case
-      </title>
-      <meta
-        name="description"
-        content="Сервисы для планирования и тестирования инвестиционных стратегий онлайн.
-        Калькуляторы для инвесторов Profit Case с удобной визуализацией."
-      />
-    </Head>
-    <Box
-      component="main"
-      sx={{
-        flexGrow: 1,
-        py: 8
-      }}
-    >
-      <Container maxWidth="lg">
-        <Typography
-          sx={{ mb: 2 }}
-          variant="body1"
-        >
+const About = () => {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "О проекте Profit Case",
+    "description": "Profit Case — это сервис для планирования и тестирования инвестиционных стратегий.",
+    "mainEntity": {
+      "@type": "Organization",
+      "name": "Profit Case",
+      "url": "https://profit-case.ru",
+      "logo": "https://profit-case.ru/static/logo.png",
+      "sameAs": []
+    }
+  };
+
+  return (
+    <DashboardLayout>
+      <Head>
+        <title>О проекте Profit Case — Инструменты для умного инвестора</title>
+        <meta
+          name="description"
+          content="Profit Case — бесплатный сервис для расчета инвестиционных стратегий. Калькуляторы сложного процента, кредитов и инструменты прогнозирования роста капитала."
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </Head>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          py: 8
+        }}
+      >
+        <Container maxWidth="lg">
+          <Typography variant="h4" component="h1" gutterBottom>
+            О сервисе Profit Case
+          </Typography>
+          <Typography
+            sx={{ mb: 2 }}
+            variant="body1"
+          >
           <Link ml={4} href="https://profit-case.ru">Profit Case</Link> - это сервис для планирования и
           тестирования инвестиционных стратегий. Он помогает спрогнозировать рост капитала на основе
           следующих параметров:
@@ -59,6 +78,7 @@ const About = () => (
       </Container>
     </Box>
   </DashboardLayout>
-);
+  );
+};
 
 export default About;
