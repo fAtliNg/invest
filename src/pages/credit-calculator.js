@@ -49,8 +49,18 @@ const CreditCalculator = () => {
         earlyRepayments
       );
 
+      const scheduleWithoutEarlyRepayment = calculateCredit(
+        Number(values.amount),
+        Number(values.term),
+        values.termType,
+        Number(values.rate),
+        values.startDate,
+        []
+      );
+
       const totalPrincipal = Number(values.amount);
       const totalInterest = schedule.reduce((sum, p) => sum + p.interest, 0);
+      const totalInterestWithoutEarlyRepayment = scheduleWithoutEarlyRepayment.reduce((sum, p) => sum + p.interest, 0);
       const totalEarlyRepayment = schedule.filter(p => p.type === 'early_repayment').reduce((sum, p) => sum + p.amount, 0);
       
       setSummary({
@@ -58,7 +68,8 @@ const CreditCalculator = () => {
         totalPayment: totalPrincipal + totalInterest,
         totalPrincipal: totalPrincipal,
         totalInterest: totalInterest,
-        totalEarlyRepayment: totalEarlyRepayment
+        totalEarlyRepayment: totalEarlyRepayment,
+        savings: Math.max(0, totalInterestWithoutEarlyRepayment - totalInterest)
       });
     }
   }, [values, earlyRepayments]);
@@ -239,6 +250,7 @@ const CreditCalculator = () => {
                 principalPayments={graphData.principalPayments}
                 interestPayments={graphData.interestPayments}
                 earlyRepaymentPayments={graphData.earlyRepaymentPayments}
+                savings={summary.savings}
               />
             </Grid>
             <Grid

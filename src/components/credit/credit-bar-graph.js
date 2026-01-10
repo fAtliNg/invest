@@ -1,5 +1,6 @@
 import { Bar } from 'react-chartjs-2';
-import { Box, Card, CardContent, CardHeader, Divider, useTheme } from '@mui/material';
+import { Box, Card, CardContent, CardHeader, Divider, Typography, useTheme, Tooltip } from '@mui/material';
+import { Info as InfoIcon } from '../../icons/info';
 
 export const CreditBarGraph = (props) => {
   const theme = useTheme();
@@ -98,7 +99,25 @@ export const CreditBarGraph = (props) => {
 
   return (
     <Card>
-      <CardHeader title="Динамика выплат" style={{ padding: "20px 32px" }} />
+      <CardHeader 
+        title="Динамика выплат" 
+        style={{ padding: "20px 32px" }}
+        action={
+          props.savings > 0 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+              <Typography variant="body1" color="textSecondary" sx={{ mr: 1 }}>
+                Экономия:
+              </Typography>
+              <Typography variant="h6" style={{ color: '#10B981', marginRight: 8 }}>
+                {props.savings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
+              </Typography>
+              <Tooltip title="Экономия от досрочного погашения">
+                <InfoIcon fontSize="small" color="action" sx={{ cursor: 'help' }} />
+              </Tooltip>
+            </Box>
+          )
+        }
+      />
       <Divider />
       <CardContent>
         <Box

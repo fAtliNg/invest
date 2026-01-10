@@ -95,7 +95,7 @@ export const CreditSummary = ({
         style={{ color: '#10B981', marginLeft: 16, lineHeight: 0.78, wordBreak: "break-word" }}
         variant="h5"
       >
-        {`${(totalPayment || 0).toLocaleString()} ₽`}
+        {`${(totalPayment || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`}
       </Typography>
     </Box>
   }
@@ -149,7 +149,7 @@ export const CreditSummary = ({
                 style={{ color, wordBreak: "break-word" }}
                 variant="h5"
               >
-                {`${value.toLocaleString()} ₽`}
+                {`${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`}
               </Typography>
             </Box>
           ))}
