@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { Box, Divider, Drawer, Typography, useMediaQuery, Chip } from '@mui/material';
 import { ChartBar as ChartBarIcon } from '../icons/chart-bar';
 import { Info as InfoIcon } from '../icons/info';
+import { Clock as ClockIcon } from '../icons/clock';
 import { NavItem } from './nav-item';
 import { ROUTES } from '../constants';
 import EmailIcon from '@mui/icons-material/Email';
@@ -30,6 +31,11 @@ const items = [
   //   icon: (<MovingIcon fontSize="small" />),
   //   title: 'Котировки'
   // },
+  {
+    href: ROUTES.CHANGELOG,
+    icon: (<ClockIcon fontSize="small" />),
+    title: 'История изменений'
+  },
   {
     href: ROUTES.ABOUT,
     icon: (<InfoIcon fontSize="small" />),

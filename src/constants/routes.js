@@ -6,4 +6,5 @@ export const ROUTES = {
   STRATEGY: "/strategy",
   DIVIDEND_CALENDAR: "/dividends",
   CREDIT_CALCULATOR: "/credit-calculator",
+  CHANGELOG: "/changelog",
 }
