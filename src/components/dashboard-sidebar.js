@@ -9,6 +9,7 @@ import { NavItem } from './nav-item';
 import { ROUTES } from '../constants';
 import EmailIcon from '@mui/icons-material/Email';
 import CalculateIcon from '@mui/icons-material/Calculate';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
 
 const items = [
   {
@@ -21,15 +22,15 @@ const items = [
     icon: (<CalculateIcon fontSize="small" />),
     title: 'Кредитный калькулятор'
   },
+  {
+    href: ROUTES.EQUITIES,
+    icon: (<ShowChartIcon fontSize="small" />),
+    title: 'Котировки'
+  },
   // {
   //   href: ROUTES.DIVIDEND_CALENDAR,
   //   // icon: (<ChartBarIcon fontSize="small" />),
   //   title: 'Календарь дивидендов'
-  // },
-  // {
-  //   href: ROUTES.EQUITIES,
-  //   icon: (<MovingIcon fontSize="small" />),
-  //   title: 'Котировки'
   // },
   {
     href: ROUTES.CHANGELOG,

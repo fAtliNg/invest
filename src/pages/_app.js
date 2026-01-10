@@ -19,7 +19,10 @@ const App = (props) => {
   const { Component, emotionCache = clientSideEmotionCache, pageProps } = props;
 
   useEffect(() => {
-    TagManager.initialize(tagManagerArgs);
+    // Only initialize GTM in production to avoid tracking/errors in development
+    if (process.env.NODE_ENV === 'production') {
+      TagManager.initialize(tagManagerArgs);
+    }
   }, []);
 
   const getLayout = Component.getLayout ?? ((page) => page);
