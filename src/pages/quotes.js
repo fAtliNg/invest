@@ -29,8 +29,7 @@ const Quotes = () => {
 
   useEffect(() => {
     // Connect to WebSocket
-    // Note: Adjust URL for production
-    const wsUrl = 'ws://localhost:5001'; 
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:5001'; 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 

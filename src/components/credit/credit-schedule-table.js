@@ -232,8 +232,14 @@ export const CreditScheduleTable = ({ payments = [], summary, onDeleteEarlyRepay
               </TableHead>
               <TableBody>
                 {shouldVirtualize && topSpacerHeight > 0 && (
-                  <TableRow key="spacer-top" sx={{ height: topSpacerHeight }}>
-                    <TableCell colSpan={7} sx={{ p: 0, border: 0 }} />
+                  <TableRow 
+                    key="spacer-top" 
+                    sx={{ height: topSpacerHeight, overflowAnchor: 'none' }}
+                  >
+                    <TableCell 
+                      colSpan={7} 
+                      sx={{ p: 0, border: 0, overflowAnchor: 'none' }} 
+                    />
                   </TableRow>
                 )}
                 {visiblePayments.map((payment, index) => (
@@ -246,7 +252,10 @@ export const CreditScheduleTable = ({ payments = [], summary, onDeleteEarlyRepay
                 >
                   <TableCell>
                     {payment.type === 'regular' ? payment.number : (
-                        <Typography variant="body2" color="textSecondary">
+                        <Typography 
+                          variant="body2" 
+                          color="textSecondary"
+                        >
                             —
                         </Typography>
                     )}
@@ -280,8 +289,14 @@ export const CreditScheduleTable = ({ payments = [], summary, onDeleteEarlyRepay
                 </TableRow>
                 ))}
                 {shouldVirtualize && bottomSpacerHeight > 0 && (
-                  <TableRow key="spacer-bottom" sx={{ height: bottomSpacerHeight }}>
-                    <TableCell colSpan={7} sx={{ p: 0, border: 0 }} />
+                  <TableRow 
+                    key="spacer-bottom" 
+                    sx={{ height: bottomSpacerHeight, overflowAnchor: 'none' }}
+                  >
+                    <TableCell 
+                      colSpan={7} 
+                      sx={{ p: 0, border: 0, overflowAnchor: 'none' }} 
+                    />
                   </TableRow>
                 )}
               </TableBody>
