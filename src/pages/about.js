@@ -63,7 +63,7 @@ const About = () => {
             sx={{ mb: 2 }}
             variant="body1"
           >
-            <Link ml={4} href="https://profit-case.ru">Profit Case</Link> предоставляет
+            <Link ml={4} href="/">Profit Case</Link> предоставляет
             реализацию калькулятора сложного процента с удобной визуализацией результатов расчета и
             динамики роста капитала.
           </Typography>

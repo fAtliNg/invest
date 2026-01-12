@@ -1,0 +1,149 @@
+#!/bin/bash
+
+# deploy_frontend.sh - Деплой фронтенда с удаленной сборкой
+# Использование: ./deploy/deploy_frontend.sh [user@host] [password]
+
+TARGET=""
+PASSWORD=""
+PROJECT_DIR="invest"
+IMAGE_NAME="invest-frontend:latest"
+TAR_NAME="frontend_src.tar.gz"
+LOCAL_DIR=$(pwd)
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -p|--password)
+      PASSWORD="$2"
+      shift 2
+      ;;
+    *)
+      if [ -z "$TARGET" ]; then
+        TARGET="$1"
+      fi
+      shift
+      ;;
+  esac
+done
+
+if [ -z "$TARGET" ]; then
+  echo "Usage: $0 <user@host> [-p password]"
+  exit 1
+fi
+
+HOST=$(echo $TARGET | cut -d@ -f2)
+
+# Проверка, что мы в корне проекта
+if [ ! -f "$LOCAL_DIR/package.json" ]; then
+    echo "❌ Ошибка: Запускайте скрипт из корня проекта!"
+    echo "Пример: ./deploy/deploy_frontend.sh root@1.2.3.4"
+    exit 1
+fi
+
+# Настройка SSH подключения (Интерактивный режим / Multiplexing)
+echo "🔑 Установка соединения с $TARGET..."
+
+SOCKET="/tmp/ssh_deploy_$$"
+
+# Функция для запуска ssh с паролем или без
+start_ssh_master() {
+    if [ -n "$PASSWORD" ]; then
+        if ! command -v sshpass &> /dev/null; then
+            echo "❌ sshpass не установлен. Установите его или используйте SSH ключи."
+            exit 1
+        fi
+        export SSHPASS="$PASSWORD"
+        sshpass -e ssh -o ControlPersist=600 -M -S "$SOCKET" -fN -o StrictHostKeyChecking=no "$TARGET"
+    else
+        echo "👉 Если используется пароль, введите его ОДИН раз."
+        ssh -o ControlPersist=600 -M -S "$SOCKET" -fN -o StrictHostKeyChecking=no "$TARGET"
+    fi
+}
+
+# Создаем мастер-соединение в фоне
+start_ssh_master
+if [ $? -ne 0 ]; then
+    echo "❌ Не удалось установить соединение."
+    exit 1
+fi
+
+# Автоудаление сокета при выходе
+trap "ssh -S \"$SOCKET\" -O exit \"$TARGET\" 2>/dev/null" EXIT
+
+SSH_CMD="ssh -S $SOCKET"
+SCP_CMD="scp -o ControlPath=$SOCKET"
+
+echo "🚀 Начинаем деплой фронтенда на $TARGET..."
+
+# 1. Упаковка исходного кода (без node_modules)
+echo "📦 Упаковка исходного кода..."
+# Use COPYFILE_DISABLE=1 to avoid macOS metadata (._ files)
+COPYFILE_DISABLE=1 tar --exclude='node_modules' --exclude='.git' --exclude='.next' --exclude='dist' --exclude='.DS_Store' --exclude='*.log' --exclude='._*' --exclude='__MACOSX' -czf "$TAR_NAME" .
+
+# 2. Отправка архива на сервер
+echo "📤 Отправка исходного кода на сервер..."
+$SSH_CMD "$TARGET" "mkdir -p ~/$PROJECT_DIR/deploy"
+$SCP_CMD "$TAR_NAME" "$TARGET:~/$PROJECT_DIR/deploy/"
+
+# 3. Сборка и запуск на сервере
+echo "🏗 Сборка и запуск на сервере..."
+# Экранируем $ в переменных, которые должны раскрываться на удаленном сервере, а не локально
+REMOTE_COMMANDS="
+set -e
+cd ~/$PROJECT_DIR/deploy
+
+echo '📥 Распаковка исходного кода...'
+rm -rf temp_build
+mkdir -p temp_build
+tar -xzf $TAR_NAME -C temp_build
+rm $TAR_NAME
+
+echo '🏗 Сборка Docker образа ($IMAGE_NAME)...'
+cd temp_build
+# Проверка наличия nginx.conf
+if [ ! -f \"deploy/nginx.conf\" ]; then
+    echo \"❌ Ошибка: deploy/nginx.conf не найден в архиве!\"
+    ls -R
+    exit 1
+fi
+
+# Копируем nginx.conf в корень сборки, чтобы он был доступен, даже если папка deploy в .dockerignore
+cp deploy/nginx.conf ./nginx.conf.temp
+
+# Копируем docker-compose.yml в папку deploy, чтобы запустить сервис
+if [ -f deploy/docker-compose.yml ]; then
+    cp deploy/docker-compose.yml ../docker-compose.yml
+else
+    echo \"⚠️ docker-compose.yml не найден в deploy/!\"
+fi
+
+# Создаем временный Dockerfile с исправленным путем
+sed 's|deploy/nginx.conf|nginx.conf.temp|g' deploy/nginx.Dockerfile > Dockerfile.temp
+
+docker build \
+    -f Dockerfile.temp \
+    -t $IMAGE_NAME \
+    --build-arg NEXT_PUBLIC_WS_URL=\"ws://$HOST/api/ws\" \
+    .
+
+echo '🚀 Перезапуск сервиса nginx...'
+cd .. # Возвращаемся в папку deploy (где лежит docker-compose.yml)
+docker compose up -d --no-deps --no-build --force-recreate nginx
+
+echo '🔍 Проверка статуса...'
+sleep 5
+if ! docker ps | grep -q \"deploy-nginx-1\"; then
+    echo \"⚠️ ОШИБКА: Контейнер nginx не запустился!\"
+    echo \"📋 Логи контейнера:\"
+    docker logs deploy-nginx-1
+    exit 1
+fi
+
+echo '🧹 Очистка...'
+rm -rf temp_build
+"
+
+$SSH_CMD "$TARGET" "$REMOTE_COMMANDS"
+
+# Очистка локального архива
+rm "$TAR_NAME"
+echo "✅ Деплой успешно завершен!"
