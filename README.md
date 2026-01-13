@@ -76,7 +76,7 @@
 | `DB_USER` | Пользователь PostgreSQL | `postgres` |
 | `DB_PASSWORD` | Пароль PostgreSQL | `postgres` |
 | `DB_NAME` | Имя базы данных | `invest` |
-| `NEXT_PUBLIC_WS_URL` | WebSocket URL для фронтенда | `ws://korgeflus.fvds.ru/api/ws` |
+| `NEXT_PUBLIC_WS_URL` | WebSocket URL для фронтенда | `ws://localhost/api/ws` |
 
 ### Изменение конфигурации
 Для изменения переменных можно создать файл `.env` на сервере в папке `~/invest/deploy/` или отредактировать `deploy/docker-compose.yml` перед деплоем.

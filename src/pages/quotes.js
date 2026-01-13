@@ -29,7 +29,20 @@ const Quotes = () => {
 
   useEffect(() => {
     // Connect to WebSocket
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:5001'; 
+    let wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    
+    // Если переменная окружения не задана, определяем URL динамически
+    if (!wsUrl) {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      // В продакшене (через nginx) вебсокеты доступны по /api/ws
+      // При локальной разработке обычно localhost:5001
+      if (window.location.hostname === 'localhost') {
+        wsUrl = 'ws://localhost:5001';
+      } else {
+        wsUrl = `${protocol}//${window.location.host}/api/ws`;
+      }
+    }
+    
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 

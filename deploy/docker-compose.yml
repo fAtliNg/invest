@@ -44,11 +44,13 @@ services:
       context: ..
       dockerfile: deploy/nginx.Dockerfile
       args:
-        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://korgeflus.fvds.ru/api/ws}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost/api/ws}
     restart: always
     ports:
       - "80:80"
       - "443:443"
+    volumes:
+      - ./cert:/etc/nginx/ssl:ro
     depends_on:
       - backend
     networks:
