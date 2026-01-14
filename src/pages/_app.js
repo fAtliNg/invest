@@ -6,24 +6,31 @@ import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { createEmotionCache } from '../utils/create-emotion-cache';
 import { theme } from '../theme';
-import TagManager from 'react-gtm-module'
+import TagManager from 'react-gtm-module';
 import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 const tagManagerArgs = {
   gtmId: 'GTM-KSWNJ4R',
-}
+};
 
 const clientSideEmotionCache = createEmotionCache();
 
 const App = (props) => {
   const { Component, emotionCache = clientSideEmotionCache, pageProps } = props;
+  const router = useRouter();
 
   useEffect(() => {
-    // Only initialize GTM in production to avoid tracking/errors in development
     if (process.env.NODE_ENV === 'production') {
       TagManager.initialize(tagManagerArgs);
     }
   }, []);
+
+  useEffect(() => {
+    if (router.pathname === '/' && router.asPath !== '/') {
+      router.replace(router.asPath);
+    }
+  }, [router]);
 
   const getLayout = Component.getLayout ?? ((page) => page);
 

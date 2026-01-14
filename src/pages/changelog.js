@@ -1,27 +1,57 @@
 import Head from 'next/head';
-import { Box, Container, Typography, Card, CardContent, Chip } from '@mui/material';
+import { Box, Container, Typography, Card, CardContent, Chip, CircularProgress } from '@mui/material';
 import { DashboardLayout } from '../components/dashboard-layout';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 const Changelog = () => {
+  const [changelog, setChangelog] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchChangelog = async () => {
+      try {
+        let apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        let endpoint = '/api/changelog';
+        
+        // If not set, determine dynamically
+        if (!apiUrl) {
+          if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+             // Local dev: backend is on port 5001, no /api prefix needed for backend route
+             apiUrl = 'http://localhost:5001';
+             endpoint = '/changelog';
+          } else {
+             // Production: Nginx proxies /api/changelog to backend /changelog
+             apiUrl = ''; 
+             endpoint = '/api/changelog';
+          }
+        }
+
+        const response = await axios.get(`${apiUrl}${endpoint}`);
+        setChangelog(response.data);
+      } catch (error) {
+        console.error('Failed to fetch changelog:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchChangelog();
+  }, []);
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
     "name": "История изменений Profit Case",
     "description": "Хронология обновлений сервиса: новые калькуляторы, функции и улучшения.",
-    "itemListElement": [
-      {
-        "@type": "ListItem",
-        "position": 1,
-        "name": "v1.0.1 - Кредитный калькулятор",
-        "description": "Добавлен полноценный кредитный калькулятор с расчетом переплаты и графиками."
-      },
-      {
-        "@type": "ListItem",
-        "position": 2,
-        "name": "v1.0.0 - MVP",
-        "description": "Официальный запуск MVP. Калькулятор сложного процента."
-      }
-    ]
+    "itemListElement": changelog.map((item, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "name": item.version,
+      "description": item.description
+    }))
   };
 
   return (
@@ -50,37 +80,31 @@ const Changelog = () => {
             История изменений
           </Typography>
 
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Chip label="v1.0.1" color="primary" sx={{ mr: 2 }} />
-              <Typography variant="subtitle1" color="textSecondary">
-                10 января 2026
-              </Typography>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <CircularProgress />
             </Box>
-            <Typography variant="body1">
-              Добавлен полноценный кредитный калькулятор. Теперь вы можете рассчитать график платежей, оценить переплату и увидеть выгоду от досрочных погашений с помощью наглядных интерактивных графиков.
-            </Typography>
-          </CardContent>
-        </Card>
+          ) : (
+            changelog.map((item) => (
+              <Card sx={{ mb: 3 }} key={item.version}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Chip label={item.version} color={item.version === changelog[0]?.version ? "primary" : "default"} variant={item.version === changelog[0]?.version ? "filled" : "outlined"} sx={{ mr: 2 }} />
+                    <Typography variant="subtitle1" color="textSecondary">
+                      {format(new Date(item.date), 'd MMMM yyyy', { locale: ru })}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body1">
+                    {item.description}
+                  </Typography>
+                </CardContent>
+              </Card>
+            ))
+          )}
 
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Chip label="v1.0.0" variant="outlined" sx={{ mr: 2 }} />
-              <Typography variant="subtitle1" color="textSecondary">
-                4 февраля 2022
-              </Typography>
-            </Box>
-            <Typography variant="body1">
-              Официальный запуск MVP. Представлен базовый функционал для инвесторов: калькулятор сложного процента, позволяющий визуализировать рост капитала с учетом реинвестирования прибыли.
-            </Typography>
-          </CardContent>
-        </Card>
-
-      </Container>
-    </Box>
-  </DashboardLayout>
+        </Container>
+      </Box>
+    </DashboardLayout>
   );
 };
 

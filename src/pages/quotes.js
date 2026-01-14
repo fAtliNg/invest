@@ -1,13 +1,16 @@
 import Head from 'next/head';
 import { Box, Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TableSortLabel, TextField, InputAdornment, SvgIcon, Tabs, Tab, TablePagination } from '@mui/material';
 import { Search as SearchIcon } from '../icons/search';
+import { useRouter } from 'next/router';
 import { DashboardLayout } from '../components/dashboard-layout';
+import { formatNumber, formatPrice, formatPercent } from '../utils/format';
 import { useEffect, useState, useRef, useMemo } from 'react';
 
 const VIRTUAL_ROW_HEIGHT = 53;
 const VIRTUAL_OVERSCAN = 8;
 
 const Quotes = () => {
+  const router = useRouter();
   const [quotes, setQuotes] = useState([]);
   const [connected, setConnected] = useState(true);
   const [order, setOrder] = useState('asc');
@@ -80,31 +83,6 @@ const Quotes = () => {
       }
     };
   }, []);
-
-  const formatPrice = (value) => {
-    if (value === null || value === undefined) return '-';
-    
-    // For very small numbers (absolute value < 0.1), show more precision
-    if (value !== 0 && Math.abs(value) < 0.1) {
-      return value.toLocaleString('ru-RU', { 
-        style: 'currency', 
-        currency: 'RUB',
-        minimumFractionDigits: 6,
-        maximumFractionDigits: 6
-      });
-    }
-
-    return value.toLocaleString('ru-RU', { style: 'currency', currency: 'RUB' });
-  };
-
-  const formatPercent = (value) => {
-    if (value === null || value === undefined) return '-';
-    return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
-  };
-
-  const formatNumber = (value) => {
-    return value ? value.toLocaleString('ru-RU') : '-';
-  };
 
   const handleRequestSort = (property) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -416,7 +394,11 @@ const Quotes = () => {
                   <TableRow
                     key={row.secid}
                     hover
-                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                    sx={{ 
+                      '&:last-child td, &:last-child th': { border: 0 },
+                      cursor: 'pointer' 
+                    }}
+                    onClick={() => router.push(`/quotes/${row.secid}`)}
                   >
                     <TableCell component="th" scope="row">
                       <Box>

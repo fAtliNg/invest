@@ -33,6 +33,16 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
+app.get(['/changelog', '/api/changelog'], async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM changelog ORDER BY date DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch changelog' });
+  }
+});
+
 // Broadcast function
 const broadcast = (data: any) => {
   wss.clients.forEach((client) => {
@@ -43,7 +53,7 @@ const broadcast = (data: any) => {
 };
 
 // Polling loop
-const POLLING_INTERVAL = 5000; // 5 seconds
+const POLLING_INTERVAL = 2000; // 1 second
 let isPolling = false;
 
 const pollMoex = async () => {
