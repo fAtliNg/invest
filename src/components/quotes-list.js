@@ -2,6 +2,7 @@ import { Box, Container, Typography, Paper, Table, TableBody, TableCell, TableCo
 import { Search as SearchIcon } from '../icons/search';
 import { useRouter } from 'next/router';
 import { formatPrice, formatPercent, formatNumber } from '../utils/format';
+import { getIcon } from '../utils/futures-icons';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import axios from 'axios';
 
@@ -563,17 +564,35 @@ export const QuotesList = () => {
                     <>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Avatar
-                            sx={{
-                              bgcolor: getAvatarColor(row.secid),
-                              mr: 2,
-                              width: 40,
-                              height: 40,
-                              fontSize: '0.875rem'
-                            }}
-                          >
-                            {row.secid.substring(0, 2)}
-                          </Avatar>
+                          {(() => {
+                            const iconUrl = getIcon(row.secid, row.shortname);
+                            return iconUrl ? (
+                              <Avatar
+                                src={iconUrl}
+                                sx={{
+                                  mr: 2,
+                                  width: 40,
+                                  height: 40,
+                                  bgcolor: 'transparent',
+                                  '& img': {
+                                    objectFit: 'contain'
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <Avatar
+                                sx={{
+                                  bgcolor: getAvatarColor(row.secid),
+                                  mr: 2,
+                                  width: 40,
+                                  height: 40,
+                                  fontSize: '0.875rem'
+                                }}
+                              >
+                                {row.secid.substring(0, 2)}
+                              </Avatar>
+                            );
+                          })()}
                           <Box>
                             <Typography variant="subtitle2" sx={{ lineHeight: 1.2 }}>
                               {row.secid}
@@ -617,7 +636,36 @@ export const QuotesList = () => {
                         component="th"
                         scope="row"
                       >
-                        <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          {(() => {
+                            const iconUrl = getIcon(row.secid, row.shortname);
+                            return iconUrl ? (
+                              <Avatar
+                                src={iconUrl}
+                                sx={{
+                                  mr: 2,
+                                  width: 40,
+                                  height: 40,
+                                  bgcolor: 'transparent',
+                                  '& img': {
+                                    objectFit: 'contain'
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <Avatar
+                                sx={{
+                                  bgcolor: getAvatarColor(row.secid),
+                                  mr: 2,
+                                  width: 40,
+                                  height: 40,
+                                  fontSize: '0.875rem'
+                                }}
+                              >
+                                {row.secid.substring(0, 2)}
+                              </Avatar>
+                            );
+                          })()}
                           <Typography
                             variant="body2"
                             fontWeight="bold"
