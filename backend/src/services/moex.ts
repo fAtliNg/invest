@@ -16,6 +16,8 @@ interface MoexData {
   matdate?: string | null;
   coupon_percent?: number | null;
   expiration?: string | null;
+  min_step?: number | null;
+  step_price?: number | null;
 }
 
 interface MoexSource {
@@ -29,7 +31,7 @@ const SOURCES: MoexSource[] = [
   { type: 'bond', url: 'https://iss.moex.com/iss/engines/stock/markets/bonds/boards/TQOB/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,MATDATE,COUPONPERCENT&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY,YIELD' },
   { type: 'fund', url: 'https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQTF/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' },
   { type: 'currency', url: 'https://iss.moex.com/iss/engines/currency/markets/selt/boards/CETS/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' },
-  { type: 'future', url: 'https://iss.moex.com/iss/engines/futures/markets/forts/boards/RFUD/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,LSTDELDATE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' }
+  { type: 'future', url: 'https://iss.moex.com/iss/engines/futures/markets/forts/boards/RFUD/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,LSTDELDATE,MINSTEP,STEPPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' }
 ];
 
 const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
@@ -54,6 +56,8 @@ const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
     const matDateIdx = getIndex(secColumns, 'MATDATE');
     const couponPercentIdx = getIndex(secColumns, 'COUPONPERCENT');
     const lstDelDateIdx = getIndex(secColumns, 'LSTDELDATE');
+    const minStepIdx = getIndex(secColumns, 'MINSTEP');
+    const stepPriceIdx = getIndex(secColumns, 'STEPPRICE');
 
     const mdSecIdIdx = getIndex(mdColumns, 'SECID');
     const lastIdx = getIndex(mdColumns, 'LAST');
@@ -92,13 +96,30 @@ const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
       // Filter out items without market data or with very basic missing info if needed
       // But for now we keep them if md exists
       if (md) {
+        const finalPrice = md.price || prevPrice || 0;
+
+        // Filter out currencies with zero or negative price
+        if (source.type === 'currency' && finalPrice <= 0) {
+          return;
+        }
+
+        // Filter out futures with missing cost data
+        if (source.type === 'future') {
+          const minStep = minStepIdx !== -1 ? (row[minStepIdx] || 0) : 0;
+          const stepPrice = stepPriceIdx !== -1 ? (row[stepPriceIdx] || 0) : 0;
+          
+          if (finalPrice <= 0 || minStep <= 0 || stepPrice <= 0) {
+            return;
+          }
+        }
+
         quotes.push({
           secid,
           shortname: cleanShortname(row[nameIdx] || secid), // Fallback to secid if name is missing
-          price: md.price || prevPrice || 0,
+          price: finalPrice,
           high: md.high || 0,
           low: md.low || 0,
-          change: md.change || 0,
+          change: md.change !== undefined ? md.change : (finalPrice && prevPrice ? finalPrice - prevPrice : 0),
           change_pct: md.change_pct || 0,
           volume: md.volume || 0,
           lot_size: lotSizeIdx !== -1 ? (row[lotSizeIdx] || 0) : 0,
@@ -106,7 +127,9 @@ const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
           yield: md.yield ?? null,
           matdate: matDateIdx !== -1 ? (row[matDateIdx] || null) : null,
           coupon_percent: couponPercentIdx !== -1 ? (row[couponPercentIdx] || null) : null,
-          expiration: lstDelDateIdx !== -1 ? (row[lstDelDateIdx] || null) : null
+          expiration: lstDelDateIdx !== -1 ? (row[lstDelDateIdx] || null) : null,
+          min_step: minStepIdx !== -1 ? (row[minStepIdx] || null) : null,
+          step_price: stepPriceIdx !== -1 ? (row[stepPriceIdx] || null) : null
         });
       }
     });
@@ -194,7 +217,7 @@ export const getQuotesFromDb = async (): Promise<MoexData[]> => {
         volume: parseInt(row.volume || '0', 10),
         lot_size: parseInt(row.lot_size || '0', 10),
         type: row.type || 'share'
-    }));
+    })).filter(quote => !(quote.type === 'currency' && quote.price <= 0));
   } catch (error) {
     console.error('Error getting quotes from DB:', error);
     return [];

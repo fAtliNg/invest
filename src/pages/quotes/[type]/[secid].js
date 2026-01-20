@@ -26,7 +26,7 @@ import {
   TableCell,
   TableBody
 } from '@mui/material';
-import { DashboardLayout } from '../../components/dashboard-layout';
+import { DashboardLayout } from '../../../components/dashboard-layout';
 import { Line } from 'react-chartjs-2';
 import axios from 'axios';
 import {
@@ -42,7 +42,7 @@ import {
 } from 'chart.js';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { formatNumber, formatPrice, formatPercent, formatLargeNumber } from '../../utils/format';
+import { formatNumber, formatPrice, formatPercent, formatLargeNumber } from '../../../utils/format';
 
 // Register ChartJS components
 ChartJS.register(
@@ -67,9 +67,10 @@ const PERIODS = [
 
 const QuoteDetails = () => {
   const router = useRouter();
+  const { secid, type } = router.query;
+
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
-  const { secid } = router.query;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [securityInfo, setSecurityInfo] = useState(null);
@@ -223,6 +224,8 @@ const QuoteDetails = () => {
           municipal_bond: 'Муниципальная облигация',
           etf: 'Биржевой фонд (ETF)',
           ppif: 'ПИФ',
+          exchange_ppif: 'БПИФ',
+          stock_ppif: 'Биржевой ПИФ',
           futures: 'Фьючерсный контракт',
           option: 'Опционный контракт',
           currency: 'Валюта'
@@ -230,6 +233,7 @@ const QuoteDetails = () => {
 
         const secInfo = {
             secid,
+            typeCode: rawType,
             fullName: descMap['NAME'] || null,
             shortname: descMap['SHORTNAME'] || descMap['NAME'] || secid,
             description: typeMap[rawType] || rawType,
@@ -721,6 +725,20 @@ const QuoteDetails = () => {
     );
   }
 
+  const getBackLink = () => {
+    if (type) return `/quotes/${type}`;
+    if (!securityInfo) return '/quotes/share';
+    const typeCode = securityInfo.typeCode;
+    
+    if (['common_share', 'preferred_share', 'depositary_receipt'].includes(typeCode)) return '/quotes/share';
+    if (['exchange_bond', 'corporate_bond', 'government_bond', 'subfederal_bond', 'municipal_bond', 'ofz_bond'].includes(typeCode)) return '/quotes/bond';
+    if (['etf', 'ppif', 'exchange_ppif', 'stock_ppif'].includes(typeCode)) return '/quotes/fund';
+    if (['futures', 'option'].includes(typeCode)) return '/quotes/future';
+    if (typeCode === 'currency' || securityInfo.groupCode === 'currency_selt') return '/quotes/currency';
+    
+    return '/quotes/share';
+  };
+
   const marketCap = (marketData?.LAST && securityInfo?.issuesize) 
     ? marketData.LAST * securityInfo.issuesize 
     : null;
@@ -733,7 +751,21 @@ const QuoteDetails = () => {
   const dividendYieldLast = dividends.last && marketData?.LAST
     ? (dividends.last / marketData.LAST) * 100
     : null;
-  const isBond = (securityInfo?.description || '').toLowerCase().includes('облигация');
+  
+  const typeCode = securityInfo?.typeCode || '';
+  
+  const isBond = ['exchange_bond', 'corporate_bond', 'government_bond', 'subfederal_bond', 'municipal_bond'].includes(typeCode) || 
+                 typeCode.includes('bond') || 
+                 (securityInfo?.description || '').toLowerCase().includes('облигация');
+
+  const isFund = ['etf', 'ppif', 'exchange_ppif', 'stock_ppif'].includes(typeCode) || 
+                 typeCode.includes('ppif') || 
+                 typeCode.includes('etf') || 
+                 ['фонд', 'пиф', 'etf', 'bpid', 'бпиф'].some(t => (securityInfo?.description || '').toLowerCase().includes(t));
+  
+  const isCurrency = typeCode === 'currency';
+  const isFutures = ['futures', 'option'].includes(typeCode) || typeCode.includes('futures');
+                 
   const bondYield = isBond
     ? (marketData?.YIELD != null ? marketData.YIELD : marketData?.YIELDATPREVWAPRICE)
     : null;
@@ -767,7 +799,10 @@ const QuoteDetails = () => {
     { value: 'trading', label: 'Торговые данные' }
   ];
   const extraTabs = [
-    { value: 'dividends', label: 'Дивиденды' }
+    { 
+      value: isBond ? 'coupons' : (isCurrency ? 'stats' : 'dividends'), 
+      label: isBond ? 'Купоны' : (isCurrency ? 'Статистика' : 'Дивиденды') 
+    }
   ];
   const keyIndicatorTabs = isSmallScreen ? [...tabs, ...extraTabs] : tabs;
   const formatDividendYield = (item) => {
@@ -784,6 +819,44 @@ const QuoteDetails = () => {
     if (Number.isNaN(num)) return '—';
     return `${formatPrice(num)}`;
   };
+  const couponsContent = (
+    <Box>
+      <Table
+        size="small"
+        sx={{
+          '& .MuiTableCell-root': { borderBottom: '1px solid rgba(255,255,255,0.06)', py: 1 },
+          '& thead .MuiTableCell-root': { fontSize: 12, color: 'text.secondary' },
+          '& tbody .MuiTableRow-root:nth-of-type(odd)': { backgroundColor: 'action.hover' }
+        }}
+      >
+        <TableHead>
+          <TableRow>
+            <TableCell>Дата</TableCell>
+            <TableCell align="right">Доходность</TableCell>
+            <TableCell align="right">Сумма</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {coupons.list.map((item, index) => (
+            <TableRow key={index}>
+              <TableCell>{formatDate(item.coupondate)}</TableCell>
+              <TableCell align="right">{item.valueprc != null ? `${item.valueprc}%` : '-'}</TableCell>
+              <TableCell align="right">{item.value != null ? formatPrice(item.value) : '-'}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {coupons.list.length === 0 && (
+        <Typography
+          variant="body2"
+          color="textSecondary"
+          sx={{ mt: 2 }}
+        >
+          Данные по купонам отсутствуют.
+        </Typography>
+      )}
+    </Box>
+  );
   const dividendsContent = (
     <Box>
       <Table
@@ -820,6 +893,133 @@ const QuoteDetails = () => {
       )}
     </Box>
   );
+
+  const fundContent = (
+    <Box>
+      <Table
+        size="small"
+        sx={{
+          '& .MuiTableCell-root': { borderBottom: '1px solid rgba(255,255,255,0.06)', py: 1 },
+          '& tbody .MuiTableRow-root:nth-of-type(odd)': { backgroundColor: 'action.hover' }
+        }}
+      >
+        <TableBody>
+           <TableRow>
+             <TableCell sx={{ color: 'text.secondary', border: 0 }}>Тип</TableCell>
+             <TableCell align="right" sx={{ border: 0 }}>{securityInfo?.description}</TableCell>
+          </TableRow>
+           <TableRow>
+             <TableCell sx={{ color: 'text.secondary', border: 0 }}>ISIN</TableCell>
+             <TableCell align="right" sx={{ border: 0 }}>{securityInfo?.isin}</TableCell>
+          </TableRow>
+           <TableRow>
+             <TableCell sx={{ color: 'text.secondary', border: 0 }}>Валюта</TableCell>
+             <TableCell align="right" sx={{ border: 0 }}>{marketData?.CURRENCYID || 'RUB'}</TableCell>
+          </TableRow>
+          {marketData?.ETFSETTLEPRICE && (
+            <TableRow>
+              <TableCell sx={{ color: 'text.secondary', border: 0 }}>СЧА</TableCell>
+              <TableCell align="right" sx={{ border: 0 }}>{formatPrice(marketData.ETFSETTLEPRICE)}</TableCell>
+            </TableRow>
+          )}
+           <TableRow>
+             <TableCell sx={{ color: 'text.secondary', border: 0 }}>Дата начала</TableCell>
+             <TableCell align="right" sx={{ border: 0 }}>{formatDate(securityInfo?.issueDate)}</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </Box>
+  );
+
+  const statsContent = (
+    <Box>
+      <Table
+        size="small"
+        sx={{
+          '& .MuiTableCell-root': { borderBottom: '1px solid rgba(255,255,255,0.06)', py: 1 },
+          '& tbody .MuiTableRow-root:nth-of-type(odd)': { backgroundColor: 'action.hover' }
+        }}
+      >
+        <TableBody>
+          <TableRow>
+            <TableCell sx={{ color: 'text.secondary', border: 0 }}>Открытие</TableCell>
+            <TableCell align="right" sx={{ border: 0 }}>{formatPrice(marketData?.OPEN ?? lastDayStats?.open)}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell sx={{ color: 'text.secondary', border: 0 }}>Минимум</TableCell>
+            <TableCell align="right" sx={{ border: 0 }}>{formatPrice(marketData?.LOW ?? lastDayStats?.low)}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell sx={{ color: 'text.secondary', border: 0 }}>Максимум</TableCell>
+            <TableCell align="right" sx={{ border: 0 }}>{formatPrice(marketData?.HIGH ?? lastDayStats?.high)}</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </Box>
+  );
+
+  const futuresInfoContent = (
+    <Box sx={{ p: 2 }}>
+      <Grid container spacing={2}>
+        <Grid item xs={6}>
+          <Typography variant="body2" color="textSecondary">Базовый актив</Typography>
+        </Grid>
+        <Grid item xs={6} sx={{ textAlign: 'right' }}>
+          <Typography variant="body2">{marketData?.ASSETCODE || '-'}</Typography>
+        </Grid>
+        
+        <Grid item xs={6}>
+          <Typography variant="body2" color="textSecondary">Наименование</Typography>
+        </Grid>
+        <Grid item xs={6} sx={{ textAlign: 'right' }}>
+          <Typography variant="body2">{securityInfo?.shortname || '-'}</Typography>
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography variant="body2" color="textSecondary">Тикер</Typography>
+        </Grid>
+        <Grid item xs={6} sx={{ textAlign: 'right' }}>
+          <Typography variant="body2">{secid}</Typography>
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography variant="body2" color="textSecondary">Тип контракта</Typography>
+        </Grid>
+        <Grid item xs={6} sx={{ textAlign: 'right' }}>
+          <Typography variant="body2">{securityInfo?.description || 'Фьючерс'}</Typography>
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography variant="body2" color="textSecondary">Последний день обращения</Typography>
+        </Grid>
+        <Grid item xs={6} sx={{ textAlign: 'right' }}>
+          <Typography variant="body2">{formatDate(marketData?.LASTTRADEDATE)}</Typography>
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography variant="body2" color="textSecondary">Лотность</Typography>
+        </Grid>
+        <Grid item xs={6} sx={{ textAlign: 'right' }}>
+          <Typography variant="body2">{marketData?.LOTVOLUME || '-'}</Typography>
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography variant="body2" color="textSecondary">Гарантийное обеспечение</Typography>
+        </Grid>
+        <Grid item xs={6} sx={{ textAlign: 'right' }}>
+          <Typography variant="body2">{marketData?.INITIALMARGIN ? formatPrice(marketData.INITIALMARGIN) : '-'}</Typography>
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography variant="body2" color="textSecondary">Шаг цены</Typography>
+        </Grid>
+        <Grid item xs={6} sx={{ textAlign: 'right' }}>
+          <Typography variant="body2">{marketData?.MINSTEP ? formatNumber(marketData.MINSTEP) : '-'}</Typography>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
   const handleDetailTabChange = (event, newValue) => {
     if (newValue) {
       setDetailTab(newValue);
@@ -842,7 +1042,7 @@ const QuoteDetails = () => {
           >
             <Button
               startIcon={<ArrowBackIcon />}
-              onClick={() => router.push('/quotes')}
+              onClick={() => router.push(getBackLink())}
             >
               К списку
             </Button>
@@ -907,13 +1107,13 @@ const QuoteDetails = () => {
                           color={color}
                           sx={{ display: 'flex', alignItems: 'center' }}
                         >
-                          {marketData?.CHANGE > 0 ? '+' : ''}{marketData?.CHANGE} ₽
+                          {marketData?.CHANGE > 0 ? '+' : ''}{formatPrice(marketData?.CHANGE)}
                         </Typography>
                         <Typography
                           variant="h6"
                           color={color}
                         >
-                          ({marketData?.LASTTOPREVPRICE > 0 ? '+' : ''}{marketData?.LASTTOPREVPRICE}%)
+                          ({formatPercent(marketData?.LASTTOPREVPRICE)})
                         </Typography>
                       </Box>
                     </Grid>
@@ -994,23 +1194,24 @@ const QuoteDetails = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                {!isSmallScreen && (
+                {(!isSmallScreen || isFutures) && (
                   <Grid
                     item
                     xs={12}
                     md={4}
                   >
                     <Card sx={{ height: '100%' }}>
-                      <CardHeader title="Дивиденды" />
+                      <CardHeader title={isBond ? "Купоны" : (isFund ? "Информация о фонде" : (isCurrency ? "Статистика" : (isFutures ? "О фьючерсе" : "Дивиденды")))} />
                       <Divider />
                       <CardContent>
-                        {dividendsContent}
+                        {isBond ? couponsContent : (isFund ? fundContent : (isCurrency ? statsContent : (isFutures ? futuresInfoContent : dividendsContent)))}
                       </CardContent>
                     </Card>
                   </Grid>
                 )}
               </Grid>
             </Grid>
+            {!isBond && !isFund && !isCurrency && !isFutures && (
             <Grid
               item
               xs={12}
@@ -1563,10 +1764,14 @@ const QuoteDetails = () => {
                       </Grid>
                     </Grid>
                   )}
-                  {detailTab === 'dividends' && isSmallScreen && dividendsContent}
+                  {detailTab === 'dividends' && isSmallScreen && !isBond && dividendsContent}
+                  {detailTab === 'coupons' && isSmallScreen && isBond && couponsContent}
+                  {detailTab === 'stats' && isSmallScreen && isCurrency && statsContent}
                 </CardContent>
               </Card>
             </Grid>
+            )}
+            {!isBond && !isCurrency && !isFutures && (
             <Grid
               item
               xs={12}
@@ -1653,6 +1858,7 @@ const QuoteDetails = () => {
                 </CardContent>
               </Card>
             </Grid>
+            )}
           </Grid>
         </Container>
       </Box>

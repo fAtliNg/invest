@@ -104,14 +104,21 @@ export const DashboardSidebar = (props) => {
           }}
         />
         <Box sx={{ flexGrow: 1 }}>
-          {items.map((item) => (
-            <NavItem
-              key={item.title}
-              icon={item.icon}
-              href={item.href}
-              title={item.title}
-            />
-          ))}
+          {items.map((item) => {
+            const active = item.title === 'Котировки' 
+              ? router.asPath.startsWith('/quotes') 
+              : undefined;
+
+            return (
+              <NavItem
+                key={item.title}
+                icon={item.icon}
+                href={item.href}
+                title={item.title}
+                active={active}
+              />
+            );
+          })}
         </Box>
         <Divider sx={{ borderColor: '#2D3748' }} />
         <Box

@@ -44,6 +44,16 @@ app.get(['/changelog', '/api/changelog'], async (req, res) => {
   }
 });
 
+app.get(['/currency-names', '/api/currency-names'], async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM currency_names');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch currency names' });
+  }
+});
+
 app.get(['/orderbook', '/api/orderbook'], async (req, res) => {
   try {
     const { secid, engine, market, depth } = req.query;
