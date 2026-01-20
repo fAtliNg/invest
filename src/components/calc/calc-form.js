@@ -41,7 +41,7 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
 
   useEffect(() => {
     onChangeValues(values);
-  }, []);
+  }, [onChangeValues, values]);
 
   const handleChange = (event) => {
     const newValues = {
@@ -49,7 +49,6 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
       [event.target.name]: event.target.value
     };
     setValues(newValues);
-    onChangeValues(newValues);
   };
 
   return (
@@ -59,7 +58,10 @@ export const CalcForm = ({ onChangeValues, ...props }) => {
       {...props}
     >
       <Card>
-        <CardHeader title="Данные для расчета" style={{ padding: "20px 32px" }} />
+        <CardHeader
+          title="Данные для расчета"
+          style={{ padding: '20px 32px' }}
+        />
         <Divider />
         <CardContent>
           <Grid

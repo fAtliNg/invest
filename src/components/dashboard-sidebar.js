@@ -76,7 +76,12 @@ export const DashboardSidebar = (props) => {
         }}
       >
         <div>
-          <Box sx={{ px: 3 }} marginTop={3} display="flex" justifyContent="space-between" >
+          <Box
+            sx={{ px: 3 }}
+            marginTop={3}
+            display="flex"
+            justifyContent="space-between"
+          >
             <Typography
               color="inherit"
               variant="h5"
@@ -85,7 +90,11 @@ export const DashboardSidebar = (props) => {
             >
               Profit Case
             </Typography>
-            <Chip label="v1.0.1" variant="outlined" style={{ color: "#F3F4F6" }} />
+            <Chip
+              label="v1.0.1"
+              variant="outlined"
+              style={{ color: '#F3F4F6' }}
+            />
           </Box>
         </div>
         <Divider
@@ -111,15 +120,17 @@ export const DashboardSidebar = (props) => {
             py: 3
           }}
         >
-
-          <a href="mailto:support@profit-case.ru" style={{ textDecoration: "none" }}>
+          <a
+            href="mailto:support@profit-case.ru"
+            style={{ textDecoration: 'none' }}
+          >
             <Typography
               display="flex"
               color="neutral.100"
               variant="subtitle2"
-              style={{ textDecoration: "underline" }}
+              style={{ textDecoration: 'underline' }}
             >
-              <EmailIcon style={{ marginRight: 8 }}/>
+              <EmailIcon style={{ marginRight: 8 }} />
               support@profit-case.ru
             </Typography>
           </a>

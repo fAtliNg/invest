@@ -58,7 +58,10 @@ const Changelog = () => {
     <DashboardLayout>
       <Head>
         <title>История изменений и обновлений | Profit Case</title>
-        <meta name="description" content="Полная история изменений сервиса Profit Case. Узнайте о новых функциях, улучшенных калькуляторах и инструментах для инвестора в нашем changelog." />
+        <meta
+          name="description"
+          content="Полная история изменений сервиса Profit Case. Узнайте о новых функциях, улучшенных калькуляторах и инструментах для инвестора в нашем changelog."
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -86,11 +89,22 @@ const Changelog = () => {
             </Box>
           ) : (
             changelog.map((item) => (
-              <Card sx={{ mb: 3 }} key={item.version}>
+              <Card
+                sx={{ mb: 3 }}
+                key={item.version}
+              >
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Chip label={item.version} color={item.version === changelog[0]?.version ? "primary" : "default"} variant={item.version === changelog[0]?.version ? "filled" : "outlined"} sx={{ mr: 2 }} />
-                    <Typography variant="subtitle1" color="textSecondary">
+                    <Chip
+                      label={item.version}
+                      color={item.version === changelog[0]?.version ? 'primary' : 'default'}
+                      variant={item.version === changelog[0]?.version ? 'filled' : 'outlined'}
+                      sx={{ mr: 2 }}
+                    />
+                    <Typography
+                      variant="subtitle1"
+                      color="textSecondary"
+                    >
                       {format(new Date(item.date), 'd MMMM yyyy', { locale: ru })}
                     </Typography>
                   </Box>

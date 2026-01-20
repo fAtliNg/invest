@@ -3,7 +3,7 @@ import { Box, Container, Typography, Paper, Table, TableBody, TableCell, TableCo
 import { Search as SearchIcon } from '../icons/search';
 import { useRouter } from 'next/router';
 import { DashboardLayout } from '../components/dashboard-layout';
-import { formatNumber, formatPrice, formatPercent } from '../utils/format';
+import { formatPrice, formatPercent } from '../utils/format';
 import { useEffect, useState, useRef, useMemo } from 'react';
 
 const VIRTUAL_ROW_HEIGHT = 53;
@@ -201,9 +201,12 @@ const Quotes = () => {
     };
   }, [shouldVirtualize]);
 
-  const { visibleRows, topSpacerHeight, bottomSpacerHeight } = useMemo(() => {
+  const { visibleRows, topSpacerHeight, bottomSpacerHeight, columnCount } = useMemo(() => {
     if (!shouldVirtualize) {
-      return { visibleRows: paginatedQuotes, topSpacerHeight: 0, bottomSpacerHeight: 0 };
+      const baseColumnCount = 7;
+      const extraBondColumns = currentTab === 'bond' ? 2 : 0;
+      const extraFutureColumns = currentTab === 'future' ? 1 : 0;
+      return { visibleRows: paginatedQuotes, topSpacerHeight: 0, bottomSpacerHeight: 0, columnCount: baseColumnCount + extraBondColumns + extraFutureColumns };
     }
 
     const total = paginatedQuotes.length;
@@ -216,20 +219,30 @@ const Quotes = () => {
     const startIndex = Math.max(0, Math.floor(visibleStart / VIRTUAL_ROW_HEIGHT) - VIRTUAL_OVERSCAN);
     const endIndex = Math.min(total, Math.ceil(visibleEnd / VIRTUAL_ROW_HEIGHT) + VIRTUAL_OVERSCAN);
 
+    const baseColumnCount = 7;
+    const extraBondColumns = currentTab === 'bond' ? 2 : 0;
+    const extraFutureColumns = currentTab === 'future' ? 1 : 0;
     return {
       visibleRows: paginatedQuotes.slice(startIndex, endIndex),
       topSpacerHeight: startIndex * VIRTUAL_ROW_HEIGHT,
-      bottomSpacerHeight: (total - endIndex) * VIRTUAL_ROW_HEIGHT
+      bottomSpacerHeight: (total - endIndex) * VIRTUAL_ROW_HEIGHT,
+      columnCount: baseColumnCount + extraBondColumns + extraFutureColumns
     };
-  }, [paginatedQuotes, shouldVirtualize, virtualMetrics]);
+  }, [paginatedQuotes, shouldVirtualize, virtualMetrics, currentTab]);
 
   return (
     <>
       <Head>
         <title>Котировки | Profit Case</title>
-        <meta name="description" content="Котировки Московской Биржи (MOEX) в режиме реального времени." />
+        <meta
+          name="description"
+          content="Котировки Московской Биржи (MOEX) в режиме реального времени."
+        />
       </Head>
-      <Box component="main" sx={{ flexGrow: 1, py: 8 }}>
+      <Box
+        component="main"
+        sx={{ flexGrow: 1, py: 8 }}
+      >
         <Container maxWidth="lg">
           <Box 
             sx={{ 
@@ -241,22 +254,25 @@ const Quotes = () => {
               gap: 2
             }}
           >
-            <Box 
-              sx={{ 
-                display: 'flex', 
+            <Box
+              sx={{
+                display: 'flex',
                 alignItems: 'center',
                 justifyContent: { xs: 'space-between', md: 'flex-start' },
                 gap: 2
               }}
             >
-              <Typography variant="h4" sx={{ m: 0 }}>
+              <Typography
+                variant="h4"
+                sx={{ m: 0 }}
+              >
                 Котировки (MOEX)
               </Typography>
-              <Chip 
-                 label={connected ? "Онлайн" : "Оффлайн"} 
-                 color={connected ? "success" : "error"} 
-                 size="small" 
-               />
+              <Chip
+                label={connected ? 'Онлайн' : 'Оффлайн'}
+                color={connected ? 'success' : 'error'}
+                size="small"
+              />
             </Box>
 
             <Box sx={{ width: { xs: '100%', md: 500 } }}>
@@ -282,23 +298,45 @@ const Quotes = () => {
           </Box>
 
           <Box sx={{ mb: 3 }}>
-            <Tabs 
-              value={currentTab} 
-              onChange={handleTabChange} 
+            <Tabs
+              value={currentTab}
+              onChange={handleTabChange}
               variant="scrollable"
               scrollButtons="auto"
               aria-label="quotes tabs"
             >
-              <Tab label="Акции" value="share" />
-              <Tab label="Облигации" value="bond" />
-              <Tab label="Фонды" value="fund" />
-              <Tab label="Валюты" value="currency" />
-              <Tab label="Фьючерсы" value="future" />
+              <Tab
+                label="Акции"
+                value="share"
+              />
+              <Tab
+                label="Облигации"
+                value="bond"
+              />
+              <Tab
+                label="Фонды"
+                value="fund"
+              />
+              <Tab
+                label="Валюты"
+                value="currency"
+              />
+              <Tab
+                label="Фьючерсы"
+                value="future"
+              />
             </Tabs>
           </Box>
 
-          <TableContainer component={Paper} ref={tableContainerRef}>
-            <Table sx={{ minWidth: 650 }} aria-label="quotes table" stickyHeader={shouldVirtualize}>
+          <TableContainer
+            component={Paper}
+            ref={tableContainerRef}
+          >
+            <Table
+              sx={{ minWidth: 650 }}
+              aria-label="quotes table"
+              stickyHeader={shouldVirtualize}
+            >
               <TableHead>
                 <TableRow ref={tableHeadRef}>
                   <TableCell>
@@ -325,25 +363,7 @@ const Quotes = () => {
                       direction={orderBy === 'price' ? order : 'asc'}
                       onClick={createSortHandler('price')}
                     >
-                      Стоимость
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell align="right">
-                    <TableSortLabel
-                      active={orderBy === 'volume'}
-                      direction={orderBy === 'volume' ? order : 'asc'}
-                      onClick={createSortHandler('volume')}
-                    >
-                      Объем
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell align="right">
-                    <TableSortLabel
-                      active={orderBy === 'lot_size'}
-                      direction={orderBy === 'lot_size' ? order : 'asc'}
-                      onClick={createSortHandler('lot_size')}
-                    >
-                      Лот
+                      {currentTab === 'currency' ? 'Курс' : (currentTab === 'future' ? 'Цена' : 'Стоимость')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell align="right">
@@ -382,27 +402,72 @@ const Quotes = () => {
                       Изм %
                     </TableSortLabel>
                   </TableCell>
+                  {currentTab === 'bond' && (
+                    <TableCell align="right">
+                      <TableSortLabel
+                        active={orderBy === 'yield'}
+                        direction={orderBy === 'yield' ? order : 'asc'}
+                        onClick={createSortHandler('yield')}
+                      >
+                        Доходн. %
+                      </TableSortLabel>
+                    </TableCell>
+                  )}
+                  {currentTab === 'bond' && (
+                    <TableCell align="right">
+                      <TableSortLabel
+                        active={orderBy === 'matdate'}
+                        direction={orderBy === 'matdate' ? order : 'asc'}
+                        onClick={createSortHandler('matdate')}
+                      >
+                        Погашение
+                      </TableSortLabel>
+                    </TableCell>
+                  )}
+                  {currentTab === 'future' && (
+                    <TableCell align="right">
+                      <TableSortLabel
+                        active={orderBy === 'expiration'}
+                        direction={orderBy === 'expiration' ? order : 'asc'}
+                        onClick={createSortHandler('expiration')}
+                      >
+                        Экспирация
+                      </TableSortLabel>
+                    </TableCell>
+                  )}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {shouldVirtualize && topSpacerHeight > 0 && (
-                  <TableRow key="spacer-top" sx={{ height: topSpacerHeight }}>
-                    <TableCell colSpan={9} sx={{ p: 0, border: 0 }} />
+                  <TableRow
+                    key="spacer-top"
+                    sx={{ height: topSpacerHeight }}
+                  >
+                    <TableCell
+                      colSpan={columnCount}
+                      sx={{ p: 0, border: 0 }}
+                    />
                   </TableRow>
                 )}
                 {visibleRows.map((row) => (
-                  <TableRow
-                    key={row.secid}
-                    hover
-                    sx={{ 
-                      '&:last-child td, &:last-child th': { border: 0 },
-                      cursor: 'pointer' 
-                    }}
-                    onClick={() => router.push(`/quotes/${row.secid}`)}
-                  >
-                    <TableCell component="th" scope="row">
+                <TableRow
+                  hover
+                  key={row.secid}
+                  sx={{
+                    '&:last-child td, &:last-child th': { border: 0 },
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => router.push(`/quotes/${row.secid}`)}
+                >
+                    <TableCell
+                      component="th"
+                      scope="row"
+                    >
                       <Box>
-                        <Typography variant="body2" fontWeight="bold">
+                        <Typography
+                          variant="body2"
+                          fontWeight="bold"
+                        >
                           {row.shortname}
                         </Typography>
                       </Box>
@@ -412,34 +477,71 @@ const Quotes = () => {
                         {row.secid}
                       </Typography>
                     </TableCell>
-                    <TableCell align="right">{formatPrice(row.price)}</TableCell>
-                    <TableCell align="right">{formatNumber(row.volume)}</TableCell>
-                    <TableCell align="right">{formatNumber(row.lot_size)}</TableCell>
-                    <TableCell align="right">{formatPrice(row.high)}</TableCell>
-                    <TableCell align="right">{formatPrice(row.low)}</TableCell>
-                    <TableCell align="right" sx={{ color: row.change >= 0 ? 'success.main' : 'error.main' }}>
+                    <TableCell align="right">
+                      {formatPrice(row.price)}
+                    </TableCell>
+                    <TableCell align="right">
+                      {formatPrice(row.high)}
+                    </TableCell>
+                    <TableCell align="right">
+                      {formatPrice(row.low)}
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{ color: row.change >= 0 ? 'success.main' : 'error.main' }}
+                    >
                       {row.change > 0 ? '+' : ''}{row.change}
                     </TableCell>
-                    <TableCell align="right" sx={{ color: row.change_pct >= 0 ? 'success.main' : 'error.main' }}>
+                    <TableCell
+                      align="right"
+                      sx={{ color: row.change_pct >= 0 ? 'success.main' : 'error.main' }}
+                    >
                       {formatPercent(row.change_pct)}
                     </TableCell>
+                    {currentTab === 'bond' && (
+                      <TableCell align="right">
+                        {typeof row.yield === 'number' ? `${row.yield.toFixed(2)}%` : '—'}
+                      </TableCell>
+                    )}
+                    {currentTab === 'bond' && (
+                      <TableCell align="right">
+                        {row.matdate ? new Date(row.matdate).toLocaleDateString('ru-RU') : '—'}
+                      </TableCell>
+                    )}
+                    {currentTab === 'future' && (
+                      <TableCell align="right">
+                        {row.expiration ? new Date(row.expiration).toLocaleDateString('ru-RU') : '—'}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
                 {shouldVirtualize && bottomSpacerHeight > 0 && (
-                  <TableRow key="spacer-bottom" sx={{ height: bottomSpacerHeight }}>
-                    <TableCell colSpan={9} sx={{ p: 0, border: 0 }} />
+                  <TableRow
+                    key="spacer-bottom"
+                    sx={{ height: bottomSpacerHeight }}
+                  >
+                    <TableCell
+                      colSpan={columnCount}
+                      sx={{ p: 0, border: 0 }}
+                    />
                   </TableRow>
                 )}
                 {sortedQuotes.length === 0 && quotes.length > 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} align="center">
+                    <TableCell
+                      colSpan={columnCount}
+                      align="center"
+                    >
                       Нет данных в этой категории
                     </TableCell>
                   </TableRow>
                 )}
                 {quotes.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} align="center">
+                    <TableCell
+                      colSpan={columnCount}
+                      align="center"
+                    >
                       Загрузка данных...
                     </TableCell>
                   </TableRow>

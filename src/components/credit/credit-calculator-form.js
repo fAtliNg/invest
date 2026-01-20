@@ -36,10 +36,6 @@ export const CreditCalculatorForm = ({ onChangeValues, onOpenEarlyRepayment, ...
     startDate: new Date(),
   });
 
-  useEffect(() => {
-    onChangeValues(values);
-  }, []);
-
   const handleChange = (event) => {
     const newValues = {
       ...values,
@@ -58,7 +54,7 @@ export const CreditCalculatorForm = ({ onChangeValues, onOpenEarlyRepayment, ...
 
   useEffect(() => {
     onChangeValues(values);
-  }, [values]);
+  }, [onChangeValues, values]);
 
   return (
     <form
@@ -70,7 +66,7 @@ export const CreditCalculatorForm = ({ onChangeValues, onOpenEarlyRepayment, ...
       <Card style={{ height: '100%' }}>
         <CardHeader
           title="Параметры кредита"
-          style={{ padding: "20px 32px" }}
+          style={{ padding: '20px 32px' }}
           action={(
             <Button
               variant="outlined"
@@ -193,12 +189,20 @@ export const CreditCalculatorForm = ({ onChangeValues, onOpenEarlyRepayment, ...
               md={6}
               xs={12}
             >
-              <LocalizationProvider dateAdapter={AdapterDateFns} locale={ruLocale}>
+              <LocalizationProvider
+                dateAdapter={AdapterDateFns}
+                locale={ruLocale}
+              >
                 <DatePicker
                   label="Дата получения кредита"
                   value={values.startDate}
                   onChange={handleDateChange}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      fullWidth
+                    />
+                  )}
                 />
               </LocalizationProvider>
             </Grid>

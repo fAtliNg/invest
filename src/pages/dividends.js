@@ -27,11 +27,19 @@ const Dividends = () => (
           sx={{ mb: 2 }}
           variant="body1"
         >
-          <Link ml={4} href="https://profit-case.ru">Profit Case</Link> - это сервис для планирования и
+          <Link
+            ml={4}
+            href="https://profit-case.ru"
+          >
+            Profit Case
+          </Link> - это сервис для планирования и
           тестирования инвестиционных стратегий. Он помогает спрогнозировать рост капитала на основе
           следующих параметров:
         </Typography>
-        <Box ml={6} mb={2}>
+        <Box
+          ml={6}
+          mb={2}
+        >
           <ul>
             <li>стартовый капитал;</li>
             <li>объем и периодичность пополнений;</li>
@@ -44,7 +52,12 @@ const Dividends = () => (
             sx={{ mb: 2 }}
             variant="body1"
           >
-            <Link ml={4} href="/">Profit Case</Link> предоставляет
+            <Link
+              ml={4}
+              href="/"
+            >
+              Profit Case
+            </Link> предоставляет
             реализацию калькулятора сложного процента с удобной визуализацией результатов расчета и
             динамики роста капитала.
           </Typography>

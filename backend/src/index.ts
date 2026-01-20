@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import axios from 'axios';
 import { query } from './db';
 import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
@@ -40,6 +41,62 @@ app.get(['/changelog', '/api/changelog'], async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch changelog' });
+  }
+});
+
+app.get(['/orderbook', '/api/orderbook'], async (req, res) => {
+  try {
+    const { secid, engine, market, depth } = req.query;
+
+    if (!secid || !engine || !market) {
+      res.status(400).json({ error: 'Missing required parameters: secid, engine, market' });
+      return;
+    }
+
+    const depthValue = typeof depth === 'string' ? depth : '10';
+
+    const url = `https://iss.moex.com/iss/engines/${encodeURIComponent(
+      String(engine)
+    )}/markets/${encodeURIComponent(String(market))}/orderbook.json?securities=${encodeURIComponent(
+      String(secid)
+    )}&depth=${encodeURIComponent(depthValue)}`;
+
+    const response = await axios.get(url);
+    const data = response.data;
+
+    const parseTable = (table: any) => {
+      if (!table || !Array.isArray(table.columns) || !Array.isArray(table.data)) {
+        return [];
+      }
+
+      const priceIndex = table.columns.indexOf('PRICE');
+      const quantityIndex = table.columns.indexOf('QUANTITY');
+
+      if (priceIndex === -1 || quantityIndex === -1) {
+        return [];
+      }
+
+      return table.data
+        .map((row: any[]) => ({
+          price: row[priceIndex],
+          quantity: row[quantityIndex]
+        }))
+        .filter(
+          (item: { price: number | null; quantity: number | null }) =>
+            item.price != null && item.quantity != null
+        );
+    };
+
+    const bids = parseTable(data.bids || data.orderbook);
+    const offers = parseTable(data.offers || data.orderbook);
+
+    res.json({
+      bids,
+      asks: offers
+    });
+  } catch (err) {
+    console.error('Error fetching orderbook from MOEX:', err);
+    res.status(500).json({ error: 'Failed to fetch orderbook' });
   }
 });
 

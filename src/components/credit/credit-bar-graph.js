@@ -99,20 +99,30 @@ export const CreditBarGraph = (props) => {
 
   return (
     <Card>
-      <CardHeader 
-        title="Динамика выплат" 
-        style={{ padding: "20px 32px" }}
+      <CardHeader
+        title="Динамика выплат"
         action={
           props.savings > 0 && (
             <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Typography variant="body1" color="textSecondary" sx={{ mr: 1 }}>
+              <Typography
+                variant="body1"
+                color="textSecondary"
+                sx={{ mr: 1 }}
+              >
                 Экономия:
               </Typography>
-              <Typography variant="h6" style={{ color: '#10B981', marginRight: 8 }}>
+              <Typography
+                variant="h6"
+                style={{ color: '#10B981', marginRight: 8 }}
+              >
                 {props.savings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
               </Typography>
               <Tooltip title="Экономия от досрочного погашения">
-                <InfoIcon fontSize="small" color="action" sx={{ cursor: 'help' }} />
+                <InfoIcon
+                  fontSize="small"
+                  color="action"
+                  sx={{ cursor: 'help' }}
+                />
               </Tooltip>
             </Box>
           )

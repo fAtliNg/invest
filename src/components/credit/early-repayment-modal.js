@@ -76,11 +76,23 @@ export const EarlyRepaymentModal = ({ open, onClose, onApply, initialDate }) => 
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+    >
       <DialogTitle>Досрочное погашение</DialogTitle>
       <DialogContent>
-        <Grid container spacing={3} sx={{ mt: 0 }}>
-          <Grid item xs={12}>
+        <Grid
+          container
+          spacing={3}
+          sx={{ mt: 0 }}
+        >
+          <Grid
+            item
+            xs={12}
+          >
             <TextField
               fullWidth
               label="Периодичность"
@@ -91,23 +103,40 @@ export const EarlyRepaymentModal = ({ open, onClose, onApply, initialDate }) => 
               variant="outlined"
             >
               {frequencies.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
+                <MenuItem
+                  key={option.value}
+                  value={option.value}
+                >
                   {option.label}
                 </MenuItem>
               ))}
             </TextField>
           </Grid>
-          <Grid item xs={12}>
-            <LocalizationProvider dateAdapter={AdapterDateFns} locale={ruLocale}>
+          <Grid
+            item
+            xs={12}
+          >
+            <LocalizationProvider
+              dateAdapter={AdapterDateFns}
+              locale={ruLocale}
+            >
               <DatePicker
                 label="Дата"
                 value={values.date}
                 onChange={handleDateChange}
-                renderInput={(params) => <TextField {...params} fullWidth />}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                  />
+                )}
               />
             </LocalizationProvider>
           </Grid>
-          <Grid item xs={12}>
+          <Grid
+            item
+            xs={12}
+          >
             <TextField
               fullWidth
               label="Пересчет графика"
@@ -118,13 +147,19 @@ export const EarlyRepaymentModal = ({ open, onClose, onApply, initialDate }) => 
               variant="outlined"
             >
               {recalcTypes.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
+                <MenuItem
+                  key={option.value}
+                  value={option.value}
+                >
                   {option.label}
                 </MenuItem>
               ))}
             </TextField>
           </Grid>
-          <Grid item xs={12}>
+          <Grid
+            item
+            xs={12}
+          >
             <InputSlider
                 value={values.amount}
                 name="amount"
@@ -149,8 +184,15 @@ export const EarlyRepaymentModal = ({ open, onClose, onApply, initialDate }) => 
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Отмена</Button>
-        <Button onClick={handleApply} variant="contained">Добавить</Button>
+        <Button onClick={onClose}>
+          Отмена
+        </Button>
+        <Button
+          onClick={handleApply}
+          variant="contained"
+        >
+          Добавить
+        </Button>
       </DialogActions>
     </Dialog>
   );

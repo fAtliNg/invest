@@ -167,7 +167,11 @@ const CreditCalculator = () => {
   };
 
   const controls = (
-    <Box width="100%" justifyContent="flex-end" display="flex">
+    <Box
+      width="100%"
+      justifyContent="flex-end"
+      display="flex"
+    >
       <Button
         color="primary"
         variant="contained"
@@ -282,7 +286,10 @@ const CreditCalculator = () => {
           </Grid>
 
           <Box sx={{ mt: 8 }}>
-            <Typography variant="h4" gutterBottom>
+            <Typography
+              variant="h4"
+              gutterBottom
+            >
               Полезная информация
             </Typography>
             <Accordion>

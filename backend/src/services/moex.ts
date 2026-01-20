@@ -11,7 +11,11 @@ interface MoexData {
   change_pct: number | null;
   volume: number | null;
   lot_size: number | null;
-  type: string; // 'share', 'bond', 'fund', 'currency', 'future'
+  type: string;
+  yield?: number | null;
+  matdate?: string | null;
+  coupon_percent?: number | null;
+  expiration?: string | null;
 }
 
 interface MoexSource {
@@ -21,11 +25,11 @@ interface MoexSource {
 
 const SOURCES: MoexSource[] = [
   { type: 'share', url: 'https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' },
-  { type: 'bond', url: 'https://iss.moex.com/iss/engines/stock/markets/bonds/boards/TQCB/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' }, // Corp bonds
-  { type: 'bond', url: 'https://iss.moex.com/iss/engines/stock/markets/bonds/boards/TQOB/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' }, // OFZ
-  { type: 'fund', url: 'https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQTF/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' }, // ETFs
+  { type: 'bond', url: 'https://iss.moex.com/iss/engines/stock/markets/bonds/boards/TQCB/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,MATDATE,COUPONPERCENT&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY,YIELD' },
+  { type: 'bond', url: 'https://iss.moex.com/iss/engines/stock/markets/bonds/boards/TQOB/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,MATDATE,COUPONPERCENT&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY,YIELD' },
+  { type: 'fund', url: 'https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQTF/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' },
   { type: 'currency', url: 'https://iss.moex.com/iss/engines/currency/markets/selt/boards/CETS/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' },
-  { type: 'future', url: 'https://iss.moex.com/iss/engines/futures/markets/forts/boards/RFUD/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' }
+  { type: 'future', url: 'https://iss.moex.com/iss/engines/futures/markets/forts/boards/RFUD/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,LSTDELDATE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' }
 ];
 
 const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
@@ -47,6 +51,9 @@ const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
     const nameIdx = getIndex(secColumns, 'SHORTNAME');
     const lotSizeIdx = getIndex(secColumns, 'LOTSIZE');
     const prevPriceIdx = getIndex(secColumns, 'PREVPRICE');
+    const matDateIdx = getIndex(secColumns, 'MATDATE');
+    const couponPercentIdx = getIndex(secColumns, 'COUPONPERCENT');
+    const lstDelDateIdx = getIndex(secColumns, 'LSTDELDATE');
 
     const mdSecIdIdx = getIndex(mdColumns, 'SECID');
     const lastIdx = getIndex(mdColumns, 'LAST');
@@ -55,6 +62,7 @@ const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
     const changeIdx = getIndex(mdColumns, 'CHANGE');
     const changePctIdx = getIndex(mdColumns, 'LASTTOPREVPRICE');
     const volumeIdx = getIndex(mdColumns, 'VOLTODAY');
+    const yieldIdx = getIndex(mdColumns, 'YIELD');
 
     // Create a map for market data
     const marketDataMap = new Map();
@@ -65,7 +73,8 @@ const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
         low: row[lowIdx],
         change: row[changeIdx],
         change_pct: row[changePctIdx],
-        volume: row[volumeIdx]
+        volume: row[volumeIdx],
+        yield: yieldIdx !== -1 ? row[yieldIdx] : null
       });
     });
 
@@ -92,8 +101,12 @@ const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
           change: md.change || 0,
           change_pct: md.change_pct || 0,
           volume: md.volume || 0,
-          lot_size: lotSizeIdx !== -1 ? (row[lotSizeIdx] || 0) : 0, // Handle missing LOTSIZE column
-          type: source.type
+          lot_size: lotSizeIdx !== -1 ? (row[lotSizeIdx] || 0) : 0,
+          type: source.type,
+          yield: md.yield ?? null,
+          matdate: matDateIdx !== -1 ? (row[matDateIdx] || null) : null,
+          coupon_percent: couponPercentIdx !== -1 ? (row[couponPercentIdx] || null) : null,
+          expiration: lstDelDateIdx !== -1 ? (row[lstDelDateIdx] || null) : null
         });
       }
     });

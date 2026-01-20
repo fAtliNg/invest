@@ -99,7 +99,9 @@ export const BarGraph = (props) => {
 
   return (
     <Card sx={{ width: '100%' }}>
-      <CardHeader title="Динамика роста" style={{ padding: "20px 32px" }} />
+      <CardHeader
+        title="Динамика роста"
+      />
       <Divider />
       <CardContent>
         <Box
