@@ -8,6 +8,8 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-invest}
+    ports:
+      - "5433:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:

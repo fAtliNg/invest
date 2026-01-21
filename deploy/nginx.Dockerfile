@@ -1,6 +1,6 @@
 # Build Stage
-# Use Node 16 for Next.js 12 compatibility
-FROM node:16-slim as builder
+# Use Node 20 (LTS) to avoid npm deprecation warnings and match backend environment
+FROM node:20-alpine as builder
 
 WORKDIR /app
 

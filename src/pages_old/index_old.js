@@ -14,7 +14,7 @@ const Dashboard = () => (
   <>
     <Head>
       <title>
-        Dashboard | Material Kitвыаыа
+        Dashboard | Profit Case
       </title>
     </Head>
     <Box

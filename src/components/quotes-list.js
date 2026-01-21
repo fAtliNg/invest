@@ -164,7 +164,7 @@ export const QuotesList = () => {
     setCurrentTab(newValue);
     setPage(0);
     setOrderBy(newValue === 'future' ? 'secid' : 'shortname');
-    router.push(`/quotes/${newValue}`, undefined, { shallow: true });
+    router.push(`/quotes/${newValue}`);
   };
 
   const handleChangePage = (_event, newPage) => {

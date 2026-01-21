@@ -1030,7 +1030,9 @@ const QuoteDetails = () => {
   return (
     <DashboardLayout>
       <Head>
-        <title>{securityInfo?.shortname} - Детали</title>
+        <title>
+          {securityInfo?.shortname ? `${securityInfo.shortname} | Profit Case` : 'Profit Case'}
+        </title>
       </Head>
       <Box
         component="main"

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # deploy_frontend.sh - Деплой фронтенда с удаленной сборкой
 # Использование: ./deploy/deploy_frontend.sh [user@host] [password]
@@ -66,10 +67,10 @@ start_ssh_master() {
             exit 1
         fi
         export SSHPASS="$PASSWORD"
-        sshpass -e ssh -o ControlPersist=600 -M -S "$SOCKET" -fN -o StrictHostKeyChecking=no "$TARGET"
+        sshpass -e ssh -o ControlPersist=600 -o ServerAliveInterval=60 -M -S "$SOCKET" -fN -o StrictHostKeyChecking=no "$TARGET"
     else
         echo "👉 Если используется пароль, введите его ОДИН раз."
-        ssh -o ControlPersist=600 -M -S "$SOCKET" -fN -o StrictHostKeyChecking=no "$TARGET"
+        ssh -o ControlPersist=600 -o ServerAliveInterval=60 -M -S "$SOCKET" -fN -o StrictHostKeyChecking=no "$TARGET"
     fi
 }
 
@@ -91,7 +92,7 @@ echo "🚀 Начинаем деплой фронтенда на $TARGET..."
 # 1. Упаковка исходного кода (без node_modules)
 echo "📦 Упаковка исходного кода..."
 # Use COPYFILE_DISABLE=1 to avoid macOS metadata (._ files)
-COPYFILE_DISABLE=1 tar --exclude='node_modules' --exclude='.git' --exclude='.next' --exclude='dist' --exclude='.DS_Store' --exclude='*.log' --exclude='._*' --exclude='__MACOSX' -czf "$TAR_NAME" .
+COPYFILE_DISABLE=1 tar --exclude='node_modules' --exclude='.git' --exclude='.next' --exclude='dist' --exclude='out' --exclude='.DS_Store' --exclude='*.log' --exclude='._*' --exclude='__MACOSX' --exclude="$TAR_NAME" -czf "$TAR_NAME" .
 
 # 2. Отправка архива на сервер
 echo "📤 Отправка исходного кода на сервер..."
@@ -123,7 +124,7 @@ if [ ! -f "$CERT_FILE" ] || [ ! -f "$KEY_FILE" ]; then
     docker stop deploy-nginx-1 2>/dev/null || true
 
     # Получение сертификата
-    echo \"🔒 Получение сертификата Let's Encrypt...\"
+    echo \"🔒 Получение сертификата Lets Encrypt...\"
     certbot certonly --standalone -d $DOMAIN --non-interactive --agree-tos -m admin@$DOMAIN --keep-until-expiring
 
     # Проверка успеха
@@ -134,13 +135,20 @@ if [ ! -f "$CERT_FILE" ] || [ ! -f "$KEY_FILE" ]; then
         cp -L /etc/letsencrypt/live/$DOMAIN/fullchain.pem ~/$PROJECT_DIR/deploy/cert/fullchain.pem
         cp -L /etc/letsencrypt/live/$DOMAIN/privkey.pem ~/$PROJECT_DIR/deploy/cert/privkey.pem
     else
-        echo '❌ Ошибка получения сертификата!'
-        exit 1
+        echo '⚠️ Ошибка получения сертификата Lets Encrypt (возможно, проблема с DNS).'
+        echo '⚙️ Генерация самоподписанного сертификата...'
+        mkdir -p ~/$PROJECT_DIR/deploy/cert
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout ~/$PROJECT_DIR/deploy/cert/privkey.pem \
+            -out ~/$PROJECT_DIR/deploy/cert/fullchain.pem \
+            -subj \"/C=RU/ST=Moscow/L=Moscow/O=Invest/CN=$DOMAIN\"
+        echo '✅ Самоподписанный сертификат создан.'
     fi
     "
     
     $SSH_CMD "$TARGET" "$CERTBOT_COMMANDS"
     
+    # Проверяем успешность выполнения блока команд (включая fallback)
     if [ $? -eq 0 ]; then
         echo "📥 Скачивание сертификатов на локальную машину..."
         mkdir -p "$CERT_DIR"
@@ -176,18 +184,20 @@ rm $TAR_NAME
 
 echo '🏗 Сборка Docker образа ($IMAGE_NAME)...'
 cd temp_build
-# Проверка наличия nginx.conf
-if [ ! -f \"deploy/nginx.conf\" ]; then
-    echo \"❌ Ошибка: deploy/nginx.conf не найден в архиве!\"
-    ls -R
+
+echo '🔍 Проверка файлов...'
+ls -R src/pages/quotes
+
+# Удаляем .dockerignore, чтобы папка deploy была доступна в контексте сборки
+rm -f .dockerignore
+
+# Обновляем server_name в deploy/nginx.conf
+if [ -f \"deploy/nginx.conf\" ]; then
+    sed -i \"s/server_name .*/server_name $DOMAIN www.$DOMAIN localhost;/g\" deploy/nginx.conf
+else
+    echo \"❌ Ошибка: deploy/nginx.conf не найден!\"
     exit 1
 fi
-
-# Копируем nginx.conf в корень сборки, чтобы он был доступен, даже если папка deploy в .dockerignore
-cp deploy/nginx.conf ./nginx.conf.temp
-
-# Обновляем server_name в nginx.conf
-sed -i \"s/server_name .*/server_name $DOMAIN www.$DOMAIN localhost;/g\" nginx.conf.temp
 
 # Копируем docker-compose.yml в папку deploy, чтобы запустить сервис
 if [ -f deploy/docker-compose.yml ]; then
@@ -196,14 +206,18 @@ else
     echo \"⚠️ docker-compose.yml не найден в deploy/!\"
 fi
 
-# Создаем временный Dockerfile с исправленным путем
-sed 's|deploy/nginx.conf|nginx.conf.temp|g' deploy/nginx.Dockerfile > Dockerfile.temp
+# Используем оригинальный Dockerfile, так как .dockerignore удален и папка deploy доступна
+cp deploy/nginx.Dockerfile Dockerfile.temp
 
-docker build \
+# Используем BuildKit (по умолчанию)
+nice -n 10 docker build --no-cache \
     -f Dockerfile.temp \
     -t $IMAGE_NAME \
     --build-arg NEXT_PUBLIC_WS_URL=\"wss://$DOMAIN/api/ws\" \
     .
+
+echo '🔍 Проверка наличия образа...'
+docker images | grep invest-frontend || echo \"❌ Образ не найден!\"
 
 echo '🚀 Перезапуск сервиса nginx...'
 cd .. # Возвращаемся в папку deploy (где лежит docker-compose.yml)
