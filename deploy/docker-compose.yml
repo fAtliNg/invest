@@ -13,7 +13,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
-      - app_network
+      - backend_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
@@ -38,7 +38,8 @@ services:
       liquibase:
         condition: service_completed_successfully
     networks:
-      - app_network
+      - backend_network
+      - frontend_network
 
   nginx:
     image: invest-frontend:latest
@@ -56,7 +57,7 @@ services:
     depends_on:
       - backend
     networks:
-      - app_network
+      - frontend_network
 
   liquibase:
     image: liquibase/liquibase:4.24
@@ -67,10 +68,11 @@ services:
       db:
         condition: service_healthy
     networks:
-      - app_network
+      - backend_network
 
 volumes:
   db_data:
 
 networks:
-  app_network:
+  backend_network:
+  frontend_network:
