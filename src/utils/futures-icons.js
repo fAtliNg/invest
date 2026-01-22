@@ -14,9 +14,21 @@ export const getIcon = (secid, shortname) => {
 
   if (secid && secid.startsWith('BYM')) return map['BLR'];
 
+  // Reported missing funds (Explicit checks to ensure coverage)
+  if (['AMFL', 'AMGB', 'AMGL', 'AMNR', 'AMNY', 'AMRE', 'AMRH'].includes(secid)) return map['ATON'];
+  if (['BCSB', 'BCSD', 'BCSE', 'BCSG', 'BCSR', 'BCSW'].includes(secid)) return map['BCS'];
+  if (['BNDA', 'BNDB', 'BNDC', 'BOND', 'DIVD', 'GROD'].includes(secid)) return map['DOHOD'];
+  if (['INFL', 'INGO'].includes(secid)) return map['INGO'];
+  if (['CASH'].includes(secid)) return map['AAA'];
+  if (['CNYM', 'EQMX', 'ESGE', 'WILD', 'OBLG'].includes(secid)) return map['WIM'];
+  if (['FINC'].includes(secid)) return map['FINSTAR'];
+  if (['FLOW'].includes(secid)) return map['UKFIRST'];
+  if (['FMMM', 'FMBR'].includes(secid)) return map['FINAM'];
+  if (['GOOD', 'SILA', 'SAFE', 'SMCF'].includes(secid)) return map['SOLID'];
+
   // ETF Mappings
   if (secid === 'LQDT') return map['VTBR'];
-  if (secid === 'RSHU') return map['RSHB'];
+  if (secid === 'RSHU' || secid === 'ESGR') return map['RSHB'];
   if (secid === 'MKBD' || secid === 'SUGB') return map['CBOM']; // Credit Bank of Moscow
   if (secid === 'TMOS') return map['TCS'];
   if (secid === 'CASH') return map['AAA'];
@@ -25,7 +37,7 @@ export const getIcon = (secid, shortname) => {
   if (secid === 'FMMM' || secid === 'FMBR') return map['FINAM'];
   
   // Sberbank / UK First ETFs (SB* and others)
-  if (secid && (secid.startsWith('SB') && secid !== 'SBER' && secid !== 'SBPR') || ['SCFT', 'SCLI', 'SIPO', 'STME'].includes(secid)) return map['UKFIRST'];
+  if (secid && (secid.startsWith('SB') && secid !== 'SBER' && secid !== 'SBPR') || ['SCFT', 'SCLI', 'SIPO', 'STME', 'FLOW'].includes(secid)) return map['UKFIRST'];
   
   // Alfa Capital ETFs (AK*) - exclude AKRN (Acron)
   if (secid && secid.startsWith('AK') && secid !== 'AKRN') return map['ALFA'];
