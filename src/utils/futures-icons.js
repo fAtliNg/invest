@@ -97,12 +97,98 @@ export const getIcon = (secid, shortname) => {
     if (secid.startsWith('UZS')) return map['UZS'];
     if (secid.startsWith('ZAR')) return map['ZAR'];
     if (secid.startsWith('INR')) return map['INR'];
-    
-    // Metals
-    if (secid.startsWith('GLD') || secid.startsWith('GOLD')) return map['GOLD'];
+  }
+
+  // Futures Prefixes
+  if (secid) {
+    if (secid.startsWith('AA')) return map['ZAR']; // AFRICA -> South Africa
+    if (secid.startsWith('AG')) return map['AGRO'];
+    if (secid.startsWith('AN')) return map['ALUMINUM']; // ALUM -> Aluminum
+    if (secid.startsWith('BB')) return map['BABA'];
+    if (secid.startsWith('BD')) return map['BIDU'];
+    if (secid.startsWith('BM')) return map['OIL'];
+    if (secid.startsWith('BR')) return map['OIL'];
+    if (secid.startsWith('CA')) return map['UCAD']; // UCAD
+    if (secid.startsWith('CC')) return map['COCOA'];
+    if (secid.startsWith('CE')) return map['COPPER'];
+    if (secid.startsWith('CL')) return map['OIL']; // WTI
+    if (secid.startsWith('CS')) return map['CONSUMER']; // CNI -> Consumer Index
+    if (secid.startsWith('CT')) return map['COTTON']; // Cotton
+    if (secid.startsWith('CY')) return map['CNY']; // CNY
+    if (secid.startsWith('DJ')) return map['DJ30'];
+    if (secid.startsWith('DX')) return map['DAX'];
+    if (secid.startsWith('EM')) return map['EM'];
+    if (secid.startsWith('ET')) return map['ETH'];
+    if (secid.startsWith('Eu')) return map['EU'];
+    if (secid.startsWith('FF')) return map['TTF'];
+    if (secid.startsWith('FN')) return map['FINANCE']; // FNI -> Finance Index
+    if (secid.startsWith('GU')) return map['GBP']; // GU -> GBP/USD
+    if (secid.startsWith('HO')) return map['HOME']; // HOME -> Real Estate
+    if (secid.startsWith('HS')) return map['HKD']; // Hang Seng -> HK
+    if (secid.startsWith('IB')) return map['BTC']; // IBIT -> Bitcoin
+    if (secid.startsWith('IMOEXF') || secid.startsWith('MX') || secid.startsWith('MIX')) return map['MOEX']; // IMOEXF/MX -> MOEX Index
+    if (secid.startsWith('IP')) return map['IPO']; // IPO -> Startup
+    if (secid.startsWith('KC')) return map['COFFEE']; // COFFEE -> Commodity
+    if (secid.startsWith('MA')) return map['MINING']; // Metals & Mining Index
+    if (secid.startsWith('MM')) return map['MOEX']; // Mini MOEX
+    if (secid.startsWith('MN')) return map['MGNT']; // Magnit
+    if (secid.startsWith('MT')) return map['MTS']; // MTS
+    if (secid.startsWith('MV')) return map['MVID']; // M.Video
+    if (secid.startsWith('MY')) return map['MOEX']; // MOEX CNY
+    if (secid.startsWith('N2')) return map['JPY']; // Nikkei -> JP
+    if (secid.startsWith('NA')) return map['NASDAQ']; // Nasdaq
+    if (secid.startsWith('NC')) return map['NICKEL']; // Nickel
+    if (secid.startsWith('NG')) return map['NATURAL_GAS']; // Natural Gas
+    if (secid.startsWith('NR')) return map['NATURAL_GAS']; // NGM -> Natural Gas
+    if (secid.startsWith('NV')) return map['NVTK']; // Novatek
+    if (secid.startsWith('OG')) return map['OIL']; // OGI -> Oil & Gas Index
+    if (secid.startsWith('OJ')) return map['ORANGE']; // Orange Juice
+    if (secid.startsWith('PD')) return map['PALLADIUM']; // Palladium
+    if (secid.startsWith('PT')) return map['PLATINUM']; // Platinum
+    if (secid.startsWith('PX')) return map['PLZL']; // Polyus
+    if (secid.startsWith('R2')) return map['DJ30']; // Russell -> US
+    if (secid.startsWith('RB')) return map['OFZ']; // RGBI -> Gov Bonds
+    if (secid.startsWith('RG')) return map['OFZ']; // RGBIF -> Gov Bonds
+    if (secid.startsWith('RI')) return map['MOEX']; // RTS -> MOEX
+    if (secid.startsWith('RM')) return map['MOEX']; // RTS Mini -> MOEX
+    if (secid.startsWith('S1')) return map['SILVER']; // Silver Mini
+    if (secid.startsWith('SA') || secid.startsWith('SU') || secid.startsWith('Su')) return map['SUGAR']; // Sugar
+    if (secid.startsWith('SF')) return map['DJ30']; // SPYF -> US
+    if (secid.startsWith('Si')) return map['Si']; // Si -> USDRUB
+    if (secid.startsWith('SQ')) return map['SOXQ']; // SOXQ
+    if (secid.startsWith('SV')) return map['SILVER']; // Silver
+    if (secid.startsWith('SX')) return map['EU']; // STOXX -> EU
+    if (secid.startsWith('TL')) return map['TLT']; // TLT -> US Treasury
+    if (secid.startsWith('VI')) return map['RVI']; // RVI -> Volatility Index
+    if (secid.startsWith('W4') || secid.startsWith('WH')) return map['WHEAT']; // Wheat
+    if (secid.startsWith('ZC')) return map['ZINC']; // Zinc
+
+  // Metals
+  if (secid.startsWith('GLD') || secid.startsWith('GOLD')) return map['GOLD'];
     if (secid.startsWith('SLV') || secid.startsWith('SILV')) return map['SILVER'];
     if (secid.startsWith('PLT') || secid.startsWith('PLAT')) return map['PLATINUM'];
     if (secid.startsWith('PLD') || secid.startsWith('PALL')) return map['PALLADIUM'];
+
+    // Russian Shares Futures
+    if (secid.startsWith('ED')) return map['ED'];
+    if (secid.startsWith('GD')) return map['GOLD'];
+    if (secid.startsWith('AF')) return map['AFLT'];
+    if (secid.startsWith('AL')) return map['ALRS'];
+    if (secid.startsWith('CH')) return map['CHMF'];
+    if (secid.startsWith('FE')) return map['FEES'];
+    if (secid.startsWith('GM')) return map['GMKN'];
+    if (secid.startsWith('GZ')) return map['GAZP'];
+    if (secid.startsWith('HY')) return map['HYDR'];
+    if (secid.startsWith('IR')) return map['IRAO'];
+    if (secid.startsWith('LK')) return map['LKOH'];
+    if (secid.startsWith('NL')) return map['NLMK'];
+    if (secid.startsWith('PH')) return map['PHOR'];
+    if (secid.startsWith('RN')) return map['ROSN'];
+    if (secid.startsWith('SN')) return map['SNGS'];
+    if (secid.startsWith('SR')) return map['SBRF'];
+    if (secid.startsWith('TT')) return map['TATN'];
+    if (secid.startsWith('VB') || secid.startsWith('VT')) return map['VTBR'];
+    if (secid.startsWith('YD') || secid.startsWith('YN')) return map['YNDX'];
   }
 
   if (!shortname) return null;
@@ -111,6 +197,12 @@ export const getIcon = (secid, shortname) => {
 
   if (shortnameUpper.startsWith('АЭРОФЛ')) return map['AFLT'];
   if (shortnameUpper.startsWith('СЕГЕЖА')) return map['SGZH'];
+  if (shortnameUpper.startsWith('АПРИ')) return map['APRI'];
+  if (shortnameUpper.startsWith('МГКЛ') || shortnameUpper.startsWith('МОСГОРЛОМБАРД')) return map['MGKL'];
+  if (shortnameUpper.startsWith('ПСБ') || shortnameUpper.startsWith('ПРОМСВЯЗЬБАНК')) return map['PSB'];
+  if (shortnameUpper.startsWith('АКРОН')) return map['AKRN'];
+  if (shortnameUpper.startsWith('RUS-')) return map['OFZ'];
+  if (shortnameUpper.startsWith('АФК СИСТЕМА') || shortnameUpper.startsWith('СИСТЕМА')) return map['AFKS'];
   if (shortnameUpper.startsWith('НОРНИК')) return map['GMKN'];
   if (shortnameUpper.startsWith('НЛМК')) return map['NLMK'];
   if (shortnameUpper.startsWith('РОССЕТ') || shortnameUpper.startsWith('ФСК') || shortnameUpper.startsWith('РСЕТИ')) return map['FEES'];
@@ -135,312 +227,184 @@ export const getIcon = (secid, shortname) => {
   if (shortnameUpper.startsWith('РУСГИД')) return map['HYDR'];
   if (shortnameUpper.startsWith('ОЗОН')) return map['OZON'];
   if (shortnameUpper.startsWith('SТБАНК')) return map['T'];
-  if (shortnameUpper.startsWith('КЛВЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ИНТЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МЕДСИ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СТРАНА')) return map['RUS'];
-  if (shortnameUpper.startsWith('АЛЬЯНС')) return map['RUS'];
-  if (shortnameUpper.startsWith('БАЛТЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ХАЙТЭК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПМЕД') || shortnameUpper.startsWith('IПМЕД')) return map['RUS'];
-  if (shortnameUpper.startsWith('АКВИЛОН')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЗАСЛОН')) return map['RUS'];
-  if (shortnameUpper.startsWith('АЙДИ')) return map['RUS'];
-  if (shortnameUpper.startsWith('УРАЛСТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('SЛЕГЕНД') || shortnameUpper.startsWith('ЛЕГЕНД')) return map['RUS'];
-  if (shortnameUpper.startsWith('РСЭКС')) return map['RUS'];
+  if (shortnameUpper.startsWith('КЛВЗ')) return map['KLVZ'];
+  if (shortnameUpper.startsWith('ИНТЛИЗ')) return map['INTLIZ'];
+  if (shortnameUpper.startsWith('МЕДСИ')) return map['MEDSI'];
+  if (shortnameUpper.startsWith('СТРАНА')) return map['STRANA'];
+  if (shortnameUpper.startsWith('АЛЬЯНС')) return map['ALLIANCE'];
+  if (shortnameUpper.startsWith('БАЛТЛИЗ')) return map['BALTLIZ'];
+  if (shortnameUpper.startsWith('ХАЙТЭК')) return map['HITECH'];
+  if (shortnameUpper.startsWith('ПМЕД') || shortnameUpper.startsWith('IПМЕД')) return map['PMED'];
+  if (shortnameUpper.startsWith('АКВИЛОН')) return map['AQUILON'];
+  if (shortnameUpper.startsWith('ЗАСЛОН')) return map['ZASLON'];
+  if (shortnameUpper.startsWith('АЙДИ')) return map['ID'];
+  if (shortnameUpper.startsWith('УРАЛСТ')) return map['URALST'];
+  if (shortnameUpper.startsWith('SЛЕГЕНД') || shortnameUpper.startsWith('ЛЕГЕНД')) return map['LEGENDA'];
+  if (shortnameUpper.startsWith('РСЭКС')) return map['RSEKS'];
   if (shortnameUpper.startsWith('НОВАТЭК')) return map['NVTK'];
-  if (shortnameUpper.startsWith('ЭКОНЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЛАЙФСТР')) return map['RUS'];
+  if (shortnameUpper.startsWith('ЭКОНЛИЗ')) return map['ECONLIZ'];
+  if (shortnameUpper.startsWith('ЛАЙФСТР')) return map['LIFESTR'];
   if (shortnameUpper.startsWith('СОВКМ')) return map['SVCB'];
-  if (shortnameUpper.startsWith('ПЕНСХОЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЭЛРЕШ')) return map['RUS'];
-  if (shortnameUpper.startsWith('УРОЖАЙ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПРАКТЛК')) return map['RUS'];
-  if (shortnameUpper.startsWith('РОЯЛКАП')) return map['RUS'];
-  if (shortnameUpper.startsWith('БСК')) return map['RUS'];
-  if (shortnameUpper.startsWith('МИГКР')) return map['RUS'];
-  if (shortnameUpper.startsWith('КИРИЛЛИЦА')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПИМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ФЭСАГРО')) return map['RUS'];
-  if (shortnameUpper.startsWith('НЕОЛИЗИНГ')) return map['RUS'];
+  if (shortnameUpper.startsWith('ПЕНСХОЛ')) return map['PENSHOL'];
+  if (shortnameUpper.startsWith('ЭЛРЕШ')) return map['ELRESH'];
+  if (shortnameUpper.startsWith('УРОЖАЙ')) return map['UROZHAY'];
+  if (shortnameUpper.startsWith('ПРАКТЛК')) return map['PRAKTLK'];
+  if (shortnameUpper.startsWith('РОЯЛКАП')) return map['ROYALCAP'];
+  if (shortnameUpper.startsWith('БСК')) return map['BSK'];
+  if (shortnameUpper.startsWith('МИГКР')) return map['MIGKR'];
+  if (shortnameUpper.startsWith('КИРИЛЛИЦА')) return map['CYRILLIC'];
+  if (shortnameUpper.startsWith('ПИМ')) return map['PIM'];
+  if (shortnameUpper.startsWith('ФЭСАГРО')) return map['FESAGRO'];
+  if (shortnameUpper.startsWith('НЕОЛИЗИНГ')) return map['NEOLIZ'];
   if (shortnameUpper.startsWith('СЕЛКТ') || shortnameUpper.startsWith('IСЕЛКТ')) return map['SELG'];
-  if (shortnameUpper.startsWith('АСВ')) return map['RUS'];
+  if (shortnameUpper.startsWith('АСВ')) return map['ASV'];
   if (shortnameUpper.startsWith('ГАЗПКАП')) return map['GAZP'];
   if (shortnameUpper.startsWith('ГАЗПНЕФТЬ')) return map['SIBN'];
+  if (shortnameUpper.startsWith('РЖД')) return map['RZD'];
+  if (shortnameUpper.startsWith('ВЭБ')) return map['VEB'];
+  if (shortnameUpper.startsWith('АВТОДОР') || shortnameUpper.startsWith('ГК АВТОДОР')) return map['AVTODOR'];
   if (shortnameUpper.startsWith('ГТЛК')) return map['GTLK'];
   if (shortnameUpper.startsWith('РСНФТ')) return map['ROSN'];
   if (shortnameUpper.startsWith('МАГНИ')) return map['MGNT'];
   if (shortnameUpper.startsWith('ПОЛЮ')) return map['PLZL'];
-  if (shortnameUpper.startsWith('ИСТРСЫР')) return map['RUS'];
-  if (shortnameUpper.startsWith('CTRL')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПРКТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СМАК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТРДБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('PLAZA')) return map['RUS'];
+  if (shortnameUpper.startsWith('ИСТРСЫР')) return map['ISTRSYR'];
+  if (shortnameUpper.startsWith('CTRL')) return map['CTRL'];
+  if (shortnameUpper.startsWith('ПРКТ')) return map['PRKT'];
+  if (shortnameUpper.startsWith('СМАК')) return map['SMAK'];
+  if (shortnameUpper.startsWith('ТРДБ')) return map['TRDB'];
+  if (shortnameUpper.startsWith('PLAZA')) return map['PLAZA'];
   if (shortnameUpper.startsWith('ГАЗПК')) return map['GAZP'];
   if (shortnameUpper.startsWith('ЯТЭК')) return map['YAKG'];
-  if (shortnameUpper.startsWith('ГРУППРО')) return map['RUS'];
-  if (shortnameUpper.startsWith('ДЖИ-ГР') || shortnameUpper.startsWith('ДЖИГР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ФЕРРУМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МАЭСТРО')) return map['RUS'];
-  if (shortnameUpper.startsWith('ОХТАГР')) return map['RUS'];
-  if (shortnameUpper.startsWith('СИБСТЕК')) return map['RUS'];
-  if (shortnameUpper.startsWith('MTRC')) return map['RUS'];
-  if (shortnameUpper.startsWith('МКЛИЗИНГ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МАНИКАП') || shortnameUpper.startsWith('МАНКАП')) return map['RUS'];
-  if (shortnameUpper.startsWith('РОССЦ')) return map['RUS'];
-  if (shortnameUpper.startsWith('АЭРФЬЮ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ИЛСБО')) return map['RUS'];
-  if (shortnameUpper.startsWith('ИНВОБЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МОСМСП')) return map['RUS'];
-  if (shortnameUpper.startsWith('РУССОЙЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('АФАНСБО')) return map['RUS'];
+  if (shortnameUpper.startsWith('ГРУППРО')) return map['GRUPPRO'];
+  if (shortnameUpper.startsWith('ДЖИ-ГР') || shortnameUpper.startsWith('ДЖИГР')) return map['GGROUP'];
+  if (shortnameUpper.startsWith('ФЕРРУМ')) return map['FERRUM'];
+  if (shortnameUpper.startsWith('МАЭСТРО')) return map['MAESTRO'];
+  if (shortnameUpper.startsWith('ОХТАГР')) return map['OHTAGR'];
+  if (shortnameUpper.startsWith('СИБСТЕК')) return map['SIBSTEK'];
+  if (shortnameUpper.startsWith('MTRC')) return map['MTRC'];
+  if (shortnameUpper.startsWith('МКЛИЗИНГ')) return map['MKLIZ'];
+  if (shortnameUpper.startsWith('МАНИКАП') || shortnameUpper.startsWith('МАНКАП')) return map['MANICAP'];
+  if (shortnameUpper.startsWith('РОССЦ')) return map['ROSSC'];
+  if (shortnameUpper.startsWith('АЭРФЬЮ')) return map['AERFU'];
+  if (shortnameUpper.startsWith('ИЛСБО')) return map['ILSBO'];
+  if (shortnameUpper.startsWith('ИНВОБЛ')) return map['INVOBL'];
+  if (shortnameUpper.startsWith('МОСМСП')) return map['MOSMSP'];
+  if (shortnameUpper.startsWith('РУССОЙЛ')) return map['RUSOIL'];
+  if (shortnameUpper.startsWith('АФАНСБО')) return map['AFANASY'];
   if (shortnameUpper.startsWith('ГАЗПН')) return map['SIBN'];
   if (shortnameUpper.startsWith('ИНАРКТ')) return map['AQUA'];
-  if (shortnameUpper.startsWith('БОРЖОМИ')) return map['RUS'];
-  if (shortnameUpper.startsWith('АВТОДОМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СИМПЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('БРУС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПИР')) return map['RUS'];
-  if (shortnameUpper.startsWith('МГОР') || shortnameUpper.startsWith('МОСКВА')) return map['RUS'];
+  if (shortnameUpper.startsWith('БОРЖОМИ')) return map['BORJOMI'];
+  if (shortnameUpper.startsWith('АВТОДОМ')) return map['AVDOM'];
+  if (shortnameUpper.startsWith('СИМПЛ')) return map['SIMPLE'];
+  if (shortnameUpper.startsWith('БРУС')) return map['BRUS'];
+  if (shortnameUpper.startsWith('ПИР')) return map['PIR'];
+  if (shortnameUpper.startsWith('МГОР') || shortnameUpper.startsWith('МОСКВА')) return map['MGOR'];
   if (shortnameUpper.startsWith('ДЖОЙ')) return map['JOYMONEY'];
-  if (shortnameUpper.startsWith('УНИТЕЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('РЕКОРД')) return map['RUS'];
-  if (shortnameUpper.startsWith('ХРОМОС') || shortnameUpper.startsWith('IХРОМОС')) return map['RUS'];
-  if (shortnameUpper.startsWith('СЕРГВ')) return map['RUS'];
+  if (shortnameUpper.startsWith('УНИТЕЛ')) return map['UNITEL'];
+  if (shortnameUpper.startsWith('РЕКОРД')) return map['RECORD'];
+  if (shortnameUpper.startsWith('ХРОМОС') || shortnameUpper.startsWith('IХРОМОС')) return map['CHROMOS'];
+  if (shortnameUpper.startsWith('СЕРГВ')) return map['SERGV'];
   if (shortnameUpper.startsWith('СИНАРА')) return map['SINARA'];
-  if (shortnameUpper.startsWith('ТЕЛХОЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('РУМБЕРГ') || shortnameUpper.startsWith('РУМБРГ')) return map['RUS'];
-  if (shortnameUpper.startsWith('АСПЭЙС')) return map['RUS'];
-  if (shortnameUpper.startsWith('СОЛТОН')) return map['RUS'];
-  if (shortnameUpper.startsWith('ДАРС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ОИЛРЕСУР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЦЕНТРИБ')) return map['RUS'];
+  if (shortnameUpper.startsWith('ТЕЛХОЛ')) return map['TELHOL'];
+  if (shortnameUpper.startsWith('РУМБЕРГ') || shortnameUpper.startsWith('РУМБРГ')) return map['ROOMBERG'];
+  if (shortnameUpper.startsWith('АСПЭЙС')) return map['ASPACE'];
+  if (shortnameUpper.startsWith('СОЛТОН')) return map['SOLTON'];
+  if (shortnameUpper.startsWith('ДАРС')) return map['DARS'];
+  if (shortnameUpper.startsWith('ОИЛРЕСУР')) return map['OILRESUR'];
+  if (shortnameUpper.startsWith('ЦЕНТРИБ')) return map['CENTRIB'];
   if (shortnameUpper.startsWith('ПКБ') || shortnameUpper.startsWith('ПЕРВОЕ КЛИЕНТСКОЕ') || shortnameUpper.startsWith('ПЕРВОЕ КОЛЛЕКТОРСКОЕ')) return map['PKB'];
-  if (shortnameUpper.startsWith('ЮДП')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТКБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('АРЛИФТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТАЛК')) return map['RUS'];
-  if (shortnameUpper.startsWith('AGROFRGT')) return map['RUS'];
-  if (shortnameUpper.startsWith('ANTERRA')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЕСЭГ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЕВРХОЛ')) return map['RUS'];
+  if (shortnameUpper.startsWith('ЮДП')) return map['UDP'];
+  if (shortnameUpper.startsWith('ТКБ')) return map['TKB'];
+  if (shortnameUpper.startsWith('АРЛИФТ')) return map['ARLIFT'];
+  if (shortnameUpper.startsWith('ТАЛК')) return map['TALK'];
+  if (shortnameUpper.startsWith('AGROFRGT')) return map['AGROFRGT'];
+  if (shortnameUpper.startsWith('ANTERRA')) return map['ANTERRA'];
+  if (shortnameUpper.startsWith('ЕСЭГ')) return map['ESEG'];
+  if (shortnameUpper.startsWith('ЕВРХОЛ')) return map['EVRHOL'];
   if (shortnameUpper.startsWith('А101')) return map['A101'];
-  if (shortnameUpper.startsWith('АФБАНК')) return map['RUS'];
-  if (shortnameUpper.startsWith('СИБКХП')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЕАС')) return map['RUS'];
+  if (shortnameUpper.startsWith('АФБАНК')) return map['AFBANK'];
+  if (shortnameUpper.startsWith('СИБКХП')) return map['SIBKHP'];
+  if (shortnameUpper.startsWith('ЕАС')) return map['EAS'];
   if (shortnameUpper.startsWith('РЕСБЕЛ')) return map['BLR'];
-  if (shortnameUpper.startsWith('НИЖЕГОРОД')) return map['RUS'];
-  if (shortnameUpper.startsWith('КЕАРЛИ')) return map['RUS'];
-  if (shortnameUpper.startsWith('NSKATD')) return map['RUS'];
-  if (shortnameUpper.startsWith('БИЗНЕС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПУБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ММЗ')) return map['RUS'];
+  if (shortnameUpper.startsWith('НИЖЕГОРОД')) return map['NIZHEGOROD'];
+  if (shortnameUpper.startsWith('КЕАРЛИ')) return map['KEARLI'];
+  if (shortnameUpper.startsWith('NSKATD')) return map['NSKATD'];
+  if (shortnameUpper.startsWith('БИЗНЕС')) return map['BUSINESS'];
+  if (shortnameUpper.startsWith('ПУБ')) return map['PUB'];
+  if (shortnameUpper.startsWith('ММЗ')) return map['MMZ'];
   if (shortnameUpper.startsWith('ПОЗИТИВ') || shortnameUpper.startsWith('IПОЗИТИВ')) return map['POSI'];
-  if (shortnameUpper.startsWith('МИРРИКО')) return map['RUS'];
-  if (shortnameUpper.startsWith('ОМЕГА')) return map['RUS'];
-  if (shortnameUpper.startsWith('БАЙСЭЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СБ СЕК') || shortnameUpper.startsWith('СБСЕК')) return map['RUS'];
-  if (shortnameUpper.startsWith('БИАНКА')) return map['RUS'];
-  if (shortnameUpper.startsWith('СУЛЬФУР')) return map['RUS'];
-  if (shortnameUpper.startsWith('АЙГЕНИС')) return map['RUS'];
+  if (shortnameUpper.startsWith('МИРРИКО')) return map['MIRRICO'];
+  if (shortnameUpper.startsWith('ОМЕГА')) return map['OMEGA'];
+  if (shortnameUpper.startsWith('БАЙСЭЛ')) return map['BYCEL'];
+  if (shortnameUpper.startsWith('СБ СЕК') || shortnameUpper.startsWith('СБСЕК')) return map['SBSEC'];
+  if (shortnameUpper.startsWith('БИАНКА')) return map['BIANKA'];
+  if (shortnameUpper.startsWith('СУЛЬФУР')) return map['SULFUR'];
+  if (shortnameUpper.startsWith('АЙГЕНИС')) return map['IGENIS'];
   if (shortnameUpper.startsWith('СПЛИТ')) return map['YNDX'];
-  if (shortnameUpper.startsWith('МОЭ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЕДА')) return map['RUS'];
+  if (shortnameUpper.startsWith('МОЭ')) return map['MOE'];
+  if (shortnameUpper.startsWith('ЕДА')) return map['EDA'];
   if (shortnameUpper.startsWith('СБКИБ')) return map['SBRF'];
-  if (shortnameUpper.startsWith('ЛАЗСИСТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('НЭППИ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТФИНАНС')) return map['RUS'];
+  if (shortnameUpper.startsWith('ЛАЗСИСТ')) return map['LAZSYST'];
+  if (shortnameUpper.startsWith('НЭППИ')) return map['NAPPY'];
+  if (shortnameUpper.startsWith('ТФИНАНС')) return map['TFINANCE'];
   if (shortnameUpper.startsWith('РОЛЬФ')) return map['ROLF'];
-  if (shortnameUpper.startsWith('ВСМИ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МЦП')) return map['RUS'];
-  if (shortnameUpper.startsWith('СОЛСАТЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('РСТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СКАЗКА')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЭКСПО')) return map['RUS'];
+  if (shortnameUpper.startsWith('ВСМИ')) return map['VSMI'];
+  if (shortnameUpper.startsWith('МЦП')) return map['MCP'];
+  if (shortnameUpper.startsWith('СОЛСАТЛ')) return map['SOLSATL'];
+  if (shortnameUpper.startsWith('РСТ')) return map['RST'];
+  if (shortnameUpper.startsWith('СКАЗКА')) return map['SKAZKA'];
+  if (shortnameUpper.startsWith('ЭКСПО')) return map['EXPO'];
   if (shortnameUpper.startsWith('САМОКАТ')) return map['SAMOKAT'];
-  if (shortnameUpper.startsWith('ТЛК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ОСТРОВ')) return map['RUS'];
-  if (shortnameUpper.startsWith('САДКО')) return map['RUS'];
-  if (shortnameUpper.startsWith('R-VISION')) return map['RUS'];
-  if (shortnameUpper.startsWith('ДЕЛЛИЗ')) return map['RUS'];
+  if (shortnameUpper.startsWith('ТЛК')) return map['TLK'];
+  if (shortnameUpper.startsWith('ОСТРОВ')) return map['OSTROV'];
+  if (shortnameUpper.startsWith('САДКО')) return map['SADKO'];
+  if (shortnameUpper.startsWith('R-VISION')) return map['RVISION'];
+  if (shortnameUpper.startsWith('ДЕЛЛИЗ')) return map['DELLIZ'];
   if (shortnameUpper.startsWith('SЕВТРАН')) return map['EUTR'];
   if (shortnameUpper.startsWith('SГПБ')) return map['GPB'];
-  if (shortnameUpper.startsWith('SМГОР')) return map['RUS'];
-  if (shortnameUpper.startsWith('SМЕТАЛИ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МЕТАЛН')) return map['RUS'];
-  if (shortnameUpper.startsWith('БСИНАРА')) return map['RUS'];
-  if (shortnameUpper.startsWith('УЛК')) return map['RUS'];
-  if (shortnameUpper.startsWith('АРКТИК')) return map['RUS'];
-  if (shortnameUpper.startsWith('РЕСАЛБ')) return map['RUS'];
+  if (shortnameUpper.startsWith('SМГОР')) return map['SMGOR'];
+  if (shortnameUpper.startsWith('SМЕТАЛИ')) return map['SMETALI'];
+  if (shortnameUpper.startsWith('МЕТАЛН')) return map['METALN'];
+  if (shortnameUpper.startsWith('БСИНАРА')) return map['BSINARA'];
+  if (shortnameUpper.startsWith('УЛК')) return map['ULK'];
+  if (shortnameUpper.startsWith('АРКТИК')) return map['ARCTIC'];
+  if (shortnameUpper.startsWith('РЕСАЛБ')) return map['RESALB'];
   if (shortnameUpper.startsWith('БАНКДОМ')) return map['DOMRF'];
-  if (shortnameUpper.startsWith('МЕДСКАН')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЭРФЬЮ') || shortnameUpper.includes('ЭРФЬЮ')) return map['RUS'];
+  if (shortnameUpper.startsWith('МЕДСКАН')) return map['MEDSCAN'];
+  if (shortnameUpper.startsWith('ЭРФЬЮ') || shortnameUpper.includes('ЭРФЬЮ')) return map['ERF'];
   if (shortnameUpper.startsWith('ССТЕМ')) return map['AFKS'];
   if (shortnameUpper.startsWith('РФ З')) return map['OFZ'];
   if (shortnameUpper.startsWith('ЕВР')) return map['EUTR'];
-  if (shortnameUpper.startsWith('ПОЛИП')) return map['RUS'];
-  if (shortnameUpper.startsWith('SГТЛК')) return map['GTLK'];
-  if (shortnameUpper.startsWith('УРАЛКУЗ')) return map['RUS'];
+  if (shortnameUpper.startsWith('ПОЛИП')) return map['POLYP'];
+  if (shortnameUpper.startsWith('SГТЛК') || shortnameUpper.startsWith('СГТЛК')) return map['GTLK'];
   if (shortnameUpper.startsWith('АБРАУ')) return map['SVAV'];
-  if (shortnameUpper.startsWith('МЕТИН')) return map['RUS'];
-  if (shortnameUpper.startsWith('IЭДЬЮКЕЙШН')) return map['RUS'];
-  if (shortnameUpper.startsWith('СКСЛОМБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ИА ТБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('УПТК')) return map['RUS'];
-  if (shortnameUpper.startsWith('СЛАВЭК')) return map['RUS'];
   if (shortnameUpper.startsWith('АЛФФБ')) return map['ALFA'];
-  if (shortnameUpper.startsWith('Л-СТАРТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('РОСИНТЕР')) return map['RUS'];
-  if (shortnameUpper.startsWith('IАЙДЕКО')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЮСВ')) return map['RUS'];
-  if (shortnameUpper.startsWith('КВАЗАРЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ГЛАНИТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('БАШКРТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ГЛАВСНАБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ИНТЕЛК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ФЕРА')) return map['RUS'];
-  if (shortnameUpper.startsWith('АГРОЭКО')) return map['RUS'];
-  if (shortnameUpper.startsWith('РОССИЯ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МАЭСТР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПГК')) return map['RUS'];
-  if (shortnameUpper.startsWith('БУСТЕР')) return map['RUS'];
-  if (shortnameUpper.startsWith('МЕГАФН')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЭЛМЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ГТЕК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЮУЛЦ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СТАНКОМАШ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЭЛЬТОН')) return map['RUS'];
-  if (shortnameUpper.startsWith('ВЕКУС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПЭТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СЕЛОЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('УРСБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ВОСТКОЙЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МКАОВОКС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ДИНТЕГ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СТРОЙДОР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТОМОБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('АДВТРАК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ФИНЭКВА')) return map['RUS'];
-  if (shortnameUpper.startsWith('ДФЮГР')) return map['RUS'];
-  if (shortnameUpper.startsWith('РЕСТОР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЯНАО')) return map['RUS'];
   if (shortnameUpper.startsWith('SСИСТЕМ')) return map['AFKS'];
-  if (shortnameUpper.startsWith('ЗОНЛАЙН')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЗООПТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТАЛЬВЕН')) return map['RUS'];
   if (shortnameUpper.startsWith('СОВКОКАП')) return map['SVCB'];
-  if (shortnameUpper.startsWith('ЭЛТЕРА')) return map['RUS'];
-  if (shortnameUpper.startsWith('КОРПСАН')) return map['RUS'];
-  if (shortnameUpper.startsWith('ДЖЕТЛ')) return map['RUS'];
   if (shortnameUpper.startsWith('АЛРОСА') || shortnameUpper.startsWith('АЛРОC')) return map['ALRS'];
-  if (shortnameUpper.startsWith('РСЭ')) return map['RUS'];
   if (shortnameUpper.startsWith('СИСТЕМ')) return map['AFKS'];
-  if (shortnameUpper.startsWith('МАНКАП')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТРАНСМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('РУБЕЖ')) return map['RUS'];
   if (shortnameUpper.startsWith('ГЛОРАКС')) return map['GLORAX'];
   if (shortnameUpper.startsWith('ЕВТРАН') || shortnameUpper.startsWith('ЕВТРНС') || shortnameUpper.startsWith('SЕВТРАН') || shortnameUpper.startsWith('SЕВТРНС')) return map['EUTR'];
-  if (shortnameUpper.startsWith('РАТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СЛДК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ВЕРАТЕК')) return map['RUS'];
-  if (shortnameUpper.startsWith('АНТЕРРА')) return map['RUS'];
-  if (shortnameUpper.startsWith('АГРОДОМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТРАНСКО')) return map['RUS'];
-  if (shortnameUpper.startsWith('АСПЭК')) return map['RUS'];
   if (shortnameUpper.startsWith('РФ ЗО')) return map['OFZ'];
-  if (shortnameUpper.startsWith('АМУР')) return map['RUS'];
   if (shortnameUpper.startsWith('SELSILV')) return map['SELG'];
-  if (shortnameUpper.startsWith('АСАЧА')) return map['RUS'];
-  if (shortnameUpper.startsWith('ВОКСИС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЭТС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПОЛИПЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МИРАТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('НОВТЕХ')) return map['RUS'];
-  if (shortnameUpper.startsWith('КОКС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ОИЛРЕС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЛКХ')) return map['RUS'];
   if (shortnameUpper.startsWith('СБCIB') || shortnameUpper.startsWith('СБ CIB')) return map['SBRF'];
-  if (shortnameUpper.startsWith('РДВ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ССЕКЬЮР')) return map['RUS'];
-  if (shortnameUpper.startsWith('УРКАП')) return map['RUS'];
-  if (shortnameUpper.startsWith('МАНИМЕН')) return map['RUS'];
-  if (shortnameUpper.startsWith('ОРГАНИК')) return map['RUS'];
   if (shortnameUpper.startsWith('ЮГК')) return map['UGLD'];
-  if (shortnameUpper.startsWith('ПАТРИОТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('БАРРЕЛЬ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЭФФТЕХ')) return map['RUS'];
-  if (shortnameUpper.startsWith('РСГ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ИЭК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ДЕЛПОРТ')) return map['RUS'];
   if (shortnameUpper.startsWith('АГРОUSD')) return map['AGRO'];
-  if (shortnameUpper.startsWith('ИПС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ДЕВАР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТЕХНЛГ')) return map['RUS'];
-  if (shortnameUpper.startsWith('БИОВИТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СЗА')) return map['RUS'];
   if (shortnameUpper.startsWith('ТБ-')) return map['TCS'];
-  if (shortnameUpper.startsWith('СГ РУС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ИНТЕРСК')) return map['RUS'];
   if (shortnameUpper.startsWith('ЭНПЛГ')) return map['ENPG'];
-  if (shortnameUpper.startsWith('СПЕКТР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ФЛИТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ИНВКЦ')) return map['RUS'];
-  if (shortnameUpper.startsWith('НПАК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ВИЛЛИН')) return map['RUS'];
-  if (shortnameUpper.startsWith('АВТОМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ВЗВТ')) return map['RUS'];
   if (shortnameUpper.startsWith('ВСИНСТР')) return map['VSEH'];
-  if (shortnameUpper.startsWith('СКЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('АФБАНК')) return map['RUS'];
-  if (shortnameUpper.startsWith('СИБКХП')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЕАС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ИНТЕРСКОЛ')) return map['RUS'];
   if (shortnameUpper.startsWith('СЛ ') || shortnameUpper === 'СЛ') return map['SOFL'];
-  if (shortnameUpper.startsWith('КАРРУС') || shortnameUpper.startsWith('IКАРРУС')) return map['RUS'];
-  if (shortnameUpper.startsWith('СОБИЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('УЛЬТРА')) return map['RUS'];
-  if (shortnameUpper.startsWith('СЕЛЛСЕРВ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЛАЙМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СМАРТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('РЕДСОФТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ФОРДЕВИНД')) return map['RUS'];
-  if (shortnameUpper.startsWith('КИФА')) return map['RUS'];
-  if (shortnameUpper.startsWith('МИКРАН')) return map['RUS'];
-  if (shortnameUpper.startsWith('СПМК')) return map['RUS'];
   if (shortnameUpper.startsWith('ФОС')) return map['PHOR'];
   if (shortnameUpper.startsWith('ВУШ') || shortnameUpper.startsWith('IВУШ')) return map['WUSH'];
-  if (shortnameUpper.startsWith('ИНТЕРСКОЛ')) return map['RUS'];
   if (shortnameUpper.startsWith('ЛУКОЙЛ')) return map['LKOH'];
   if (shortnameUpper.startsWith('ЧЕРКИЗ')) return map['GCHE'];
-  if (shortnameUpper.startsWith('МЕТАЛИН')) return map['RUS'];
   if (shortnameUpper.startsWith('СКФ')) return map['FLOT'];
-  if (shortnameUpper.startsWith('АЛЬТА')) return map['RUS'];
-  if (shortnameUpper.startsWith('НОВТЕХН')) return map['RUS'];
-  if (shortnameUpper.startsWith('АПРИ')) return map['RUS'];
   if (shortnameUpper.startsWith('РКС')) return map['ETLN'];
-  if (shortnameUpper.startsWith('БОРЕЦ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЭФФЕРОН')) return map['RUS'];
-  if (shortnameUpper.startsWith('РЕИННОЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('РОДЕЛЕН')) return map['RUS'];
   if (shortnameUpper.startsWith('СОПФ') || shortnameUpper.startsWith('SСОПФ')) return map['DOMRF'];
-  if (shortnameUpper.startsWith('SСТМ') || shortnameUpper.startsWith('СТМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СИБАВТО')) return map['RUS'];
   if (shortnameUpper.startsWith('МАГНИТ')) return map['MGNT'];
-  if (shortnameUpper.startsWith('АРЕНЗА')) return map['RUS'];
   if (shortnameUpper.startsWith('ВЫМПЕЛ')) return map['VEON'];
-  if (shortnameUpper.startsWith('САММИТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЭЛЕМЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СЭТЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ДФФ')) return map['RUS'];
-  if (shortnameUpper.startsWith('БДЕНЬГ')) return map['RUS'];
   if (shortnameUpper.startsWith('ТГК-1') || shortnameUpper.startsWith('ТГК1')) return map['TGKA'];
-  if (shortnameUpper.startsWith('МГДОБЛ')) return map['RUS'];
   if (shortnameUpper.startsWith('ГАЗК')) return map['GAZR'];
-  if (shortnameUpper.startsWith('АГТК')) return map['RUS'];
-  if (shortnameUpper.startsWith('РЭО')) return map['RUS'];
-  if (shortnameUpper.startsWith('АБЗ')) return map['RUS'];
   if (shortnameUpper.startsWith('ИНТЕРРАО')) return map['IRAO'];
   if (shortnameUpper.startsWith('ТМК') || shortnameUpper.startsWith('ЧТПЗ')) return map['TMK'];
   if (shortnameUpper.startsWith('ГТЛК')) return map['GTLK'];
@@ -458,23 +422,6 @@ export const getIcon = (secid, shortname) => {
   if (shortnameUpper.startsWith('ГАЗПРОМК')) return map['GAZR'];
   if (shortnameUpper.startsWith('ОГК-2') || shortnameUpper.startsWith('ОГК2')) return map['OGKB'];
   if (shortnameUpper.startsWith('ТРНФ') || shortnameUpper.startsWith('ТРАНСНФ')) return map['TRNF'];
-  if (shortnameUpper.startsWith('РОСНАНО')) return map['RUS'];
-  if (shortnameUpper.startsWith('МЕГАФОН')) return map['RUS'];
-  if (shortnameUpper.startsWith('МЕТАЛИНБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('АЗБУКА')) return map['RUS'];
-  if (shortnameUpper.startsWith('АПТ36')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЯКУТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('КРАСНОД')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПСБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МБЭС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПР-ЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЮНИМЕТР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПНППК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЖКХРСЯ')) return map['RUS'];
-  if (shortnameUpper.startsWith('SРУСОЛ') || shortnameUpper.startsWith('РУСОЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('IУОМЗ') || shortnameUpper.startsWith('УОМЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('SСОЦ') || shortnameUpper.startsWith('СОЦ')) return map['RUS'];
-  if (shortnameUpper.startsWith('RUS-')) return map['RUS'];
   if (shortnameUpper.startsWith('BLR-') || shortnameUpper.startsWith('РЕСБЕЛ') || shortnameUpper.startsWith('BYM')) return map['BLR'];
 
   if (shortnameUpper.startsWith('HENDERSON')) return map['HENDERSON'];
@@ -491,122 +438,27 @@ export const getIcon = (secid, shortname) => {
   if (shortnameUpper.startsWith('КАМАЗ')) return map['KMAZ'];
   if (shortnameUpper.startsWith('БАШНФТ')) return map['BANE'];
   if (shortnameUpper.startsWith('СИСТЕМА') || shortnameUpper.startsWith('АФК СИСТЕМА') || shortnameUpper.startsWith('СИСТЕМ')) return map['AFKS'];
-  if (shortnameUpper.startsWith('БИНФАРМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('SКАПИТАЛ') || shortnameUpper.startsWith('КАПИТАЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПЕТСНАБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('БНТЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СОЛЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СНХТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('НЗРМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПУШК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТРАНСМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЭЛАП')) return map['RUS'];
   if (shortnameUpper.startsWith('SИАДОМ')) return map['DOMRF'];
-  if (shortnameUpper.startsWith('МГКЛ')) return map['RUS'];
   if (shortnameUpper.startsWith('SВЭБ')) return map['VEB'];
-  if (shortnameUpper.startsWith('ШЕВЧЕНК')) return map['RUS'];
   if (shortnameUpper.startsWith('CIB')) return map['SBER'];
-  if (shortnameUpper.startsWith('ЦР')) return map['RUS'];
   if (shortnameUpper.startsWith('ГАЗКЗ')) return map['GAZR'];
   if (shortnameUpper.startsWith('РОСНЕФТЬ') || shortnameUpper.startsWith('РОСНФТ')) return map['ROSN'];
-  if (shortnameUpper.startsWith('ГИДРОМАШ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СИБУР')) return map['RUS']; // No Sibur icon yet
-  if (shortnameUpper.startsWith('SMGOR') || shortnameUpper.startsWith('SМГОР') || shortnameUpper.startsWith('СМГОР')) return map['RUS'];
   if (shortnameUpper.startsWith('МЭЙЛ')) return map['VKCO'];
-  if (shortnameUpper.startsWith('ПЕТРИНЖ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ДРКТЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МОТОР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТАТНХИМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МСБЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СЛАВЭКО')) return map['RUS'];
-  if (shortnameUpper.startsWith('СФО')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЦИФРБРО')) return map['RUS'];
-  if (shortnameUpper.startsWith('ВСК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ИА') && shortnameUpper.includes('АБС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЛТРЕЙД')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЭНИКА')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТРАНСМХ')) return map['RUS'];
-  if (shortnameUpper.startsWith('АТОМЭН') || shortnameUpper.startsWith('SАТОМЭН')) return map['RUS'];
-  if (shortnameUpper.startsWith('БАШКОРТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('АРТГН')) return map['RUS'];
-  if (shortnameUpper.startsWith('БЭЛТИ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МЕТИНВ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МАНЫЧ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЕВРОПЛН')) return map['RUS'];
-  if (shortnameUpper.startsWith('РЕГПРОД')) return map['RUS'];
-  if (shortnameUpper.startsWith('АВТОБФ')) return map['RUS'];
+  if (shortnameUpper.startsWith('АТОМЭН') || shortnameUpper.startsWith('SАТОМЭН') || shortnameUpper.startsWith('SАТОМ')) return map['ROSATOM'];
   if (shortnameUpper.startsWith('ЭТАЛ')) return map['ETLN'];
-  if (shortnameUpper.startsWith('СЛАВНЕ')) return map['RUS']; // Shortened from СЛАВНЕФ
   if (shortnameUpper.startsWith('РУСАЛ') || shortnameUpper.startsWith('РСАЛ')) return map['RUAL'];
   if (shortnameUpper.startsWith('МОСТРЕСТ')) return map['MSTT'];
   if (shortnameUpper.startsWith('РОСТЕЛ')) return map['RTKM'];
   if (shortnameUpper.startsWith('РЕСО')) return map['RENI'];
   if (shortnameUpper.startsWith('ЧТПЗ')) return map['TMK'];
-  if (shortnameUpper.startsWith('АВТОДОР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЗСД') || shortnameUpper.startsWith('ГЛДОРОГА') || shortnameUpper.startsWith('СЗКК')) return map['RUS'];
   if (shortnameUpper.startsWith('ДОМ') || shortnameUpper.startsWith('ИА ДОМ') || shortnameUpper.startsWith('ИАДОМ')) return map['DOMRF'];
   if (shortnameUpper.startsWith('МОСКРЕД') || shortnameUpper.startsWith('МКБ')) return map['CBOM'];
   if (shortnameUpper.startsWith('НКНХ')) return map['NKNC'];
   if (shortnameUpper.startsWith('СЕВЕРСТ')) return map['CHMF'];
   if (shortnameUpper.startsWith('ФПК')) return map['RZD'];
-  if (shortnameUpper.startsWith('СИТИМАТ') || shortnameUpper.startsWith('СИТИМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПЕРЕСВЕТ') || shortnameUpper.startsWith('ПЕРЕСВ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МДС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПКТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ДЕРЖАВА')) return map['RUS'];
-  if (shortnameUpper.startsWith('НОВОСИБ') || shortnameUpper.startsWith('НОВСИБ') || shortnameUpper.startsWith('ЯРОБЛ') || shortnameUpper.startsWith('ОРЕНБ') || shortnameUpper.startsWith('СПБГО') || shortnameUpper.startsWith('САМАРОБЛ') || shortnameUpper.startsWith('СВЕРДЛОБЛ') || shortnameUpper.startsWith('УДМУРТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ОДК')) return map['RUS'];
-  if (shortnameUpper.startsWith('STKK') || shortnameUpper.startsWith('SТКК') || shortnameUpper.startsWith('ТКК')) return map['RUS'];
-  if (shortnameUpper.startsWith('АКРОН')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТРАНСФ')) return map['RUS'];
-  if (shortnameUpper.startsWith('КРАУС')) return map['RUS'];
-  if (shortnameUpper.startsWith('РСЭКСМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЛОКОСЕРВ')) return map['RUS'];
-  if (shortnameUpper.startsWith('АРАГОН')) return map['RUS'];
-  if (shortnameUpper.startsWith('МЕЖИНБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЛЕВЕНГУК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ВЦЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЦППК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ВЕРТОЛЕТ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СФЕРФИН')) return map['RUS'];
-  if (shortnameUpper.startsWith('РОССИУМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЕАБР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТКХ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ММЦБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПРАВОУРМ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПИОНЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СГБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('БРАЙТФ')) return map['RUS'];
-  if (shortnameUpper.startsWith('СЛАВНЕФ')) return map['RUS'];
-  if (shortnameUpper.startsWith('КАЗАХСТ')) return map['BLR']; // Use BLR/Foreign icon or KZT? KZT is currency icon. BLR maps to by.svg. Maybe map to KZ flag if available? I have KZT -> kz.svg.
-  if (shortnameUpper.startsWith('УЛЬОБ')) return map['RUS'];
+  if (shortnameUpper.startsWith('R-VISION') || shortnameUpper.startsWith('Р-ВИЖН') || shortnameUpper.startsWith('R-VIS')) return map['RVIS'];
+  if (shortnameUpper.startsWith('КАЗАХСТ')) return map['KZT']; // Use BLR/Foreign icon or KZT? KZT is currency icon. BLR maps to by.svg. Maybe map to KZ flag if available? I have KZT -> kz.svg.
   if (shortnameUpper.startsWith('IMT_FREE')) return map['MTS'];
-  if (shortnameUpper.startsWith('МОЭК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ИА АБС')) return map['RUS'];
-  if (shortnameUpper.startsWith('НКК')) return map['RUS'];
-  if (shortnameUpper.startsWith('РВК')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТОМСК')) return map['RUS'];
-  if (shortnameUpper.startsWith('СЭЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ВИС')) return map['RUS'];
-  if (shortnameUpper.startsWith('ПРОДКОРП')) return map['RUS'];
-  if (shortnameUpper.startsWith('МОСОБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('НИЖГОР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЧЕЛЯБ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МСП')) return map['RUS'];
-  if (shortnameUpper.startsWith('СТАВР')) return map['RUS'];
-  if (shortnameUpper.startsWith('КАЛИН')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТИТАН')) return map['RUS'];
-  if (shortnameUpper.startsWith('БМБАНК')) return map['RUS'];
-  if (shortnameUpper.startsWith('РЕНКРЕД')) return map['RUS'];
-  if (shortnameUpper.startsWith('СДЭК')) return map['RUS'];
-  if (shortnameUpper.startsWith('РОСАГРЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ЮСК')) return map['RUS'];
-  if (shortnameUpper.startsWith('РИТЙЛ')) return map['RUS'];
-  if (shortnameUpper.startsWith('КИРОВ')) return map['RUS'];
-  if (shortnameUpper.startsWith('МГОР')) return map['RUS'];
-  if (shortnameUpper.startsWith('НОВОТР')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТЕХЛИЗ')) return map['RUS'];
-  if (shortnameUpper.startsWith('ТП КИР')) return map['RUS'];
   if (shortnameUpper.startsWith('СПЛИТ')) return map['YNDX'];
   if (shortnameUpper.startsWith('ДЕНУМ')) return map['DENUM'];
   if (shortnameUpper.startsWith('ТАЛАН')) return map['TALAN'];
@@ -619,13 +471,19 @@ export const getIcon = (secid, shortname) => {
   if (shortnameUpper.startsWith('ЦЕНТР-К')) return map['CENTERK'];
   if (shortnameUpper.startsWith('ДЕНУМ')) return map['DENUM'];
   if (shortnameUpper.startsWith('ТАЛАН')) return map['TALAN'];
-  if (shortnameUpper.startsWith('ПИОНЕР')) return map['PIONEER'];
-  if (shortnameUpper.startsWith('СОДРУЖ')) return map['SODR'];
   if (shortnameUpper.startsWith('АСГТРАФО')) return map['ASG'];
   if (shortnameUpper.startsWith('ТПЛЮС')) return map['TPLUS'];
   if (shortnameUpper.startsWith('ГКАЗОТ')) return map['AZOT'];
   if (shortnameUpper.startsWith('ЛМБРД888') || shortnameUpper.startsWith('ЛОМБАРД888')) return map['LOMBARD888'];
   if (shortnameUpper.startsWith('РС БО') || shortnameUpper.startsWith('РУССКИЙ СВЕТ')) return map['RUSVET'];
+  
+  if (shortnameUpper.startsWith('SСОЦ.РАЗ') || shortnameUpper.startsWith('ССОЦ.РАЗ')) return map['SOCR'];
+  if (shortnameUpper.startsWith('SТКК') || shortnameUpper.startsWith('СТКК')) return map['TKK'];
+  if (shortnameUpper.startsWith('A101') || shortnameUpper.startsWith('А101')) return map['A101'];
+  if (shortnameUpper.startsWith('АБЗ-1')) return map['ABZ'];
+  if (shortnameUpper.startsWith('АВТОБФ')) return map['AVBN'];
+  if (shortnameUpper.startsWith('АВТОДОМ')) return map['AVDOM'];
+
   
   // Extract asset code from shortname (e.g., "SBRF-3.26" -> "SBRF")
   const assetCode = shortname.split('-')[0].toUpperCase();
@@ -645,10 +503,26 @@ const getIconMap = () => {
   return {
     // Russian Companies
     'AFLT': ru('AFLT.svg'),
+    'BABA': cn('BABA.svg'),
+    'BIDU': cn('BIDU.svg'),
+    'OIL': com('OIL.svg'),
+    'ALUMINUM': com('ALUMINUM.svg'),
+    'COCOA': com('COCOA.svg'),
+    'COPPER': com('COPPER.svg'),
+    'TTF': com('TTF.svg'),
+    'DJ30': cur('us.svg'),
+    'DAX': cur('de.svg'),
+    'EM': us('EM.svg'),
+    'ETH': cry('ETH.svg'),
+    'EU': cur('eu.svg'),
+    'UCAD': cur('ca.svg'),
+    'HOME': ru('HOME.svg'),
+    'COFFEE': com('COFFEE.svg'),
+    'MINING': ru('MINING.svg'),
+    'NASDAQ': us('NASDAQ.svg'),
+    'NICKEL': com('NICKEL.svg'),
     'OFZ': cur('ru.svg'),
-    'RUS': cur('ru.svg'),
     'BLR': cur('by.svg'),
-    'RZD': ru('RZD.svg'),
     'TMK': ru('TMK.svg'),
     'ALFA': ru('ALFA.svg'),
     'POCHTA': ru('POCHTA.svg'),
@@ -659,13 +533,9 @@ const getIconMap = () => {
     'MTS': ru('MTSS.svg'),
     'TCS': ru('TCS.svg'),
     'SUEK': ru('SUEK.svg'),
-    'GTLK': cur('ru.svg'),
-    'EUTR': cur('ru.svg'),
     'BRUS': ru('BRUS.svg'),
-    'A101': ru('A101.svg'),
     'BORJ': ru('BORJ.svg'),
     'SINARA': ru('SINARA.svg'),
-    'VSEH': cur('ru.svg'),
     'SAMOKAT': ru('SAMOKAT.svg'),
     'ROLF': ru('ROLF.svg'),
     'GLORAX': ru('GLORAX.svg'),
@@ -679,7 +549,6 @@ const getIconMap = () => {
     'WIM': ru('WIM.png'),
     'GENERAL': ru('GENERAL.png'),
     'APRIORI': ru('APRIORI.png'),
-    'PKB': ru('PKB.svg'),
     'SBER': ru('SBRF.svg'), // Share ticker
     'SBERP': ru('SBRF.svg'), // Share ticker
     'SBRF': ru('SBRF.svg'),
@@ -723,9 +592,6 @@ const getIconMap = () => {
     'MOEX': ru('MOEX.svg'),
     'RUAL': ru('RUAL.svg'),
     'VKCO': ru('VKCO.svg'),
-    'DOMRF': ru('DOMRF.svg'),
-    'VEB': ru('VEB.svg'),
-    'ROSATOM': ru('ROSATOM.svg'),
     
     // Russian Companies (Favicons saved as PNG)
     'HHRU': ru('HHRU.png'),
@@ -929,7 +795,6 @@ const getIconMap = () => {
     'VJGZP': ru('VJGZP.png'),
     'VRSB': ru('VRSB.png'),
     'VRSBP': ru('VRSBP.png'),
-    'VSYD': ru('VSYD.png'),
     'YKEN': ru('YKEN.png'),
     'YKENP': ru('YKENP.png'),
     'YRSB': ru('YRSB.png'),
@@ -955,16 +820,53 @@ const getIconMap = () => {
     'XIA': cn('XIA.svg'),
     
     // Commodities
+    'COTTON': com('COTTON.svg'),
+    'GAZP': ru('GAZR.svg'),
+    'GAZPF': ru('GAZR.svg'),
     'GOLD': com('GOLD.svg'),
     'GL': com('GOLD.svg'),
+    'GD': com('GOLD.svg'), // Gold Future prefix
     'SILVER': com('SILVER.svg'),
+    'SLV': com('SILVER.svg'),
+    'SILV': com('SILVER.svg'),
     'PLATINUM': com('PLATINUM.svg'),
+    'PLT': com('PLATINUM.svg'),
+    'PLAT': com('PLATINUM.svg'),
     'PALLADIUM': com('PALLADIUM.svg'),
+    'PLD': com('PALLADIUM.svg'),
+    'PALL': com('PALLADIUM.svg'),
+    'NATURAL_GAS': com('NATURAL_GAS.svg'),
+    'NG': com('NATURAL_GAS.svg'),
+    'NR': com('NATURAL_GAS.svg'),
+    'ORANGE': com('ORANGE.svg'),
+    'SUGAR': com('SUGAR.svg'),
+    'SOXQ': us('SOXQ.svg'),
+    'TLT': cur('us.svg'), // Using US flag for Treasury Bonds
+    'WHEAT': com('WHEAT.svg'),
+    'ZINC': com('ZINC.svg'),
+    'ZC': com('ZINC.svg'),
+    'ALUMINUM': com('ALUMINUM.svg'),
+    'AN': com('ALUMINUM.svg'),
+    'COPPER': com('COPPER.svg'),
+    'CE': com('COPPER.svg'),
+    'Co': com('COPPER.svg'),
+    'NICKEL': com('NICKEL.svg'),
+    'NC': com('NICKEL.svg'),
+    'Ni': com('NICKEL.svg'),
+    'OIL': com('OIL.svg'),
+    'BR': com('OIL.svg'),
+    'BM': com('OIL.svg'),
+    'CL': com('OIL.svg'), // WTI
+    'RVI': ru('RVI.svg'),
     
     // Currencies
+    'SI': cur('us.svg'), // Si -> SI (uppercase)
+    'EU': cur('eu.svg'), // Eu -> EU (uppercase)
+    'CY': cur('cn.svg'), // CNY Future
+    'CNYRUB': cur('cn.svg'),
+    'CNY': cur('cn.svg'),
     'Si': cur('us.svg'),
     'Eu': cur('eu.svg'),
-    'CNY': cur('cn.svg'),
     'ED': cur('eu.svg'),
     'AED': cur('ae.svg'),
     'AMD_CURRENCY': cur('am.svg'), // Renamed to avoid conflict with AMD stock
@@ -1019,9 +921,7 @@ const getIconMap = () => {
     
     // Bonds
     'OFZ': cur('ru.svg'),
-    'RUS': cur('ru.svg'),
     'BLR': cur('by.svg'),
-    'RZD': ru('RZD.svg'),
     'TMK': ru('TMK.svg'),
     'ALFA': ru('ALFA.svg'),
     'POCHTA': ru('POCHTA.svg'),
@@ -1039,11 +939,11 @@ const getIconMap = () => {
     'HENDERSON': ru('HNFG.png'),
     'POLYUS': ru('PLZL.svg'),
     'MTS': ru('MTSS.svg'),
-    'DOMRF': ru('DOMRF.svg'),
-    'VEB': ru('VEB.svg'),
-    'ROSATOM': ru('ROSATOM.svg'),
+    'APRI': ru('APRI.svg'),
+    'RZD': ru('rzd.svg'),
+    'VEB': ru('veb.svg'),
+    'AVTODOR': ru('avtodor.svg'),
+
   };
 };
 
-// Export alias for backward compatibility if needed, but we will update usages
-export const getFuturesIcon = getIcon;

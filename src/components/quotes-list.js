@@ -589,7 +589,7 @@ export const QuotesList = () => {
                                   fontSize: '0.875rem'
                                 }}
                               >
-                                {row.secid.substring(0, 2)}
+                                {row.shortname ? row.shortname.substring(0, 2) : row.secid.substring(0, 2)}
                               </Avatar>
                             );
                           })()}
@@ -662,7 +662,7 @@ export const QuotesList = () => {
                                   fontSize: '0.875rem'
                                 }}
                               >
-                                {row.secid.substring(0, 2)}
+                                {row.shortname ? row.shortname.substring(0, 2) : row.secid.substring(0, 2)}
                               </Avatar>
                             );
                           })()}
