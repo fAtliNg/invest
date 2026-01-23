@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M32 4L12 60h40L32 4z" fill="#00BFFF"/>
-  <path d="M32 14L20 54h24L32 14z" fill="#87CEFA"/>
-  <text x="32" y="60" font-family="Arial, sans-serif" font-weight="bold" font-size="12" text-anchor="middle" fill="#000">GAS</text>
-</svg>

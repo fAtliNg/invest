@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="32" cy="32" r="30" fill="#1E88E5"/>
-  <path d="M4 32h56M32 4v56" stroke="#FFF" stroke-width="2"/>
-  <text x="32" y="38" font-family="Arial, sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="#FFF">EM</text>
-</svg>

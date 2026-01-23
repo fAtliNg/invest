@@ -32,20 +32,33 @@ const getFutureCost = (row) => {
 const QuoteLogo = ({ row }) => {
   const [src, setSrc] = useState(null);
   const [hasError, setHasError] = useState(false);
+  const [usedSecid, setUsedSecid] = useState(false);
 
   useEffect(() => {
     setHasError(false);
+    setUsedSecid(false);
+
     if (row.type === 'currency' && row.secid) {
       setSrc(`/logos/${row.secid}`);
     } else if (row.isin) {
       setSrc(`/logos/${row.isin}`);
+    } else if (row.type === 'future' && row.secid) {
+      setSrc(`/logos/${row.secid}`);
+      setUsedSecid(true);
     } else {
       setSrc(null);
     }
   }, [row.isin, row.secid, row.type]);
 
   const handleError = () => {
-    setHasError(true);
+    // If we haven't tried secid yet and it's a future with a secid, try it as fallback
+    if (row.type === 'future' && row.secid && !usedSecid) {
+      setSrc(`/logos/${row.secid}`);
+      setUsedSecid(true);
+      setHasError(false);
+    } else {
+      setHasError(true);
+    }
   };
 
   if (src && !hasError) {
