@@ -2,25 +2,13 @@ import { Box, Container, Typography, Paper, Table, TableBody, TableCell, TableCo
 import { Search as SearchIcon } from '../icons/search';
 import { useRouter } from 'next/router';
 import { formatPrice, formatPercent, formatNumber } from '../utils/format';
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import axios from 'axios';
+import { QuoteLogo } from './quote-logo';
 
 const VIRTUAL_ROW_HEIGHT = 53; // approximate row height
 const VIRTUAL_OVERSCAN = 5;
 const TABS = ['share', 'bond', 'fund', 'currency', 'future'];
-
-const getAvatarColor = (string) => {
-  let hash = 0;
-  for (let i = 0; i < string.length; i += 1) {
-    hash = string.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  let color = '#';
-  for (let i = 0; i < 3; i += 1) {
-    const value = (hash >> (i * 8)) & 0xff;
-    color += `00${value.toString(16)}`.slice(-2);
-  }
-  return color;
-};
 
 const getFutureCost = (row) => {
   if (row.price && row.min_step && row.step_price) {
@@ -29,75 +17,7 @@ const getFutureCost = (row) => {
   return null;
 };
 
-const QuoteLogo = ({ row }) => {
-  const [src, setSrc] = useState(null);
-  const [hasError, setHasError] = useState(false);
-  const [usedSecid, setUsedSecid] = useState(false);
 
-  useEffect(() => {
-    setHasError(false);
-    setUsedSecid(false);
-
-    if (row.type === 'currency' && row.secid) {
-      setSrc(`/logos/${row.secid}`);
-    } else if (row.isin) {
-      setSrc(`/logos/${row.isin}`);
-    } else if (row.type === 'future' && row.secid) {
-      setSrc(`/logos/${row.secid}`);
-      setUsedSecid(true);
-    } else {
-      setSrc(null);
-    }
-  }, [row.isin, row.secid, row.type]);
-
-  const handleError = () => {
-    // If we haven't tried secid yet and it's a future with a secid, try it as fallback
-    if (row.type === 'future' && row.secid && !usedSecid) {
-      setSrc(`/logos/${row.secid}`);
-      setUsedSecid(true);
-      setHasError(false);
-    } else {
-      setHasError(true);
-    }
-  };
-
-  if (src && !hasError) {
-    return (
-      <Avatar
-        src={src}
-        variant={row.type === 'currency' ? 'square' : 'circular'}
-        imgProps={{ 
-          onError: handleError,
-          loading: 'lazy'
-        }}
-        sx={{
-          mr: 2,
-          width: 40,
-          height: 40,
-          bgcolor: 'transparent',
-          '& img': {
-            objectFit: 'contain'
-          }
-        }}
-      />
-    );
-  }
-
-  return (
-    <Avatar
-      variant={row.type === 'currency' ? 'square' : 'circular'}
-      sx={{
-        bgcolor: getAvatarColor(row.secid),
-        mr: 2,
-        width: 40,
-        height: 40,
-        fontSize: '0.875rem'
-      }}
-    >
-      {row.shortname ? row.shortname.substring(0, 2) : row.secid.substring(0, 2)}
-    </Avatar>
-  );
-};
 
 export const QuotesList = () => {
   const router = useRouter();
@@ -116,6 +36,24 @@ export const QuotesList = () => {
       setOrderBy(activeParam === 'future' ? 'secid' : 'shortname');
     }
   }, [secid, type]);
+
+  const [debugMode, setDebugMode] = useState(false);
+  const [hiddenQuotes, setHiddenQuotes] = useState(new Set());
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage.getItem('debug_no_icons')) {
+      setDebugMode(true);
+    }
+  }, []);
+
+  const handleIconLoaded = useCallback((secid) => {
+    setHiddenQuotes(prev => {
+      if (prev.has(secid)) return prev;
+      const next = new Set(prev);
+      next.add(secid);
+      return next;
+    });
+  }, []);
 
   const [quotes, setQuotes] = useState([]);
   const [connected, setConnected] = useState(true);
@@ -244,6 +182,9 @@ export const QuotesList = () => {
     if (!quotes) return [];
     
     return quotes.filter((quote) => {
+      // Filter by debug mode (hide if icon loaded)
+      if (debugMode && hiddenQuotes.has(quote.secid)) return false;
+
       // Filter by tab type
       if (quote.type !== currentTab) return false;
 
@@ -255,7 +196,7 @@ export const QuotesList = () => {
         (currencyNames[quote.secid] && currencyNames[quote.secid].toLowerCase().includes(query))
       );
     });
-  }, [quotes, currentTab, searchQuery, currencyNames]);
+  }, [quotes, currentTab, searchQuery, currencyNames, debugMode, hiddenQuotes]);
 
   const sortedQuotes = useMemo(() => {
     return [...filteredQuotes].sort((a, b) => {
@@ -628,7 +569,7 @@ export const QuotesList = () => {
                     <>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <QuoteLogo row={row} />
+                          <QuoteLogo row={row} debugMode={debugMode} onIconLoaded={handleIconLoaded} />
                           <Box>
                             <Typography variant="subtitle2" sx={{ lineHeight: 1.2 }}>
                               {row.secid}
@@ -673,7 +614,7 @@ export const QuotesList = () => {
                         scope="row"
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <QuoteLogo row={row} />
+                          <QuoteLogo row={row} debugMode={debugMode} onIconLoaded={handleIconLoaded} />
                           <Typography
                             variant="body2"
                             fontWeight="bold"

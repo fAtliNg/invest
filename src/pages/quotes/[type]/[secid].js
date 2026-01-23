@@ -43,6 +43,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { formatNumber, formatPrice, formatPercent, formatLargeNumber } from '../../../utils/format';
+import { QuoteLogo } from '../../../components/quote-logo';
 
 // Register ChartJS components
 ChartJS.register(
@@ -1070,18 +1071,23 @@ const QuoteDetails = () => {
                       xs={12}
                       md={6}
                     >
-                      <Typography
-                        variant="h4"
-                        component="h1"
-                      >
-                        {securityInfo?.shortname} ({securityInfo?.secid})
-                      </Typography>
-                      <Typography
-                        color="textSecondary"
-                        variant="subtitle1"
-                      >
-                        {securityInfo?.description}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <QuoteLogo row={{ ...securityInfo, type }} size={60} />
+                        <Box>
+                          <Typography
+                            variant="h4"
+                            component="h1"
+                          >
+                            {securityInfo?.shortname} ({securityInfo?.secid})
+                          </Typography>
+                          <Typography
+                            color="textSecondary"
+                            variant="subtitle1"
+                          >
+                            {securityInfo?.description}
+                          </Typography>
+                        </Box>
+                      </Box>
                     </Grid>
                     <Grid
                       item
