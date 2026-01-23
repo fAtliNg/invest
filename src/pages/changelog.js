@@ -13,23 +13,7 @@ const Changelog = () => {
   useEffect(() => {
     const fetchChangelog = async () => {
       try {
-        let apiUrl = process.env.NEXT_PUBLIC_API_URL;
-        let endpoint = '/api/changelog';
-        
-        // If not set, determine dynamically
-        if (!apiUrl) {
-          if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-             // Local dev: backend is on port 5001, no /api prefix needed for backend route
-             apiUrl = 'http://localhost:5001';
-             endpoint = '/changelog';
-          } else {
-             // Production: Nginx proxies /api/changelog to backend /changelog
-             apiUrl = ''; 
-             endpoint = '/api/changelog';
-          }
-        }
-
-        const response = await axios.get(`${apiUrl}${endpoint}`);
+        const response = await axios.get('/api/changelog');
         setChangelog(response.data);
       } catch (error) {
         console.error('Failed to fetch changelog:', error);

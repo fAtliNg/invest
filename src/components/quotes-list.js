@@ -35,12 +35,14 @@ const QuoteLogo = ({ row }) => {
 
   useEffect(() => {
     setHasError(false);
-    if (row.isin) {
+    if (row.type === 'currency' && row.secid) {
+      setSrc(`/logos/${row.secid}`);
+    } else if (row.isin) {
       setSrc(`/logos/${row.isin}`);
     } else {
       setSrc(null);
     }
-  }, [row.isin]);
+  }, [row.isin, row.secid, row.type]);
 
   const handleError = () => {
     setHasError(true);
@@ -50,6 +52,7 @@ const QuoteLogo = ({ row }) => {
     return (
       <Avatar
         src={src}
+        variant={row.type === 'currency' ? 'square' : 'circular'}
         imgProps={{ 
           onError: handleError,
           loading: 'lazy'
@@ -69,6 +72,7 @@ const QuoteLogo = ({ row }) => {
 
   return (
     <Avatar
+      variant={row.type === 'currency' ? 'square' : 'circular'}
       sx={{
         bgcolor: getAvatarColor(row.secid),
         mr: 2,
@@ -176,12 +180,7 @@ export const QuotesList = () => {
   useEffect(() => {
     const fetchCurrencyNames = async () => {
       try {
-        let apiUrl = '/api/currency-names';
-        if (window.location.hostname === 'localhost') {
-            apiUrl = 'http://localhost:5001/api/currency-names';
-        }
-        
-        const response = await axios.get(apiUrl);
+        const response = await axios.get('/api/currency-names');
         if (Array.isArray(response.data)) {
           const namesMap = response.data.reduce((acc, item) => {
             acc[item.secid] = item.name;

@@ -16,6 +16,10 @@ const nextConfig = {
         source: '/logos/:path*',
         destination: '/api/logos/:path*',
       },
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:5001/:path*',
+      },
     ];
   },
 }

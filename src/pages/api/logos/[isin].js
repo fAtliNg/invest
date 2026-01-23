@@ -4,9 +4,9 @@ import path from 'path';
 export default function handler(req, res) {
   const { isin } = req.query;
   
-  // Validate ISIN to prevent directory traversal
-  if (!isin || typeof isin !== 'string' || !/^[A-Z0-9]+$/.test(isin)) {
-    return res.status(400).json({ error: 'Invalid ISIN' });
+  // Validate ISIN/Ticker to prevent directory traversal
+  if (!isin || typeof isin !== 'string' || !/^[A-Z0-9_]+$/.test(isin)) {
+    return res.status(400).json({ error: 'Invalid ISIN/Ticker' });
   }
 
   const extensions = ['svg', 'png', 'jpg', 'jpeg', 'ico'];
