@@ -9,5 +9,6 @@
   <include file="sql/02_create_changelog_table.sql" relativeToChangelogFile="true"/>
   <include file="sql/03_create_currency_names.sql" relativeToChangelogFile="true"/>
   <include file="sql/04_populate_currency_names.sql" relativeToChangelogFile="true"/>
+  <include file="sql/05_add_isin_column.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

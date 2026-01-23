@@ -12,6 +12,7 @@ interface MoexData {
   volume: number | null;
   lot_size: number | null;
   type: string;
+  isin?: string | null;
   yield?: number | null;
   matdate?: string | null;
   coupon_percent?: number | null;
@@ -26,12 +27,12 @@ interface MoexSource {
 }
 
 const SOURCES: MoexSource[] = [
-  { type: 'share', url: 'https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' },
-  { type: 'bond', url: 'https://iss.moex.com/iss/engines/stock/markets/bonds/boards/TQCB/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,MATDATE,COUPONPERCENT&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY,YIELD' },
-  { type: 'bond', url: 'https://iss.moex.com/iss/engines/stock/markets/bonds/boards/TQOB/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,MATDATE,COUPONPERCENT&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY,YIELD' },
-  { type: 'fund', url: 'https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQTF/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' },
-  { type: 'currency', url: 'https://iss.moex.com/iss/engines/currency/markets/selt/boards/CETS/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' },
-  { type: 'future', url: 'https://iss.moex.com/iss/engines/futures/markets/forts/boards/RFUD/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,LSTDELDATE,MINSTEP,STEPPRICE&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' }
+  { type: 'share', url: 'https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,ISIN&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' },
+  { type: 'bond', url: 'https://iss.moex.com/iss/engines/stock/markets/bonds/boards/TQCB/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,MATDATE,COUPONPERCENT,ISIN&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY,YIELD' },
+  { type: 'bond', url: 'https://iss.moex.com/iss/engines/stock/markets/bonds/boards/TQOB/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,MATDATE,COUPONPERCENT,ISIN&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY,YIELD' },
+  { type: 'fund', url: 'https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQTF/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,ISIN&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' },
+  { type: 'currency', url: 'https://iss.moex.com/iss/engines/currency/markets/selt/boards/CETS/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,ISIN&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' },
+  { type: 'future', url: 'https://iss.moex.com/iss/engines/futures/markets/forts/boards/RFUD/securities.json?iss.meta=off&iss.only=securities,marketdata&securities.columns=SECID,SHORTNAME,LOTSIZE,PREVPRICE,LSTDELDATE,MINSTEP,STEPPRICE,ISIN&marketdata.columns=SECID,LAST,HIGH,LOW,CHANGE,LASTTOPREVPRICE,VOLTODAY' }
 ];
 
 const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
@@ -58,6 +59,7 @@ const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
     const lstDelDateIdx = getIndex(secColumns, 'LSTDELDATE');
     const minStepIdx = getIndex(secColumns, 'MINSTEP');
     const stepPriceIdx = getIndex(secColumns, 'STEPPRICE');
+    const isinIdx = getIndex(secColumns, 'ISIN');
 
     const mdSecIdIdx = getIndex(mdColumns, 'SECID');
     const lastIdx = getIndex(mdColumns, 'LAST');
@@ -129,7 +131,8 @@ const fetchFromSource = async (source: MoexSource): Promise<MoexData[]> => {
           coupon_percent: couponPercentIdx !== -1 ? (row[couponPercentIdx] || null) : null,
           expiration: lstDelDateIdx !== -1 ? (row[lstDelDateIdx] || null) : null,
           min_step: minStepIdx !== -1 ? (row[minStepIdx] || null) : null,
-          step_price: stepPriceIdx !== -1 ? (row[stepPriceIdx] || null) : null
+          step_price: stepPriceIdx !== -1 ? (row[stepPriceIdx] || null) : null,
+          isin: isinIdx !== -1 ? (row[isinIdx] || null) : null
         });
       }
     });
@@ -166,8 +169,8 @@ export const updateQuotesInDb = async (quotes: MoexData[]) => {
     
     const updatePromises = quotes.map(quote => {
       const queryText = `
-        INSERT INTO quotes (secid, shortname, price, high, low, change, change_pct, volume, lot_size, type, last_updated)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+        INSERT INTO quotes (secid, shortname, price, high, low, change, change_pct, volume, lot_size, type, isin, last_updated)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
         ON CONFLICT (secid) DO UPDATE SET
           shortname = EXCLUDED.shortname,
           price = EXCLUDED.price,
@@ -178,6 +181,7 @@ export const updateQuotesInDb = async (quotes: MoexData[]) => {
           volume = EXCLUDED.volume,
           lot_size = EXCLUDED.lot_size,
           type = EXCLUDED.type,
+          isin = EXCLUDED.isin,
           last_updated = NOW();
       `;
       const values = [
@@ -190,7 +194,8 @@ export const updateQuotesInDb = async (quotes: MoexData[]) => {
         quote.change_pct,
         quote.volume,
         quote.lot_size,
-        quote.type
+        quote.type,
+        quote.isin
       ];
       return query(queryText, values);
     });
@@ -216,7 +221,8 @@ export const getQuotesFromDb = async (): Promise<MoexData[]> => {
         change_pct: parseFloat(row.change_pct),
         volume: parseInt(row.volume || '0', 10),
         lot_size: parseInt(row.lot_size || '0', 10),
-        type: row.type || 'share'
+        type: row.type || 'share',
+        isin: row.isin || null
     })).filter(quote => !(quote.type === 'currency' && quote.price <= 0));
   } catch (error) {
     console.error('Error getting quotes from DB:', error);

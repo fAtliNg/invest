@@ -76,13 +76,15 @@ fi
 SCRIPT_DIR=$(dirname "$0")
 DEPLOY_DB="$SCRIPT_DIR/deploy_db.sh"
 DEPLOY_BACKEND="$SCRIPT_DIR/deploy_backend.sh"
+DEPLOY_LOGOS="$SCRIPT_DIR/deploy_logos.sh"
 DEPLOY_FRONTEND="$SCRIPT_DIR/deploy_frontend.sh"
 
-if [ ! -x "$DEPLOY_DB" ] || [ ! -x "$DEPLOY_BACKEND" ] || [ ! -x "$DEPLOY_FRONTEND" ]; then
+if [ ! -x "$DEPLOY_DB" ] || [ ! -x "$DEPLOY_BACKEND" ] || [ ! -x "$DEPLOY_LOGOS" ] || [ ! -x "$DEPLOY_FRONTEND" ]; then
     echo "❌ Ошибка: Один или несколько скриптов деплоя не найдены или не исполняемые."
     echo "Ожидаются:"
     echo "  - $DEPLOY_DB"
     echo "  - $DEPLOY_BACKEND"
+    echo "  - $DEPLOY_LOGOS"
     echo "  - $DEPLOY_FRONTEND"
     exit 1
 fi
@@ -103,7 +105,7 @@ fi
 # 2. Деплой бэкенда
 echo ""
 echo "=========================================="
-echo "⚙️  ШАГ 2: Деплой бэкенда"
+echo "⚙️  ШАГ 2: Деплой бэкенда (API)"
 echo "=========================================="
 "$DEPLOY_BACKEND" "$TARGET" -p "$PASSWORD"
 if [ $? -ne 0 ]; then
@@ -111,10 +113,21 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# 3. Деплой фронтенда
+# 3. Деплой сервиса логотипов
 echo ""
 echo "=========================================="
-echo "🌐  ШАГ 3: Деплой фронтенда"
+echo "🖼️  ШАГ 3: Деплой Logo Service"
+echo "=========================================="
+"$DEPLOY_LOGOS" "$TARGET" -p "$PASSWORD"
+if [ $? -ne 0 ]; then
+    echo "❌ Ошибка при деплое сервиса логотипов. Прерывание."
+    exit 1
+fi
+
+# 4. Деплой фронтенда
+echo ""
+echo "=========================================="
+echo "🌐 ШАГ 4: Деплой фронтенда (Nginx + Next.js)"
 echo "=========================================="
 "$DEPLOY_FRONTEND" "$TARGET" -p "$PASSWORD" -d "$DOMAIN"
 if [ $? -ne 0 ]; then

@@ -10,6 +10,14 @@ const nextConfig = {
     // Игнорируем ESLint при сборке
     ignoreDuringBuilds: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/logos/:path*',
+        destination: '/api/logos/:path*',
+      },
+    ];
+  },
 }
 
 module.exports = nextConfig

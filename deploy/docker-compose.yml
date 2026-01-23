@@ -41,6 +41,16 @@ services:
       - backend_network
       - frontend_network
 
+  logo-service:
+    build:
+      context: .
+      dockerfile: logo.Dockerfile
+    restart: always
+    volumes:
+      - ../logos:/data/logos
+    networks:
+      - frontend_network
+
   nginx:
     image: invest-frontend:latest
     build:
@@ -56,6 +66,7 @@ services:
       - ./cert:/etc/nginx/ssl:ro
     depends_on:
       - backend
+      - logo-service
     networks:
       - frontend_network
 
@@ -72,6 +83,7 @@ services:
 
 volumes:
   db_data:
+  # logos-data: # Removed in favor of bind mount
 
 networks:
   backend_network:
