@@ -91,7 +91,7 @@ export const DashboardSidebar = (props) => {
               Profit Case
             </Typography>
             <Chip
-              label="v1.0.1"
+              label="v1.0.2"
               variant="outlined"
               style={{ color: '#F3F4F6' }}
             />
