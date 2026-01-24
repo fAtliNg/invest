@@ -65,7 +65,11 @@ export const theme = createTheme({
       },
       styleOverrides: {
         root: {
-          padding: '32px 24px'
+          padding: '16px 24px',
+          minHeight: 64,
+          height: 64,
+          display: 'flex',
+          alignItems: 'center'
         }
       }
     },
@@ -95,7 +99,7 @@ export const theme = createTheme({
           display: 'flex',
           flex: '1 1 auto',
           flexDirection: 'column',
-          height: '100%',
+          minHeight: '100%',
           width: '100%'
         }
       }

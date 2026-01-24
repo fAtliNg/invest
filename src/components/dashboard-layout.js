@@ -32,7 +32,11 @@ export const DashboardLayout = (props) => {
           {children}
         </Box>
       </DashboardLayoutRoot>
-      <DashboardNavbar sx={{ display: { lg: 'none' }}} onSidebarOpen={() => setSidebarOpen(true)} controls={controls} />
+      <DashboardNavbar
+        sx={{ display: { lg: 'none' } }}
+        onSidebarOpen={() => setSidebarOpen(true)}
+        controls={controls}
+      />
       <DashboardSidebar
         onClose={() => setSidebarOpen(false)}
         open={isSidebarOpen}

@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   CardHeader,
+  TableContainer,
   Table,
   TableBody,
   TableCell,
@@ -15,8 +16,33 @@ import { format } from 'date-fns';
 import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
 import * as XLSX from 'xlsx';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+const VIRTUAL_ROW_HEIGHT = 49;
+const VIRTUAL_OVERSCAN = 8;
 
 export const CreditScheduleTable = ({ payments = [], summary, onDeleteEarlyRepayment, ...props }) => {
+  const [virtualMetrics, setVirtualMetrics] = useState({
+    scrollY: 0,
+    viewportHeight: 0,
+    tableTop: 0,
+    headerHeight: 0
+  });
+  const tableRef = useRef(null);
+  const tableHeadRef = useRef(null);
+  const scrollRafRef = useRef(null);
+
+  const getPaymentKey = (payment, index) => {
+    if (payment?.type === 'early_repayment' && payment?.earlyRepaymentId !== undefined && payment?.earlyRepaymentId !== null) {
+      return `early_${payment.earlyRepaymentId}`;
+    }
+    if (payment?.type === 'regular' && payment?.number !== undefined && payment?.number !== null) {
+      return `regular_${payment.number}`;
+    }
+    const datePart = payment?.date ? format(payment.date, 'yyyy-MM-dd') : 'no_date';
+    return `p_${datePart}_${payment?.amount ?? 'no_amount'}_${index}`;
+  };
+
   const handleDownload = () => {
     const monthlyPayment = payments.length > 0 ? payments.find(p => p.type === 'regular')?.amount || 0 : 0;
     const totalPayment = summary?.totalPayment || 0;
@@ -93,6 +119,73 @@ export const CreditScheduleTable = ({ payments = [], summary, onDeleteEarlyRepay
     XLSX.writeFile(wb, 'credit_schedule.xlsx');
   };
 
+  const shouldVirtualize = payments.length > 200;
+
+  useEffect(() => {
+    if (!shouldVirtualize) return;
+
+    const updateMetrics = () => {
+      const tableEl = tableRef.current;
+      const headEl = tableHeadRef.current;
+      const tableTop = tableEl ? tableEl.getBoundingClientRect().top + window.scrollY : 0;
+      const headerHeight = headEl ? headEl.getBoundingClientRect().height : VIRTUAL_ROW_HEIGHT;
+
+      setVirtualMetrics({
+        scrollY: window.scrollY,
+        viewportHeight: window.innerHeight,
+        tableTop,
+        headerHeight
+      });
+    };
+
+    const onScroll = () => {
+      if (scrollRafRef.current) return;
+      scrollRafRef.current = window.requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        updateMetrics();
+      });
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    updateMetrics();
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (scrollRafRef.current) {
+        window.cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+    };
+  }, [shouldVirtualize]);
+
+  const { visiblePayments, topSpacerHeight, bottomSpacerHeight } = useMemo(() => {
+    if (!shouldVirtualize) {
+      return {
+        visiblePayments: payments,
+        topSpacerHeight: 0,
+        bottomSpacerHeight: 0
+      };
+    }
+
+    const total = payments.length;
+    const totalHeight = total * VIRTUAL_ROW_HEIGHT;
+    const bodyTop = virtualMetrics.tableTop + virtualMetrics.headerHeight;
+    const viewportTop = virtualMetrics.scrollY;
+    const viewportBottom = virtualMetrics.scrollY + virtualMetrics.viewportHeight;
+    const visibleStart = Math.max(0, viewportTop - bodyTop);
+    const visibleEnd = Math.min(totalHeight, viewportBottom - bodyTop);
+    const startIndex = Math.max(0, Math.floor(visibleStart / VIRTUAL_ROW_HEIGHT) - VIRTUAL_OVERSCAN);
+    const endIndex = Math.min(total, Math.ceil(visibleEnd / VIRTUAL_ROW_HEIGHT) + VIRTUAL_OVERSCAN);
+
+    return {
+      visiblePayments: payments.slice(startIndex, endIndex),
+      topSpacerHeight: startIndex * VIRTUAL_ROW_HEIGHT,
+      bottomSpacerHeight: (total - endIndex) * VIRTUAL_ROW_HEIGHT
+    };
+  }, [payments, shouldVirtualize, virtualMetrics]);
+
   return (
     <Card {...props}>
       <CardHeader
@@ -108,11 +201,12 @@ export const CreditScheduleTable = ({ payments = [], summary, onDeleteEarlyRepay
         )}
         title="График платежей"
       />
-      <Box sx={{ overflowX: 'auto' }}>
+      <Box sx={{ overflowX: 'auto', overflowAnchor: 'none' }}>
         <Box sx={{ minWidth: 800 }}>
-          <Table>
+          <TableContainer sx={{ overflowAnchor: 'none' }}>
+            <Table ref={tableRef}>
             <TableHead>
-              <TableRow>
+              <TableRow ref={tableHeadRef}>
                 <TableCell>
                   №
                 </TableCell>
@@ -134,20 +228,34 @@ export const CreditScheduleTable = ({ payments = [], summary, onDeleteEarlyRepay
                 <TableCell>
                   
                 </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {payments.map((payment, index) => (
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {shouldVirtualize && topSpacerHeight > 0 && (
+                  <TableRow 
+                    key="spacer-top" 
+                    sx={{ height: topSpacerHeight, overflowAnchor: 'none' }}
+                  >
+                    <TableCell 
+                      colSpan={7} 
+                      sx={{ p: 0, border: 0, overflowAnchor: 'none' }} 
+                    />
+                  </TableRow>
+                )}
+                {visiblePayments.map((payment, index) => (
                 <TableRow
                   hover
-                  key={index}
+                  key={getPaymentKey(payment, index)}
                   sx={{
                     backgroundColor: payment.type === 'early_repayment' ? 'action.hover' : 'inherit'
                   }}
                 >
                   <TableCell>
                     {payment.type === 'regular' ? payment.number : (
-                        <Typography variant="body2" color="textSecondary">
+                        <Typography 
+                          variant="body2" 
+                          color="textSecondary"
+                        >
                             —
                         </Typography>
                     )}
@@ -179,9 +287,21 @@ export const CreditScheduleTable = ({ payments = [], summary, onDeleteEarlyRepay
                     )}
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                ))}
+                {shouldVirtualize && bottomSpacerHeight > 0 && (
+                  <TableRow 
+                    key="spacer-bottom" 
+                    sx={{ height: bottomSpacerHeight, overflowAnchor: 'none' }}
+                  >
+                    <TableCell 
+                      colSpan={7} 
+                      sx={{ p: 0, border: 0, overflowAnchor: 'none' }} 
+                    />
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Box>
       </Box>
     </Card>

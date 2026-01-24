@@ -1,96 +1,121 @@
-## [Material Kit - React](https://material-kit-react.devias.io/) [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social&logo=twitter)](https://twitter.com/intent/tweet?text=%F0%9F%9A%A8Devias%20Freebie%20Alert%20-%20An%20awesome%20ready-to-use%20register%20page%20made%20with%20%23material%20%23react%0D%0Ahttps%3A%2F%2Fdevias.io%20%23createreactapp%20%23devias%20%23material%20%23freebie%20%40devias-io)
+# Документация по деплою и настройке окружения
 
-![license](https://img.shields.io/badge/license-MIT-blue.svg)
+Этот документ описывает процесс настройки сервера и деплоя приложения (Frontend + Backend + Database) на удаленный сервер.
 
-[![Material Kit - React](https://github.com/devias-io/material-kit-react/blob/main/public/static/thumbnail.png)](https://material-kit-react.devias.io/)
+## 📋 Требования
 
-> Free React Admin Dashboard made with [MUI's](https://mui.com/?ref=devias-io) components, [React](https://reactjs.org/?ref=devias-io) and of course [Next.js](https://github.com/vercel/next.js/?ref=devias-io) to boost your app development process!
+### Локальное окружение
+Для запуска скриптов деплоя с вашего локального компьютера (macOS/Linux) требуются следующие утилиты:
+- **Bash** (терминал)
+- **SSH клиент** (`ssh`, `scp`)
+- **sshpass** (опционально, для автоматического ввода пароля)
+  - macOS: `brew install sshpass`
+  - Ubuntu: `sudo apt install sshpass`
 
-## Demo
+### Серверное окружение
+Скрипт настройки (`setup.sh`) протестирован на **Ubuntu 24.04**.
+Требования к серверу:
+- Чистая установка Ubuntu (рекомендуется)
+- Доступ по SSH (root или sudo user)
+- Открытые порты 80 (HTTP) и 443 (HTTPS)
 
-- [Dashboard Page](https://material-kit-react.devias.io)
-- [Users Page](https://material-kit-react.devias.io/customers)
-- [Products Page](https://material-kit-react.devias.io/products)
-- [Register Page](https://material-kit-react.devias.io/register)
-- [Login Page](https://material-kit-react.devias.io/login)
-- [Account Page](https://material-kit-react.devias.io/account)
-- [Settings Page](https://material-kit-react.devias.io/settings)
+## 🚀 Быстрый старт
 
-## Free Figma Community File
- - [Duplicate File](https://www.figma.com/community/file/1039837897183395483/Devias-Dashboard-Design-Library-Kit)
+### 1. Настройка сервера
+Перед первым деплоем необходимо подготовить сервер (установить Docker, настроить права).
+Запустите скрипт `setup.sh` из корня проекта:
 
-## Upgrade to PRO Version
-
-We also have a pro version of this product which bundles even more pages and components if you want to save more time and design efforts :)
-
-| Free Version (this one)  | [Material Kit Pro - React](https://material-ui.com/store/items/devias-kit-pro/) |
-| ------------------------ | :----------------------------------------------------------- |
-| **7** Demo Pages         | **40+** demo pages
-| -                        | ✔ Dark & light mode
-| -                        | ✔ Authentication with *Amplify**, **Auth0**, **JWT** and **Firebase**
-| -                        | ✔ TypeScript version - for Standard Plus and Extended license
-| -                        | ✔ Design files (sketch & figma) - for Standard Plus and Extended license
-| -                        | ✔ Complete users flows
-
-## Quick start
-
-- [Download from Github](https://github.com/devias-io/material-kit-react/archive/master.zip) or [Download from Devias](https://devias.io/products/material-kit-react) or clone the repo: `git clone https://github.com/devias-io/material-kit-react.git`
-
-- Make sure your NodeJS and npm versions are up to date for `React 17`
-
-- Install dependencies: `npm install` or `yarn`
-
-- Start the server: `npm run dev` or `yarn dev`
-
-- Views are on: `localhost:3000`
-
-## File Structure
-
-Within the download you'll find the following directories and files:
-
-```
-material-kit-react
-
-┌── .eslintrc.json
-├── .gitignore
-├── CHANGELOG.md
-├── jsconfig.json
-├── LICENSE.md
-├── package.json
-├── README.md
-├── public
-└── src
-	├── __mocks__
-	├── components
-	├── icons
-	├── theme
-	├── utils
-	└── pages
-		├── 404.js
-		├── _app.js
-		├── _document.js
-		├── account.js
-		├── customers.js
-		├── index.js
-		├── login.js
-		├── products.js
-		├── register.js
-		└── settings.js
+```bash
+# Использование: ./deploy/setup.sh <user@host> [password]
+./deploy/setup.sh root@123.45.67.89 MySecretPassword
 ```
 
-## Resources
+*Если пароль не передан, будет использована авторизация по SSH ключам.*
 
-- More freebies like this one: <https://devias.io>
+### 2. Полный деплой
+Для деплоя всего приложения (БД -> Бэкенд -> Фронтенд) используйте скрипт-оркестратор `deploy.sh`:
 
-## Reporting Issues:
+```bash
+# Использование: ./deploy/deploy.sh <user@host> [-p password]
+./deploy/deploy.sh root@123.45.67.89 -p MySecretPassword
+```
 
-- [Github Issues Page](https://github.com/devias-io/react-material-dashboard/issues?ref=devias-io)
+Скрипт последовательно выполнит:
+1.  **Deploy DB**: Применение миграций Liquibase.
+2.  **Deploy Backend**: Сборка и перезапуск API контейнера.
+3.  **Deploy Frontend**: Сборка и перезапуск Nginx/Frontend контейнера.
 
-## License
+## 🛠 Отдельные скрипты деплоя
 
-- Licensed under MIT (https://github.com/devias-io/react-material-dashboard/blob/master/LICENSE.md)
+Вы можете деплоить компоненты по отдельности:
 
-## Contact Us
+### База данных
+Обновляет структуру БД (Liquibase миграции).
+```bash
+./deploy/deploy_db.sh root@123.45.67.89 -p MySecretPassword
+```
 
-- Email Us: support@deviasio.zendesk.com
-- [Follow us on Instagram](https://www.instagram.com/deviasio/)
+### Бэкенд
+Обновляет код API сервера.
+```bash
+./deploy/deploy_backend.sh root@123.45.67.89 -p MySecretPassword
+```
+
+### Фронтенд
+Обновляет клиентскую часть приложения (Next.js + Nginx).
+```bash
+./deploy/deploy_frontend.sh root@123.45.67.89 -p MySecretPassword
+```
+
+## ⚙️ Конфигурация
+
+Конфигурация приложения управляется через переменные окружения в `deploy/docker-compose.yml`.
+
+| Переменная | Описание | Значение по умолчанию |
+|------------|----------|-----------------------|
+| `DB_USER` | Пользователь PostgreSQL | `postgres` |
+| `DB_PASSWORD` | Пароль PostgreSQL | `postgres` |
+| `DB_NAME` | Имя базы данных | `invest` |
+| `NEXT_PUBLIC_WS_URL` | WebSocket URL для фронтенда | `ws://localhost/api/ws` |
+
+### Изменение конфигурации
+Для изменения переменных можно создать файл `.env` на сервере в папке `~/invest/deploy/` или отредактировать `deploy/docker-compose.yml` перед деплоем.
+
+## 📂 Структура проекта (Deploy)
+
+```
+deploy/
+├── deploy.sh            # Главный скрипт деплоя
+├── setup.sh             # Скрипт первоначальной настройки сервера
+├── deploy_frontend.sh   # Скрипт деплоя фронтенда
+├── deploy_backend.sh    # Скрипт деплоя бэкенда
+├── deploy_db.sh         # Скрипт деплоя базы данных
+├── docker-compose.yml   # Описание сервисов (Docker Compose)
+├── nginx.conf           # Конфигурация Nginx
+├── backend.Dockerfile   # Dockerfile для бэкенда
+├── nginx.Dockerfile     # Dockerfile для фронтенда
+└── README.md            # Эта документация
+```
+
+## ❓ Устранение неполадок
+
+### 1. Ошибка "sshpass: command not found"
+Установите `sshpass` на локальной машине или используйте SSH ключи (сгенерируйте `ssh-keygen` и скопируйте `ssh-copy-id user@host`).
+
+### 2. Ошибка "Permission denied" при работе с Docker
+Убедитесь, что пользователь на сервере добавлен в группу `docker`. Скрипт `setup.sh` делает это автоматически, но может потребоваться перелогиниться на сервере.
+
+### 3. Контейнеры не запускаются
+Проверьте логи на сервере:
+```bash
+ssh root@123.45.67.89
+cd ~/invest/deploy
+docker compose logs -f
+```
+
+### 4. Порт 80 занят
+Если на сервере уже запущен другой веб-сервер (например, системный nginx), остановите его:
+```bash
+systemctl stop nginx
+systemctl disable nginx
+```

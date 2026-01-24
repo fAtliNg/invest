@@ -10,8 +10,8 @@ const Equities = () => {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    // axios.get('https://profit-case.ru/api/dividends/calendar');
-    fetch('https://profit-case.ru/api/dividends/calendar/')
+    // axios.get('/api/dividends/calendar');
+    fetch('/api/dividends/calendar/')
       .then(response => response.json())
       .then(data => setData(data));
   }, [])

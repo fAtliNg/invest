@@ -49,6 +49,9 @@ class CustomDocument extends Document {
             name="theme-color"
             content="#111827"
           />
+          {process.env.NEXT_PUBLIC_IS_DEV === 'true' && (
+            <meta name="robots" content="noindex, nofollow" />
+          )}
         </Head>
         <body>
         <Main />

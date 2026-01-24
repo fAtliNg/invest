@@ -69,25 +69,32 @@ export const PieChart = ({
   ];
 
   const renderResultTitle = (totalBalance) => {
-    return <Box display="flex" alignItems="center">
-      <Typography
-        color="textPrimary"
-        variant="h6"
+    return (
+      <Box
+        display="flex"
+        alignItems="center"
       >
-        Итого:
-      </Typography>
-      <Typography
-        style={{ color: '#10B981', marginLeft: 16, lineHeight: 0.78, wordBreak: "break-word" }}
-        variant="h5"
-      >
-        {`${(totalBalance || 0).toLocaleString()} ₽`}
-      </Typography>
-    </Box>
-  }
+        <Typography
+          color="textPrimary"
+          variant="h6"
+        >
+          Итого:
+        </Typography>
+        <Typography
+          style={{ color: '#10B981', marginLeft: 16, lineHeight: 0.78, wordBreak: 'break-word', display: 'flex', alignItems: 'center' }}
+          variant="h5"
+        >
+          {`${(totalBalance || 0).toLocaleString()} ₽`}
+        </Typography>
+      </Box>
+    );
+  };
 
   return (
     <Card>
-      <CardHeader title={renderResultTitle(totalBalance)} style={{ padding: "20px 32px" }} />
+      <CardHeader
+        title={renderResultTitle(totalBalance)}
+      />
       <Divider />
       <CardContent>
         <Box

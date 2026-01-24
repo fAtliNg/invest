@@ -84,27 +84,34 @@ export const CreditSummary = ({
   });
 
   const renderResultTitle = (totalPayment) => {
-    return <Box display="flex" alignItems="center">
-      <Typography
-        color="textPrimary"
-        variant="h6"
+    return (
+      <Box
+        display="flex"
+        alignItems="center"
       >
-        Итого:
-      </Typography>
-      <Typography
-        style={{ color: '#10B981', marginLeft: 16, lineHeight: 0.78, wordBreak: "break-word" }}
-        variant="h5"
-      >
-        {`${(totalPayment || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`}
-      </Typography>
-    </Box>
-  }
+        <Typography
+          color="textPrimary"
+          variant="h6"
+        >
+          Итого:
+        </Typography>
+        <Typography
+          style={{ color: '#10B981', marginLeft: 16, lineHeight: 0.78, wordBreak: 'break-word' }}
+          variant="h5"
+        >
+          {`${(totalPayment || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`}
+        </Typography>
+      </Box>
+    );
+  };
 
   return (
-    <Card style={{ height: '100%' }} {...props}>
-      <CardHeader 
-        title={renderResultTitle(totalPayment)} 
-        style={{ padding: "20px 32px" }} 
+    <Card
+      style={{ height: '100%' }}
+      {...props}
+    >
+      <CardHeader
+        title={renderResultTitle(totalPayment)}
       />
       <Divider />
       <CardContent>

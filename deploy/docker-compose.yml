@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-invest}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../deploy/backend.Dockerfile
+    restart: always
+    environment:
+      DB_USER: ${DB_USER:-postgres}
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-invest}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_PORT: 5432
+      PORT: 5001
+    depends_on:
+      db:
+        condition: service_healthy
+      liquibase:
+        condition: service_completed_successfully
+    networks:
+      - backend_network
+      - frontend_network
+
+  logo-service:
+    build:
+      context: .
+      dockerfile: logo.Dockerfile
+    restart: always
+    volumes:
+      - ../logos:/data/logos
+    networks:
+      - frontend_network
+
+  nginx:
+    image: invest-frontend:latest
+    build:
+      context: ..
+      dockerfile: deploy/nginx.Dockerfile
+      args:
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost/api/ws}
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./cert:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - logo-service
+    networks:
+      - frontend_network
+
+  liquibase:
+    image: liquibase/liquibase:4.24
+    command: --url=jdbc:postgresql://db:5432/${DB_NAME:-invest} --changeLogFile=changelog.xml --username=${DB_USER:-postgres} --password=${DB_PASSWORD:-postgres} update
+    volumes:
+      - ../backend/liquibase:/liquibase/changelog
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend_network
+
+volumes:
+  db_data:
+  # logos-data: # Removed in favor of bind mount
+
+networks:
+  backend_network:
+  frontend_network:

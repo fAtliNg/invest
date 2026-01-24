@@ -6,21 +6,31 @@ import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { createEmotionCache } from '../utils/create-emotion-cache';
 import { theme } from '../theme';
-import TagManager from 'react-gtm-module'
+import TagManager from 'react-gtm-module';
 import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 const tagManagerArgs = {
   gtmId: 'GTM-KSWNJ4R',
-}
+};
 
 const clientSideEmotionCache = createEmotionCache();
 
 const App = (props) => {
   const { Component, emotionCache = clientSideEmotionCache, pageProps } = props;
+  const router = useRouter();
 
   useEffect(() => {
-    TagManager.initialize(tagManagerArgs);
+    if (process.env.NODE_ENV === 'production') {
+      TagManager.initialize(tagManagerArgs);
+    }
   }, []);
+
+  useEffect(() => {
+    if (router.pathname === '/' && router.asPath !== '/') {
+      router.replace(router.asPath);
+    }
+  }, [router]);
 
   const getLayout = Component.getLayout ?? ((page) => page);
 
@@ -28,7 +38,7 @@ const App = (props) => {
     <CacheProvider value={emotionCache}>
       <Head>
         <title>
-          Material Kit Pro
+          Profit Case
         </title>
         <meta
           name="viewport"

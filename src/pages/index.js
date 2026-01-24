@@ -34,24 +34,30 @@ const Calc = () => {
     labels: [],
   });
 
-  const onSubmit = () => {
-    const resultElement = document.getElementById('result');
-    resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    onCalc();
-  }
-
   const onCalc = () => {
     const results = resolve(values);
     setResult(results.summary);
     setBarGraphValues(results.details);
-  }
+  };
 
   useEffect(() => {
-    onCalc();
+    const results = resolve(values);
+    setResult(results.summary);
+    setBarGraphValues(results.details);
   }, [values]);
 
+  const onSubmit = () => {
+    const resultElement = document.getElementById('result');
+    resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    onCalc();
+  };
+
   const controls = (
-    <Box width="100%" justifyContent="flex-end" display="flex">
+    <Box
+      width="100%"
+      justifyContent="flex-end"
+      display="flex"
+    >
       <Button
         color="primary"
         variant="contained"
@@ -98,7 +104,10 @@ const Calc = () => {
               md={6}
               xs={12}
             >
-              <CalcForm onSubmit={onSubmit} onChangeValues={(data) => {setValues(data)}} />
+              <CalcForm
+                onSubmit={onSubmit}
+                onChangeValues={(data) => { setValues(data); }}
+              />
             </Grid>
             <Grid
               item
@@ -130,14 +139,27 @@ const Calc = () => {
           </Grid>
           
           <Box sx={{ mt: 8 }}>
-            <Typography variant="h4" gutterBottom>
+            <Typography
+              variant="h4"
+              gutterBottom
+            >
               Формула расчета сложного процента
             </Typography>
-            <Paper elevation={2} sx={{ p: 3, mb: 4, bgcolor: 'background.default' }}>
-              <Typography variant="h6" gutterBottom sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', p: 2, borderRadius: 1 }}>
+            <Paper
+              elevation={2}
+              sx={{ p: 3, mb: 4, bgcolor: 'background.default' }}
+            >
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', p: 2, borderRadius: 1 }}
+              >
                 A = P × (1 + r/n)<sup>n×t</sup>
               </Typography>
-              <Typography paragraph sx={{ mt: 2 }}>
+              <Typography
+                paragraph
+                sx={{ mt: 2 }}
+              >
                 Где:
               </Typography>
               <ul style={{ paddingLeft: '20px' }}>
@@ -147,14 +169,21 @@ const Calc = () => {
                 <li><Typography variant="body1"><strong>n</strong> — количество периодов капитализации процентов в год (например, 12 для ежемесячной капитализации).</Typography></li>
                 <li><Typography variant="body1"><strong>t</strong> — общий срок инвестирования в годах.</Typography></li>
               </ul>
-              <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                sx={{ mt: 2 }}
+              >
                 Наш онлайн калькулятор также учитывает регулярные ежемесячные пополнения, используя расширенную формулу аннуитетов для максимально точного прогноза роста вашего капитала.
               </Typography>
             </Paper>
           </Box>
 
           <Box sx={{ mt: 8 }}>
-            <Typography variant="h4" gutterBottom>
+            <Typography
+              variant="h4"
+              gutterBottom
+            >
               Частые вопросы
             </Typography>
             <Accordion>

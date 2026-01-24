@@ -37,7 +37,7 @@ const Login = () => {
   return (
     <>
       <Head>
-        <title>Login | Material Kit</title>
+        <title>Login | Profit Case</title>
       </Head>
       <Box
         component="main"

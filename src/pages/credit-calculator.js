@@ -7,8 +7,7 @@ import {
   Button,
   Accordion,
   AccordionSummary,
-  AccordionDetails,
-  Paper
+  AccordionDetails
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { DashboardLayout } from '../components/dashboard-layout';
@@ -23,7 +22,6 @@ import { getYear, format } from 'date-fns';
 
 const CreditCalculator = () => {
   const [values, setValues] = useState({});
-  const [debouncedValues, setDebouncedValues] = useState({});
   const [payments, setPayments] = useState([]);
   const [summary, setSummary] = useState({
     totalAmount: 0,
@@ -34,20 +32,11 @@ const CreditCalculator = () => {
   const [graphData, setGraphData] = useState({
     principalPayments: [],
     interestPayments: [],
+    earlyRepaymentPayments: [],
     labels: []
   });
   const [earlyRepayments, setEarlyRepayments] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedValues(values);
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [values]);
 
   useEffect(() => {
     if (Object.keys(values).length > 0) {
@@ -59,6 +48,7 @@ const CreditCalculator = () => {
         values.startDate,
         earlyRepayments
       );
+      setPayments(schedule);
 
       const scheduleWithoutEarlyRepayment = calculateCredit(
         Number(values.amount),
@@ -82,20 +72,6 @@ const CreditCalculator = () => {
         totalEarlyRepayment: totalEarlyRepayment,
         savings: Math.max(0, totalInterestWithoutEarlyRepayment - totalInterest)
       });
-    }
-  }, [values, earlyRepayments]);
-
-  useEffect(() => {
-    if (Object.keys(debouncedValues).length > 0) {
-      const schedule = calculateCredit(
-        Number(debouncedValues.amount),
-        Number(debouncedValues.term),
-        debouncedValues.termType,
-        Number(debouncedValues.rate),
-        debouncedValues.startDate,
-        earlyRepayments
-      );
-      setPayments(schedule);
 
       // Подготовка данных для графика
       let labels = [];
@@ -172,7 +148,7 @@ const CreditCalculator = () => {
         earlyRepaymentPayments
       });
     }
-  }, [debouncedValues, earlyRepayments]);
+  }, [values, earlyRepayments]);
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
@@ -191,7 +167,11 @@ const CreditCalculator = () => {
   };
 
   const controls = (
-    <Box width="100%" justifyContent="flex-end" display="flex">
+    <Box
+      width="100%"
+      justifyContent="flex-end"
+      display="flex"
+    >
       <Button
         color="primary"
         variant="contained"
@@ -306,7 +286,10 @@ const CreditCalculator = () => {
           </Grid>
 
           <Box sx={{ mt: 8 }}>
-            <Typography variant="h4" gutterBottom>
+            <Typography
+              variant="h4"
+              gutterBottom
+            >
               Полезная информация
             </Typography>
             <Accordion>
