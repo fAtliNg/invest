@@ -701,7 +701,12 @@ const QuoteDetails = () => {
   if (loading) {
     return (
         <DashboardLayout>
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                minHeight: '100vh'
+            }}>
                 <CircularProgress />
             </Box>
         </DashboardLayout>
@@ -764,7 +769,7 @@ const QuoteDetails = () => {
                  typeCode.includes('etf') || 
                  ['фонд', 'пиф', 'etf', 'bpid', 'бпиф'].some(t => (securityInfo?.description || '').toLowerCase().includes(t));
   
-  const isCurrency = typeCode === 'currency';
+  const isCurrency = typeCode === 'currency' || type === 'currency';
   const isFutures = ['futures', 'option'].includes(typeCode) || typeCode.includes('futures');
                  
   const bondYield = isBond
@@ -796,13 +801,13 @@ const QuoteDetails = () => {
   };
   const tradeDayText = `Данные отображаются за ${lastDayStats?.tradeDate ? formatDate(lastDayStats.tradeDate) : '-'}`;
   const tabs = [
-    { value: 'security', label: 'Данные о бумаге' },
-    { value: 'trading', label: 'Торговые данные' }
+    { value: 'security', label: 'Данные' },
+    { value: 'trading', label: 'Торговые' }
   ];
   const extraTabs = [
     { 
-      value: isBond ? 'coupons' : (isCurrency ? 'stats' : 'dividends'), 
-      label: isBond ? 'Купоны' : (isCurrency ? 'Статистика' : 'Дивиденды') 
+      value: isBond ? 'coupons' : (isFund ? 'fundInfo' : (isCurrency ? 'stats' : 'dividends')), 
+      label: isBond ? 'Купоны' : (isFund ? 'Информация' : (isCurrency ? 'Статистика' : 'Дивиденды')) 
     }
   ];
   const keyIndicatorTabs = isSmallScreen ? [...tabs, ...extraTabs] : tabs;
@@ -1021,6 +1026,22 @@ const QuoteDetails = () => {
     </Box>
   );
 
+  const IndicatorItem = ({ label, value }) => (
+    <Grid item xs={12} md={6}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Typography variant="body2" color="textSecondary" sx={{ mr: 2 }}>
+          {label}
+        </Typography>
+        <Typography 
+          variant={isSmallScreen ? "body2" : "body1"} 
+          sx={{ fontWeight: isSmallScreen ? 500 : 400, textAlign: 'right' }}
+        >
+          {value}
+        </Typography>
+      </Box>
+    </Grid>
+  );
+
   const handleDetailTabChange = (event, newValue) => {
     if (newValue) {
       setDetailTab(newValue);
@@ -1028,8 +1049,48 @@ const QuoteDetails = () => {
   };
   
   
+  const mobileHeaderContent = (
+    <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' }, justifyContent: 'space-between', alignItems: 'center', ml: 1, overflow: 'hidden' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', overflow: 'hidden', mr: 1 }}>
+        <Typography
+          variant="h6"
+          component="h1"
+          sx={{ fontWeight: 'bold', lineHeight: 1.2, m: 0, color: 'text.primary' }}
+          noWrap
+        >
+          {securityInfo?.shortname || securityInfo?.secid}
+        </Typography>
+      </Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end', flexShrink: 0 }}>
+        <Typography
+          variant="subtitle1"
+          component="div"
+          sx={{ fontWeight: 'bold', lineHeight: 1.2, color: 'text.primary', m: 0 }}
+        >
+          {formatPrice(marketData?.LAST || marketData?.PREVPRICE)}
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography
+            variant="caption"
+            color={color}
+            sx={{ fontWeight: 'bold', lineHeight: 1.2 }}
+          >
+            {marketData?.CHANGE > 0 ? '+' : ''}{formatPrice(marketData?.CHANGE)}
+          </Typography>
+          <Typography
+            variant="caption"
+            color={color}
+            sx={{ fontWeight: 'bold', lineHeight: 1.2 }}
+          >
+            ({formatPercent(marketData?.LASTTOPREVPRICE)})
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
+  
   return (
-    <DashboardLayout>
+    <DashboardLayout controls={mobileHeaderContent}>
       <Head>
         <title>
           {securityInfo?.shortname ? `${securityInfo.shortname} | Profit Case` : 'Profit Case'}
@@ -1037,11 +1098,11 @@ const QuoteDetails = () => {
       </Head>
       <Box
         component="main"
-        sx={{ flexGrow: 1, py: 4 }}
+        sx={{ flexGrow: 1, py: { xs: 8, md: 4 } }}
       >
         <Container maxWidth={false}>
           <Box
-            sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}
+            sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'space-between', alignItems: 'center', mb: 3 }}
           >
             <Button
               startIcon={<ArrowBackIcon />}
@@ -1058,6 +1119,7 @@ const QuoteDetails = () => {
             <Grid
               item
               xs={12}
+              sx={{ display: { xs: 'none', md: 'block' } }}
             >
               <Card>
                 <CardContent>
@@ -1073,16 +1135,20 @@ const QuoteDetails = () => {
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <QuoteLogo row={{ ...securityInfo, type }} size={60} />
-                        <Box>
+                        <Box sx={{ ml: 2, overflow: 'hidden' }}>
                           <Typography
                             variant="h4"
                             component="h1"
+                            sx={{ fontWeight: 'bold', lineHeight: 1.2 }}
+                            noWrap
                           >
-                            {securityInfo?.shortname} ({securityInfo?.secid})
+                             {`${securityInfo?.shortname} (${securityInfo?.secid})`}
                           </Typography>
                           <Typography
                             color="textSecondary"
                             variant="subtitle1"
+                            noWrap
+                            sx={{ lineHeight: 1.2, display: 'block' }}
                           >
                             {securityInfo?.description}
                           </Typography>
@@ -1093,12 +1159,12 @@ const QuoteDetails = () => {
                       item
                       xs={12}
                       md={6}
-                      sx={{ textAlign: { md: 'right', xs: 'left' } }}
+                      sx={{ textAlign: 'right' }}
                     >
                       <Typography
                         variant="h3"
                         component="div"
-                        sx={{ fontWeight: 'bold' }}
+                        sx={{ fontWeight: 'bold', lineHeight: 1.2 }}
                       >
                         {formatPrice(marketData?.LAST || marketData?.PREVPRICE)}
                       </Typography>
@@ -1106,20 +1172,22 @@ const QuoteDetails = () => {
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: { md: 'flex-end', xs: 'flex-start' },
+                          justifyContent: 'flex-end',
+                          flexDirection: 'row',
                           gap: 1
                         }}
                       >
                         <Typography
                           variant="h6"
                           color={color}
-                          sx={{ display: 'flex', alignItems: 'center' }}
+                          sx={{ display: 'flex', alignItems: 'center', lineHeight: 1.2 }}
                         >
                           {marketData?.CHANGE > 0 ? '+' : ''}{formatPrice(marketData?.CHANGE)}
                         </Typography>
                         <Typography
                           variant="h6"
                           color={color}
+                          sx={{ lineHeight: 1.2 }}
                         >
                           ({formatPercent(marketData?.LASTTOPREVPRICE)})
                         </Typography>
@@ -1166,7 +1234,7 @@ const QuoteDetails = () => {
                     />
                     <Divider />
                     <CardContent>
-                      <Box sx={{ height: 400, position: 'relative' }}>
+                      <Box sx={{ height: isSmallScreen ? 250 : 400, position: 'relative' }}>
                         {chartData && (
                           <Line
                             data={chartData}
@@ -1219,7 +1287,7 @@ const QuoteDetails = () => {
                 )}
               </Grid>
             </Grid>
-            {!isBond && !isFund && !isCurrency && !isFutures && (
+            {(isSmallScreen || (!isBond && !isFund && !isCurrency)) && !isFutures && (
             <Grid
               item
               xs={12}
@@ -1266,515 +1334,54 @@ const QuoteDetails = () => {
                   {detailTab === 'security' && (
                     <Grid
                       container
-                      spacing={3}
+                      spacing={isSmallScreen ? 1 : 3}
                     >
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Код ценной бумаги
-                        </Typography>
-                        <Typography variant="body1">
-                          {securityInfo?.secid || '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          ISIN код
-                        </Typography>
-                        <Typography variant="body1">
-                          {securityInfo?.isin || '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Идентификатор режима торгов
-                        </Typography>
-                        <Typography variant="body1">
-                          {securityInfo?.boardid || '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Уровень листинга
-                        </Typography>
-                        <Typography variant="body1">
-                          {securityInfo?.listLevel || '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Режим торгов
-                        </Typography>
-                        <Typography variant="body1">
-                          {securityInfo?.board_title || '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Лотность
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatNumber(lotSize)}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Бумаги для квалифицированных инвесторов
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatYesNo(securityInfo?.isQualifiedInvestors)}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Дата начала торгов
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatDate(securityInfo?.issueDate)}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Полное наименование
-                        </Typography>
-                        <Typography variant="body1">
-                          {securityInfo?.fullName || securityInfo?.emitentTitle || securityInfo?.shortname || '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Допуск к утренней дополнительной торговой сессии
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatYesNo(securityInfo?.morningSession)}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Краткое наименование
-                        </Typography>
-                        <Typography variant="body1">
-                          {securityInfo?.shortname || '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Допуск к вечерней дополнительной торговой сессии
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatYesNo(securityInfo?.eveningSession)}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Номер государственной регистрации
-                        </Typography>
-                        <Typography variant="body1">
-                          {securityInfo?.regNumber || '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Допуск к дополнительной торговой сессии выходного дня
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatYesNo(securityInfo?.weekendSession)}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Номинальная стоимость
-                        </Typography>
-                        <Typography variant="body1">
-                          {securityInfo?.faceValue != null ? formatPrice(securityInfo.faceValue) : '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Индикатор &quot;торговые операции разрешены/запрещены&quot;
-                        </Typography>
-                        <Typography variant="body1">
-                          {marketData?.STATUS || '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Валюта номинала
-                        </Typography>
-                        <Typography variant="body1">
-                          {securityInfo?.faceUnit || '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Группа инструментов
-                        </Typography>
-                        <Typography variant="body1">
-                          {securityInfo?.groupCode || '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Объем выпуска
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatLargeNumber(securityInfo?.issuesize)}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Дата расчетов сделки
-                        </Typography>
-                        <Typography variant="body1">
-                          {formatDate(marketData?.SETTLEDATE)}
-                        </Typography>
-                      </Grid>
+                      <IndicatorItem label="Код ценной бумаги" value={securityInfo?.secid || '-'} />
+                      <IndicatorItem label="ISIN код" value={securityInfo?.isin || '-'} />
+                      <IndicatorItem label="Идентификатор режима торгов" value={securityInfo?.boardid || '-'} />
+                      <IndicatorItem label="Уровень листинга" value={securityInfo?.listLevel || '-'} />
+                      <IndicatorItem label="Режим торгов" value={securityInfo?.board_title || '-'} />
+                      <IndicatorItem label="Лотность" value={formatNumber(lotSize)} />
+                      <IndicatorItem label="Бумаги для квалифицированных инвесторов" value={formatYesNo(securityInfo?.isQualifiedInvestors)} />
+                      <IndicatorItem label="Дата начала торгов" value={formatDate(securityInfo?.issueDate)} />
+                      <IndicatorItem label="Полное наименование" value={securityInfo?.fullName || securityInfo?.emitentTitle || securityInfo?.shortname || '-'} />
+                      <IndicatorItem label="Допуск к утренней дополнительной торговой сессии" value={formatYesNo(securityInfo?.morningSession)} />
+                      <IndicatorItem label="Краткое наименование" value={securityInfo?.shortname || '-'} />
+                      <IndicatorItem label="Допуск к вечерней дополнительной торговой сессии" value={formatYesNo(securityInfo?.eveningSession)} />
+                      <IndicatorItem label="Номер государственной регистрации" value={securityInfo?.regNumber || '-'} />
+                      <IndicatorItem label="Допуск к дополнительной торговой сессии выходного дня" value={formatYesNo(securityInfo?.weekendSession)} />
+                      <IndicatorItem label="Номинальная стоимость" value={securityInfo?.faceValue != null ? formatPrice(securityInfo.faceValue) : '-'} />
+                      <IndicatorItem label='Индикатор "торговые операции разрешены/запрещены"' value={marketData?.STATUS || '-'} />
+                      <IndicatorItem label="Валюта номинала" value={securityInfo?.faceUnit || '-'} />
+                      <IndicatorItem label="Группа инструментов" value={securityInfo?.groupCode || '-'} />
+                      <IndicatorItem label="Объем выпуска" value={formatLargeNumber(securityInfo?.issuesize)} />
+                      <IndicatorItem label="Дата расчетов сделки" value={formatDate(marketData?.SETTLEDATE)} />
                     </Grid>
                   )}
                   {detailTab === 'trading' && (
                     <Grid
                       container
-                      spacing={3}
+                      spacing={isSmallScreen ? 1 : 3}
                     >
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Цена закрытия пред. дня
-                        </Typography>
-                        <Typography variant="body1">
-                          {lastDayStats?.close != null ? formatPrice(lastDayStats.close) : '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Цена открытия
-                        </Typography>
-                        <Typography variant="body1">
-                          {lastDayStats?.open != null ? formatPrice(lastDayStats.open) : '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Мин. цена
-                        </Typography>
-                        <Typography variant="body1">
-                          {lastDayStats?.low != null ? formatPrice(lastDayStats.low) : '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Макс. цена
-                        </Typography>
-                        <Typography variant="body1">
-                          {lastDayStats?.high != null ? formatPrice(lastDayStats.high) : '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Объем сделок за день, руб.
-                        </Typography>
-                        <Typography variant="body1">
-                          {lastDayStats?.value != null ? formatLargeNumber(lastDayStats.value) : '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Объем сделок за день, шт.
-                        </Typography>
-                        <Typography variant="body1">
-                          {lastDayStats?.volume != null ? formatLargeNumber(lastDayStats.volume) : '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Цена последней сделки
-                        </Typography>
-                        <Typography variant="body1">
-                          {lastDayStats?.close != null ? formatPrice(lastDayStats.close) : '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Объем первой сделки
-                        </Typography>
-                        <Typography variant="body1">
-                          -
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Рыночная цена (2)
-                        </Typography>
-                        <Typography variant="body1">
-                          {lastDayStats?.marketPrice2 != null ? formatPrice(lastDayStats.marketPrice2) : '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Объем последней сделки
-                        </Typography>
-                        <Typography variant="body1">
-                          -
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Рыночная цена (3)
-                        </Typography>
-                        <Typography variant="body1">
-                          {lastDayStats?.marketPrice3 != null ? formatPrice(lastDayStats.marketPrice3) : '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Сделки для рыночной цены (2)
-                        </Typography>
-                        <Typography variant="body1">
-                          {lastDayStats?.mp2ValTrd != null ? formatLargeNumber(lastDayStats.mp2ValTrd) : '-'}
-                        </Typography>
-                      </Grid>
-                      <Grid
-                        item
-                        xs={12}
-                        md={6}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                        >
-                          Сделки для рыночной цены (3)
-                        </Typography>
-                        <Typography variant="body1">
-                          {lastDayStats?.mp3TradesValue != null ? formatLargeNumber(lastDayStats.mp3TradesValue) : '-'}
-                        </Typography>
-                      </Grid>
+                      <IndicatorItem label="Цена закрытия пред. дня" value={lastDayStats?.close != null ? formatPrice(lastDayStats.close) : '-'} />
+                      <IndicatorItem label="Цена открытия" value={lastDayStats?.open != null ? formatPrice(lastDayStats.open) : '-'} />
+                      <IndicatorItem label="Мин. цена" value={lastDayStats?.low != null ? formatPrice(lastDayStats.low) : '-'} />
+                      <IndicatorItem label="Макс. цена" value={lastDayStats?.high != null ? formatPrice(lastDayStats.high) : '-'} />
+                      <IndicatorItem label="Объем сделок за день, руб." value={lastDayStats?.value != null ? formatLargeNumber(lastDayStats.value) : '-'} />
+                      <IndicatorItem label="Объем сделок за день, шт." value={lastDayStats?.volume != null ? formatLargeNumber(lastDayStats.volume) : '-'} />
+                      <IndicatorItem label="Цена последней сделки" value={lastDayStats?.close != null ? formatPrice(lastDayStats.close) : '-'} />
+                      <IndicatorItem label="Объем первой сделки" value="-" />
+                      <IndicatorItem label="Рыночная цена (2)" value={lastDayStats?.marketPrice2 != null ? formatPrice(lastDayStats.marketPrice2) : '-'} />
+                      <IndicatorItem label="Объем последней сделки" value="-" />
+                      <IndicatorItem label="Рыночная цена (3)" value={lastDayStats?.marketPrice3 != null ? formatPrice(lastDayStats.marketPrice3) : '-'} />
+                      <IndicatorItem label="Сделки для рыночной цены (2)" value={lastDayStats?.mp2ValTrd != null ? formatLargeNumber(lastDayStats.mp2ValTrd) : '-'} />
+                      <IndicatorItem label="Сделки для рыночной цены (3)" value={lastDayStats?.mp3TradesValue != null ? formatLargeNumber(lastDayStats.mp3TradesValue) : '-'} />
                     </Grid>
                   )}
-                  {detailTab === 'dividends' && isSmallScreen && !isBond && dividendsContent}
+                  {detailTab === 'dividends' && isSmallScreen && !isBond && !isFund && dividendsContent}
                   {detailTab === 'coupons' && isSmallScreen && isBond && couponsContent}
                   {detailTab === 'stats' && isSmallScreen && isCurrency && statsContent}
+                  {detailTab === 'fundInfo' && isSmallScreen && isFund && fundContent}
                 </CardContent>
               </Card>
             </Grid>

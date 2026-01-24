@@ -1,4 +1,5 @@
-import { Box, Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TableSortLabel, TextField, InputAdornment, SvgIcon, Tabs, Tab, TablePagination, Avatar } from '@mui/material';
+import { Box, Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TableSortLabel, TextField, InputAdornment, SvgIcon, Tabs, Tab, TablePagination, Avatar, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Search as SearchIcon } from '../icons/search';
 import { useRouter } from 'next/router';
 import { formatPrice, formatPercent, formatNumber } from '../utils/format';
@@ -6,7 +7,6 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { QuoteLogo } from './quote-logo';
 
-const VIRTUAL_ROW_HEIGHT = 53; // approximate row height
 const VIRTUAL_OVERSCAN = 5;
 const TABS = ['share', 'bond', 'fund', 'currency', 'future'];
 
@@ -19,9 +19,14 @@ const getFutureCost = (row) => {
 
 
 
-export const QuotesList = () => {
+export const QuotesList = (props) => {
   const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const rowHeight = isMobile ? 72 : 53;
+  
   const { secid, type } = router.query;
+  const { searchQuery: externalSearchQuery, onSearchChange } = props;
   
   // Initialize tab based on URL or default to 'share'
   const activeParam = type || secid;
@@ -59,7 +64,10 @@ export const QuotesList = () => {
   const [connected, setConnected] = useState(true);
   const [order, setOrder] = useState('asc');
   const [orderBy, setOrderBy] = useState(initialTab === 'future' ? 'secid' : 'shortname');
-  const [searchQuery, setSearchQuery] = useState('');
+  
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
+  const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : internalSearchQuery;
+
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [currencyNames, setCurrencyNames] = useState({});
@@ -158,9 +166,16 @@ export const QuotesList = () => {
   };
 
   const handleSearchChange = (event) => {
-    setSearchQuery(event.target.value);
-    setPage(0);
+    if (onSearchChange) {
+      onSearchChange(event);
+    } else {
+      setInternalSearchQuery(event.target.value);
+    }
   };
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchQuery]);
 
   const handleTabChange = (_event, newValue) => {
     setCurrentTab(newValue);
@@ -228,11 +243,14 @@ export const QuotesList = () => {
   }, [filteredQuotes, order, orderBy]);
 
   const paginatedQuotes = useMemo(() => {
+    if (isMobile) {
+      return sortedQuotes;
+    }
     if (rowsPerPage > 0) {
       return sortedQuotes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
     }
     return sortedQuotes;
-  }, [sortedQuotes, page, rowsPerPage]);
+  }, [sortedQuotes, page, rowsPerPage, isMobile]);
 
   const shouldVirtualize = paginatedQuotes.length > 200;
 
@@ -284,20 +302,20 @@ export const QuotesList = () => {
     }
 
     const total = paginatedQuotes.length;
-    const totalHeight = total * VIRTUAL_ROW_HEIGHT;
+    const totalHeight = total * rowHeight;
     const bodyTop = virtualMetrics.tableTop + virtualMetrics.headerHeight;
     const viewportTop = virtualMetrics.scrollY;
     const viewportBottom = virtualMetrics.scrollY + virtualMetrics.viewportHeight;
     const visibleStart = Math.max(0, viewportTop - bodyTop);
     const visibleEnd = Math.min(totalHeight, viewportBottom - bodyTop);
-    const startIndex = Math.max(0, Math.floor(visibleStart / VIRTUAL_ROW_HEIGHT) - VIRTUAL_OVERSCAN);
-    const endIndex = Math.min(total, Math.ceil(visibleEnd / VIRTUAL_ROW_HEIGHT) + VIRTUAL_OVERSCAN);
+    const startIndex = Math.max(0, Math.floor(visibleStart / rowHeight) - VIRTUAL_OVERSCAN);
+    const endIndex = Math.min(total, Math.ceil(visibleEnd / rowHeight) + VIRTUAL_OVERSCAN);
 
     if (currentTab === 'future') {
       return {
         visibleRows: paginatedQuotes.slice(startIndex, endIndex),
-        topSpacerHeight: startIndex * VIRTUAL_ROW_HEIGHT,
-        bottomSpacerHeight: (total - endIndex) * VIRTUAL_ROW_HEIGHT,
+        topSpacerHeight: startIndex * rowHeight,
+        bottomSpacerHeight: (total - endIndex) * rowHeight,
         columnCount: 4
       };
     }
@@ -306,11 +324,11 @@ export const QuotesList = () => {
     const extraBondColumns = currentTab === 'bond' ? 2 : 0;
     return {
       visibleRows: paginatedQuotes.slice(startIndex, endIndex),
-      topSpacerHeight: startIndex * VIRTUAL_ROW_HEIGHT,
-      bottomSpacerHeight: (total - endIndex) * VIRTUAL_ROW_HEIGHT,
+      topSpacerHeight: startIndex * rowHeight,
+      bottomSpacerHeight: (total - endIndex) * rowHeight,
       columnCount: baseColumnCount + extraBondColumns
     };
-  }, [paginatedQuotes, shouldVirtualize, virtualMetrics, currentTab]);
+  }, [paginatedQuotes, shouldVirtualize, virtualMetrics, currentTab, rowHeight]);
 
   return (
     <Box
@@ -340,7 +358,7 @@ export const QuotesList = () => {
               variant="h4"
               sx={{ m: 0 }}
             >
-              Котировки (MOEX)
+              {isMobile ? 'Котировки' : 'Котировки (MOEX)'}
             </Typography>
             <Chip
               label={connected ? 'Онлайн' : 'Оффлайн'}
@@ -349,7 +367,7 @@ export const QuotesList = () => {
             />
           </Box>
 
-          <Box sx={{ width: { xs: '100%', md: 500 } }}>
+          <Box sx={{ width: { xs: '100%', md: 500 }, display: { xs: 'none', md: 'block' } }}>
             <TextField
               fullWidth
               InputProps={{
@@ -407,7 +425,7 @@ export const QuotesList = () => {
           ref={tableContainerRef}
         >
           <Table
-            sx={{ minWidth: 650 }}
+            sx={{ minWidth: { xs: '100%', md: 650 } }}
             aria-label="quotes table"
             stickyHeader={shouldVirtualize}
           >
@@ -424,7 +442,7 @@ export const QuotesList = () => {
                         Инструмент
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       <TableSortLabel
                         active={orderBy === 'cost'}
                         direction={orderBy === 'cost' ? order : 'asc'}
@@ -442,7 +460,7 @@ export const QuotesList = () => {
                         Цена
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       <TableSortLabel
                         active={orderBy === 'change_pct'}
                         direction={orderBy === 'change_pct' ? order : 'asc'}
@@ -463,7 +481,7 @@ export const QuotesList = () => {
                         Название
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       <TableSortLabel
                         active={orderBy === 'secid'}
                         direction={orderBy === 'secid' ? order : 'asc'}
@@ -481,7 +499,7 @@ export const QuotesList = () => {
                         {currentTab === 'currency' ? 'Курс' : (currentTab === 'future' ? 'Цена' : 'Стоимость')}
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       <TableSortLabel
                         active={orderBy === 'high'}
                         direction={orderBy === 'high' ? order : 'asc'}
@@ -490,7 +508,7 @@ export const QuotesList = () => {
                         Макс
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       <TableSortLabel
                         active={orderBy === 'low'}
                         direction={orderBy === 'low' ? order : 'asc'}
@@ -499,7 +517,7 @@ export const QuotesList = () => {
                         Мин
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       <TableSortLabel
                         active={orderBy === 'change'}
                         direction={orderBy === 'change' ? order : 'asc'}
@@ -508,7 +526,7 @@ export const QuotesList = () => {
                         Изм
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       <TableSortLabel
                         active={orderBy === 'change_pct'}
                         direction={orderBy === 'change_pct' ? order : 'asc'}
@@ -518,7 +536,7 @@ export const QuotesList = () => {
                       </TableSortLabel>
                     </TableCell>
                     {currentTab === 'bond' && (
-                      <TableCell align="right">
+                      <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <TableSortLabel
                           active={orderBy === 'yield'}
                           direction={orderBy === 'yield' ? order : 'asc'}
@@ -529,7 +547,7 @@ export const QuotesList = () => {
                       </TableCell>
                     )}
                     {currentTab === 'bond' && (
-                      <TableCell align="right">
+                      <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <TableSortLabel
                           active={orderBy === 'matdate'}
                           direction={orderBy === 'matdate' ? order : 'asc'}
@@ -569,8 +587,8 @@ export const QuotesList = () => {
                     <>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <QuoteLogo row={row} debugMode={debugMode} onIconLoaded={handleIconLoaded} />
-                          <Box>
+                          <QuoteLogo row={row} debugMode={debugMode} onIconLoaded={handleIconLoaded} size={isMobile ? 32 : 40} />
+                          <Box sx={{ ml: 1.5 }}>
                             <Typography variant="subtitle2" sx={{ lineHeight: 1.2 }}>
                               {row.secid}
                             </Typography>
@@ -580,7 +598,7 @@ export const QuotesList = () => {
                           </Box>
                         </Box>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <Typography variant="body2" fontWeight="bold">
                           {formatPrice(getFutureCost(row))}
                         </Typography>
@@ -589,8 +607,24 @@ export const QuotesList = () => {
                         <Typography variant="body2">
                           {row.price ? row.price.toLocaleString('ru-RU') : '-'} пт.
                         </Typography>
+                        {isMobile && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mt: 0.5, gap: 0.5 }}>
+                            <Typography
+                              variant="caption"
+                              sx={{ color: row.change >= 0 ? 'success.main' : 'error.main', lineHeight: 1.2 }}
+                            >
+                              {row.change > 0 ? '+' : ''}{typeof row.change === 'number' ? row.change.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'} пт.
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{ color: row.change_pct >= 0 ? 'success.main' : 'error.main', lineHeight: 1.2 }}
+                            >
+                              {formatPercent(row.change_pct)}
+                            </Typography>
+                          </Box>
+                        )}
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                           <Typography
                             variant="body2"
@@ -614,48 +648,76 @@ export const QuotesList = () => {
                         scope="row"
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <QuoteLogo row={row} debugMode={debugMode} onIconLoaded={handleIconLoaded} />
-                          <Typography
-                            variant="body2"
-                            fontWeight="bold"
-                          >
-                            {currencyNames[row.secid] || row.shortname}
-                          </Typography>
+                          <QuoteLogo row={row} debugMode={debugMode} onIconLoaded={handleIconLoaded} size={isMobile ? 32 : 40} />
+                          <Box sx={{ ml: 1.5 }}>
+                            <Typography
+                              variant="body2"
+                              fontWeight="bold"
+                              sx={{ lineHeight: 1.2 }}
+                            >
+                              {currencyNames[row.secid] || row.shortname}
+                            </Typography>
+                            {isMobile && (
+                              <Typography variant="caption" color="textSecondary" sx={{ display: 'block', lineHeight: 1.2 }}>
+                                {row.secid}
+                              </Typography>
+                            )}
+                          </Box>
                         </Box>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <Typography variant="body2">
                           {row.secid}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
-                        {formatPrice(row.price)}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <Typography variant="body2" sx={{ lineHeight: 1.2 }}>
+                            {formatPrice(row.price)}
+                          </Typography>
+                          {isMobile && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mt: 0.5, gap: 0.5 }}>
+                              <Typography
+                                variant="caption"
+                                sx={{ color: row.change >= 0 ? 'success.main' : 'error.main', lineHeight: 1.2 }}
+                              >
+                                {row.change > 0 ? '+' : ''}{typeof row.change === 'number' ? row.change.toLocaleString('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{ color: row.change_pct >= 0 ? 'success.main' : 'error.main', lineHeight: 1.2 }}
+                              >
+                                {formatPercent(row.change_pct)}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         {formatPrice(row.high)}
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         {formatPrice(row.low)}
                       </TableCell>
                       <TableCell
                         align="right"
-                        sx={{ color: row.change >= 0 ? 'success.main' : 'error.main' }}
+                        sx={{ color: row.change >= 0 ? 'success.main' : 'error.main', display: { xs: 'none', md: 'table-cell' } }}
                       >
                         {row.change > 0 ? '+' : ''}{formatPrice(row.change)}
                       </TableCell>
                       <TableCell
                         align="right"
-                        sx={{ color: row.change_pct >= 0 ? 'success.main' : 'error.main' }}
+                        sx={{ color: row.change_pct >= 0 ? 'success.main' : 'error.main', display: { xs: 'none', md: 'table-cell' } }}
                       >
                         {formatPercent(row.change_pct)}
                       </TableCell>
                       {currentTab === 'bond' && (
-                        <TableCell align="right">
+                        <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                           {typeof row.yield === 'number' ? `${row.yield.toFixed(2)}%` : '—'}
                         </TableCell>
                       )}
                       {currentTab === 'bond' && (
-                        <TableCell align="right">
+                        <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                           {row.matdate ? new Date(row.matdate).toLocaleDateString('ru-RU') : '—'}
                         </TableCell>
                       )}
@@ -696,17 +758,19 @@ export const QuotesList = () => {
               )}
             </TableBody>
           </Table>
-          <TablePagination
-            component="div"
-            count={sortedQuotes.length}
-            page={page}
-            onPageChange={handleChangePage}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            rowsPerPageOptions={[50, 100, 200, 500, { label: 'Все', value: -1 }]}
-            labelRowsPerPage="Строк на странице:"
-            labelDisplayedRows={({ from, to, count }) => `${from}–${to} из ${count !== -1 ? count : `более чем ${to}`}`}
-          />
+          {!isMobile && (
+            <TablePagination
+              component="div"
+              count={sortedQuotes.length}
+              page={page}
+              onPageChange={handleChangePage}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              rowsPerPageOptions={[50, 100, 200, 500, { label: 'Все', value: -1 }]}
+              labelRowsPerPage="Строк на странице:"
+              labelDisplayedRows={({ from, to, count }) => `${from}–${to} из ${count !== -1 ? count : `более чем ${to}`}`}
+            />
+          )}
         </TableContainer>
       </Container>
     </Box>

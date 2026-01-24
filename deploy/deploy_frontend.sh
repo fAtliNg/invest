@@ -45,6 +45,15 @@ if [ -z "$DOMAIN" ]; then
     exit 1
 fi
 
+# Определение окружения (dev/prod)
+IS_DEV="false"
+if [ "$DOMAIN" = "profit-case-dev.ru" ]; then
+    IS_DEV="true"
+    echo "🔧 Режим: DEV (индексация будет запрещена)"
+else
+    echo "🔧 Режим: PROD (индексация разрешена)"
+fi
+
 HOST=$(echo $TARGET | cut -d@ -f2)
 
 # Проверка, что мы в корне проекта
@@ -191,6 +200,13 @@ ls -R src/pages/quotes
 # Удаляем .dockerignore, чтобы папка deploy была доступна в контексте сборки
 rm -f .dockerignore
 
+# Обновляем robots.txt если это dev окружение
+if [ "$IS_DEV" = "true" ]; then
+    echo \"User-agent: *\" > public/robots.txt
+    echo \"Disallow: /\" >> public/robots.txt
+    echo \"🤖 Robots.txt updated for DEV environment (Disallow all)\"
+fi
+
 # Обновляем server_name в deploy/nginx.conf
 if [ -f \"deploy/nginx.conf\" ]; then
     sed -i \"s/server_name .*/server_name $DOMAIN www.$DOMAIN localhost;/g\" deploy/nginx.conf
@@ -214,6 +230,7 @@ nice -n 10 docker build --no-cache \
     -f Dockerfile.temp \
     -t $IMAGE_NAME \
     --build-arg NEXT_PUBLIC_WS_URL=\"wss://$DOMAIN/api/ws\" \
+    --build-arg NEXT_PUBLIC_IS_DEV=\"$IS_DEV\" \
     .
 
 echo '🔍 Проверка наличия образа...'
