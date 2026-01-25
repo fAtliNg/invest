@@ -17,12 +17,14 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.22.1",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.16.3",
     "ws": "^8.19.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.25",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.0.5",
     "@types/pg": "^8.16.0",
     "nodemon": "^3.1.11",

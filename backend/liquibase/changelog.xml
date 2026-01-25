@@ -11,5 +11,6 @@
   <include file="sql/04_populate_currency_names.sql" relativeToChangelogFile="true"/>
   <include file="sql/05_add_isin_column.sql" relativeToChangelogFile="true"/>
   <include file="sql/06_add_changelog_v102.sql" relativeToChangelogFile="true"/>
+  <include file="sql/08_recreate_users_table.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

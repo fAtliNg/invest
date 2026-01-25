@@ -32,6 +32,27 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_PORT: 5432
       PORT: 5001
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-access-secret}
+    depends_on:
+      db:
+        condition: service_healthy
+      liquibase:
+        condition: service_completed_successfully
+    networks:
+      - backend_network
+      - frontend_network
+
+  auth-service:
+    build:
+      context: ../auth-service
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-invest}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-refresh-secret}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      PORT: 5002
     depends_on:
       db:
         condition: service_healthy
