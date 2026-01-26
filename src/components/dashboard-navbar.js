@@ -20,7 +20,7 @@ export const DashboardNavbar = (props) => {
   const { onSidebarOpen, controls, ...other } = props;
   const settingsRef = useRef(null);
   const [openAccountPopover, setOpenAccountPopover] = useState(false);
-  const { user, isAuthenticated } = useAuthContext();
+  const { user, isAuthenticated, isLoading } = useAuthContext();
 
   return (
     <>
@@ -64,7 +64,9 @@ export const DashboardNavbar = (props) => {
             </IconButton>
             <Box sx={{ flexGrow: 1 }} />
             {controls}
-            {isAuthenticated ? (
+            {isLoading ? (
+                <Box sx={{ ml: 1, width: 40, height: 40 }} /> // Placeholder to prevent layout shift
+            ) : isAuthenticated ? (
               <Avatar
                 onClick={() => setOpenAccountPopover(true)}
                 ref={settingsRef}

@@ -11,9 +11,6 @@ export const AccountPopover = (props) => {
     try {
       await signOut();
       onClose();
-      // Redirect handled by component usage or auth guard usually, 
-      // but here we might want to reload or push to login
-      window.location.href = '/login';
     } catch (err) {
       console.error(err);
     }

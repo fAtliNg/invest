@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import PropTypes from 'prop-types';
-import { Box, Divider, Drawer, Typography, useMediaQuery, Chip } from '@mui/material';
+import { Box, Button, Divider, Drawer, Typography, useMediaQuery, Chip } from '@mui/material';
 import { ChartBar as ChartBarIcon } from '../icons/chart-bar';
 import { Info as InfoIcon } from '../icons/info';
 import { Clock as ClockIcon } from '../icons/clock';
@@ -10,6 +10,9 @@ import { ROUTES } from '../constants';
 import EmailIcon from '@mui/icons-material/Email';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
+import LoginIcon from '@mui/icons-material/Login';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useAuthContext } from '../contexts/auth-context';
 
 const items = [
   {
@@ -47,6 +50,7 @@ const items = [
 export const DashboardSidebar = (props) => {
   const { open, onClose } = props;
   const router = useRouter();
+  const { user, signOut, isLoading } = useAuthContext();
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up('lg'), {
     defaultMatches: true,
     noSsr: false
@@ -119,6 +123,50 @@ export const DashboardSidebar = (props) => {
               />
             );
           })}
+        </Box>
+        <Divider sx={{ borderColor: '#2D3748' }} />
+        <Box
+          sx={{
+            px: 2,
+            py: 3
+          }}
+        >
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Typography color="neutral.500" variant="body2">
+                Загрузка...
+              </Typography>
+            </Box>
+          ) : user ? (
+            <Box>
+              <Typography
+                color="neutral.100"
+                variant="subtitle2"
+                sx={{ mb: 2 }}
+              >
+                {user.email}
+              </Typography>
+              <Button
+                color="secondary"
+                variant="outlined"
+                fullWidth
+                onClick={signOut}
+                startIcon={<LogoutIcon />}
+              >
+                Выйти
+              </Button>
+            </Box>
+          ) : (
+            <Button
+              color="secondary"
+              variant="contained"
+              fullWidth
+              onClick={() => router.push('/login')}
+              startIcon={<LoginIcon />}
+            >
+              Войти
+            </Button>
+          )}
         </Box>
         <Divider sx={{ borderColor: '#2D3748' }} />
         <Box

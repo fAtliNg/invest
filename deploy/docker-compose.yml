@@ -46,6 +46,7 @@ services:
   auth-service:
     build:
       context: ../auth-service
+      dockerfile: ../deploy/auth.Dockerfile
     restart: always
     environment:
       PORT: 5002
