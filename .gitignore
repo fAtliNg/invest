@@ -28,3 +28,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 deploy/cert
+
+# Deploy secrets
+deploy/.env
+deploy/env.prod
+deploy/env.dev

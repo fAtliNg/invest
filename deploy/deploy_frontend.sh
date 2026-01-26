@@ -98,10 +98,40 @@ SCP_CMD="scp -o ControlPath=$SOCKET"
 
 echo "🚀 Начинаем деплой фронтенда на $TARGET..."
 
-# 1. Упаковка исходного кода (без node_modules)
-echo "📦 Упаковка исходного кода..."
-# Use COPYFILE_DISABLE=1 to avoid macOS metadata (._ files)
-COPYFILE_DISABLE=1 tar --exclude='node_modules' --exclude='.git' --exclude='.next' --exclude='dist' --exclude='out' --exclude='.DS_Store' --exclude='*.log' --exclude='._*' --exclude='__MACOSX' --exclude="$TAR_NAME" -czf "$TAR_NAME" .
+# 1. Локальная сборка и упаковка артефактов
+echo "🏗 Локальная сборка проекта..."
+NEXT_PUBLIC_WS_URL="wss://$DOMAIN/api/ws"
+export NEXT_PUBLIC_WS_URL
+export NEXT_PUBLIC_IS_DEV="$IS_DEV"
+
+# Убедимся, что зависимости установлены
+if [ ! -d "node_modules" ]; then
+    echo "📦 Установка зависимостей..."
+    npm ci --legacy-peer-deps
+fi
+
+echo "⚙️ Запуск build & export..."
+# Clean previous build
+rm -rf out .next
+
+npm run build && npm run export
+
+if [ $? -ne 0 ]; then
+    echo "❌ Ошибка сборки!"
+    exit 1
+fi
+
+echo "📦 Упаковка артефактов..."
+rm -rf temp_deploy_pkg
+mkdir -p temp_deploy_pkg
+
+cp -r out temp_deploy_pkg/
+cp deploy/nginx.conf temp_deploy_pkg/
+cp deploy/nginx-static.Dockerfile temp_deploy_pkg/Dockerfile
+cp deploy/docker-compose.yml temp_deploy_pkg/
+
+COPYFILE_DISABLE=1 tar -C temp_deploy_pkg -czf "$TAR_NAME" .
+rm -rf temp_deploy_pkg
 
 # 2. Отправка архива на сервер
 echo "📤 Отправка исходного кода на сервер..."
@@ -178,66 +208,38 @@ $SSH_CMD "$TARGET" "mkdir -p ~/$PROJECT_DIR/deploy/cert"
 $SCP_CMD "$CERT_FILE" "$TARGET:~/$PROJECT_DIR/deploy/cert/fullchain.pem"
 $SCP_CMD "$KEY_FILE" "$TARGET:~/$PROJECT_DIR/deploy/cert/privkey.pem"
 
-# 3. Сборка и запуск на сервере
-echo "🏗 Сборка и запуск на сервере..."
+# 3. Сборка (Docker) и запуск на сервере
+echo "🏗 Сборка Docker образа и запуск на сервере..."
 # Экранируем $ в переменных, которые должны раскрываться на удаленном сервере, а не локально
 REMOTE_COMMANDS="
 set -e
 cd ~/$PROJECT_DIR/deploy
 
-echo '📥 Распаковка исходного кода...'
+echo '📥 Распаковка артефактов...'
 rm -rf temp_build
 mkdir -p temp_build
 tar -xzf $TAR_NAME -C temp_build
 rm $TAR_NAME
 
-echo '🏗 Сборка Docker образа ($IMAGE_NAME)...'
+echo '🐳 Сборка Docker образа из статики ($IMAGE_NAME)...'
 cd temp_build
 
-echo '🔍 Проверка файлов...'
-ls -R src/pages/quotes
-
-# Удаляем .dockerignore, чтобы папка deploy была доступна в контексте сборки
-rm -f .dockerignore
-
-# Обновляем robots.txt если это dev окружение
-if [ "$IS_DEV" = "true" ]; then
-    echo \"User-agent: *\" > public/robots.txt
-    echo \"Disallow: /\" >> public/robots.txt
-    echo \"🤖 Robots.txt updated for DEV environment (Disallow all)\"
-fi
-
-# Обновляем server_name в deploy/nginx.conf
-if [ -f \"deploy/nginx.conf\" ]; then
-    sed -i \"s/server_name .*/server_name $DOMAIN www.$DOMAIN localhost;/g\" deploy/nginx.conf
+# Обновляем server_name в nginx.conf
+if [ -f \"nginx.conf\" ]; then
+    sed -i \"s/server_name .*/server_name $DOMAIN www.$DOMAIN localhost;/g\" nginx.conf
 else
-    echo \"❌ Ошибка: deploy/nginx.conf не найден!\"
+    echo \"❌ Ошибка: nginx.conf не найден!\"
     exit 1
 fi
 
-# Копируем docker-compose.yml в папку deploy, чтобы запустить сервис
-if [ -f deploy/docker-compose.yml ]; then
-    cp deploy/docker-compose.yml ../docker-compose.yml
-else
-    echo \"⚠️ docker-compose.yml не найден в deploy/!\"
-fi
+# Копируем docker-compose.yml выше
+cp docker-compose.yml ..
 
-# Используем оригинальный Dockerfile, так как .dockerignore удален и папка deploy доступна
-cp deploy/nginx.Dockerfile Dockerfile.temp
-
-# Используем BuildKit (по умолчанию)
-nice -n 10 docker build --no-cache \
-    -f Dockerfile.temp \
-    -t $IMAGE_NAME \
-    --build-arg NEXT_PUBLIC_WS_URL=\"wss://$DOMAIN/api/ws\" \
-    --build-arg NEXT_PUBLIC_IS_DEV=\"$IS_DEV\" \
-    .
-
-echo '🔍 Проверка наличия образа...'
-docker images | grep invest-frontend || echo \"❌ Образ не найден!\"
+# Строим образ (быстро, так как статика)
+docker build -t $IMAGE_NAME .
 
 echo '🚀 Перезапуск сервиса nginx...'
-cd .. # Возвращаемся в папку deploy (где лежит docker-compose.yml)
+cd ..
 docker compose up -d --no-deps --no-build --force-recreate nginx
 
 echo '🔍 Проверка статуса...'

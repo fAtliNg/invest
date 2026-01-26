@@ -72,6 +72,8 @@ if [ -z "$DOMAIN" ]; then
     exit 1
 fi
 
+PROJECT_DIR="invest"
+
 # Проверка наличия подскриптов
 SCRIPT_DIR=$(dirname "$0")
 DEPLOY_DB="$SCRIPT_DIR/deploy_db.sh"
@@ -90,6 +92,53 @@ if [ ! -x "$DEPLOY_DB" ] || [ ! -x "$DEPLOY_BACKEND" ] || [ ! -x "$DEPLOY_LOGOS"
 fi
 
 echo "🚀 Начинаем полный деплой проекта на $TARGET..."
+
+# 0. Подготовка и отправка .env файла
+echo ""
+echo "=========================================="
+echo "📝 ШАГ 0: Настройка окружения (.env)"
+echo "=========================================="
+
+ENV_FILE=""
+if [[ "$DOMAIN" == "profit-case.ru" ]]; then
+    ENV_FILE="deploy/env.prod"
+    echo "✅ Выбран PROD конфиг: $ENV_FILE"
+elif [[ "$DOMAIN" == "profit-case-dev.ru" ]]; then
+    ENV_FILE="deploy/env.dev"
+    echo "✅ Выбран DEV конфиг: $ENV_FILE"
+else
+    echo "⚠️ Неизвестный домен: $DOMAIN. Попытка найти deploy/env.$DOMAIN"
+    if [ -f "deploy/env.$DOMAIN" ]; then
+        ENV_FILE="deploy/env.$DOMAIN"
+    elif [ -f "deploy/.env" ]; then
+        ENV_FILE="deploy/.env"
+        echo "⚠️ Используется стандартный deploy/.env"
+    else
+        echo "❌ Не найден подходящий .env файл. Создайте deploy/env.prod или deploy/env.dev"
+        exit 1
+    fi
+fi
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo "❌ Ошибка: Файл конфигурации $ENV_FILE не найден!"
+    exit 1
+fi
+
+# Создаем директорию на сервере, если её нет
+echo "📁 Создание директории $PROJECT_DIR/deploy..."
+if [ -n "$PASSWORD" ]; then
+    if ! command -v sshpass &> /dev/null; then
+        echo "❌ sshpass не установлен."
+        exit 1
+    fi
+    sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$TARGET" "mkdir -p ~/$PROJECT_DIR/deploy"
+    sshpass -p "$PASSWORD" scp -o StrictHostKeyChecking=no "$ENV_FILE" "$TARGET:~/$PROJECT_DIR/deploy/.env"
+else
+    ssh -o StrictHostKeyChecking=no "$TARGET" "mkdir -p ~/$PROJECT_DIR/deploy"
+    scp -o StrictHostKeyChecking=no "$ENV_FILE" "$TARGET:~/$PROJECT_DIR/deploy/.env"
+fi
+
+echo "✅ Файл окружения отправлен на сервер."
 
 # 1. Деплой базы данных
 echo ""

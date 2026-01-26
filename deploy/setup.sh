@@ -26,7 +26,7 @@ fi
 echo "🚀 Начинаем настройку сервера $TARGET..."
 
 # Команды для выполнения на удаленном сервере
-REMOTE_SCRIPT="
+REMOTE_SCRIPT=$(cat <<'EOF'
 set -e
 
 echo '📦 Обновление пакетов...'
@@ -43,8 +43,8 @@ fi
 
 # Add the repository to Apt sources:
 echo \
-  \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  \$(. /etc/os-release && echo \"\$VERSION_CODENAME\") stable\" | \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 sudo apt-get update
@@ -71,9 +71,9 @@ fi
 
 echo '🔧 Настройка прав доступа...'
 # Если пользователь не root, добавляем его в группу docker
-if [ "\$USER" != "root" ]; then
-    sudo usermod -aG docker \$USER
-    echo \"⚠️  Пользователь \$USER добавлен в группу docker. Вам может потребоваться перезайти в систему.\"
+if [ "$USER" != "root" ]; then
+    sudo usermod -aG docker $USER
+    echo "⚠️  Пользователь $USER добавлен в группу docker. Вам может потребоваться перезайти в систему."
 fi
 
 echo '🛡️  Установка и настройка безопасности (UFW, Fail2Ban)...'
@@ -115,15 +115,15 @@ echo "PermitRootLogin no" | sudo tee -a /etc/ssh/sshd_config.d/99-security-harde
 # Но sshd может ругаться на дублирующиеся директивы.
 echo "Cleaning up conflicting configurations..."
 sudo grep -l "PasswordAuthentication yes" /etc/ssh/sshd_config.d/*.conf 2>/dev/null | while read f; do 
-    echo "Fixing \$f..."
-    sudo sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' "\$f"
+    echo "Fixing $f..."
+    sudo sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' "$f"
 done
 
 # Если мы под root, то PermitRootLogin no может нас заблокировать, если у нас нет другого юзера.
 # Но скрипт setup.sh запускается один раз. 
 # ВНИМАНИЕ: Если вы запускаете это под root и не создали другого юзера с ключами, вы потеряете доступ!
 # Поэтому добавим проверку: блокируем root только если текущий пользователь НЕ root.
-if [ "\$USER" == "root" ]; then
+if [ "$USER" == "root" ]; then
     echo "⚠️  Вы запускаете скрипт от root. PermitRootLogin останется 'yes' (или 'prohibit-password'), чтобы вы не потеряли доступ."
     # Удаляем строку про root из нашего хард-конфига
     sudo sed -i '/PermitRootLogin/d' /etc/ssh/sshd_config.d/99-security-hardening.conf
@@ -132,7 +132,8 @@ fi
 # Перезапускаем SSHD
 sudo systemctl restart ssh
 echo '✅ SSH настроен (PasswordAuthentication=no).'
-"
+EOF
+)
 
 # Выполнение скрипта
 if [ -n "$PASSWORD" ]; then
