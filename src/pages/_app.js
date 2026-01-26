@@ -9,6 +9,7 @@ import { theme } from '../theme';
 import TagManager from 'react-gtm-module';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { AuthProvider } from '../contexts/auth-context';
 
 const tagManagerArgs = {
   gtmId: 'GTM-KSWNJ4R',
@@ -48,7 +49,9 @@ const App = (props) => {
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          {getLayout(<Component {...pageProps} />)}
+          <AuthProvider>
+            {getLayout(<Component {...pageProps} />)}
+          </AuthProvider>
         </ThemeProvider>
       </LocalizationProvider>
     </CacheProvider>

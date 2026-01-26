@@ -57,6 +57,7 @@ const Calc = () => {
       width="100%"
       justifyContent="flex-end"
       display="flex"
+      sx={{ display: { xs: 'flex', lg: 'none' } }}
     >
       <Button
         color="primary"

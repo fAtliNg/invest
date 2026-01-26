@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -9,31 +9,31 @@ import {
   Grid,
   TextField
 } from '@mui/material';
-
-const states = [
-  {
-    value: 'alabama',
-    label: 'Alabama'
-  },
-  {
-    value: 'new-york',
-    label: 'New York'
-  },
-  {
-    value: 'san-francisco',
-    label: 'San Francisco'
-  }
-];
+import { useAuthContext } from '../../contexts/auth-context';
 
 export const AccountProfileDetails = (props) => {
+  const { user, updateProfile } = useAuthContext();
   const [values, setValues] = useState({
-    firstName: 'Katarina',
-    lastName: 'Smith',
-    email: 'demo@devias.io',
+    firstName: '',
+    lastName: '',
+    email: '',
     phone: '',
-    state: 'Alabama',
-    country: 'USA'
+    city: '',
+    country: ''
   });
+
+  useEffect(() => {
+    if (user) {
+      setValues({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        city: user.city || '',
+        country: user.country || ''
+      });
+    }
+  }, [user]);
 
   const handleChange = (event) => {
     setValues({
@@ -42,16 +42,28 @@ export const AccountProfileDetails = (props) => {
     });
   };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      await updateProfile(values);
+      alert('Профиль обновлен');
+    } catch (err) {
+      console.error(err);
+      alert('Ошибка обновления профиля');
+    }
+  };
+
   return (
     <form
       autoComplete="off"
       noValidate
       {...props}
+      onSubmit={handleSubmit}
     >
       <Card>
         <CardHeader
-          subheader="The information can be edited"
-          title="Profile"
+          subheader="Информация может быть изменена"
+          title="Профиль"
         />
         <Divider />
         <CardContent>
@@ -66,8 +78,8 @@ export const AccountProfileDetails = (props) => {
             >
               <TextField
                 fullWidth
-                helperText="Please specify the first name"
-                label="First name"
+                helperText="Пожалуйста, укажите имя"
+                label="Имя"
                 name="firstName"
                 onChange={handleChange}
                 required
@@ -82,7 +94,7 @@ export const AccountProfileDetails = (props) => {
             >
               <TextField
                 fullWidth
-                label="Last name"
+                label="Фамилия"
                 name="lastName"
                 onChange={handleChange}
                 required
@@ -97,12 +109,13 @@ export const AccountProfileDetails = (props) => {
             >
               <TextField
                 fullWidth
-                label="Email Address"
+                label="Email адрес"
                 name="email"
                 onChange={handleChange}
                 required
                 value={values.email}
                 variant="outlined"
+                disabled // Email usually shouldn't be changed easily or needs verification
               />
             </Grid>
             <Grid
@@ -112,10 +125,10 @@ export const AccountProfileDetails = (props) => {
             >
               <TextField
                 fullWidth
-                label="Phone Number"
+                label="Номер телефона"
                 name="phone"
                 onChange={handleChange}
-                type="number"
+                type="text"
                 value={values.phone}
                 variant="outlined"
               />
@@ -127,7 +140,7 @@ export const AccountProfileDetails = (props) => {
             >
               <TextField
                 fullWidth
-                label="Country"
+                label="Страна"
                 name="country"
                 onChange={handleChange}
                 required
@@ -142,24 +155,13 @@ export const AccountProfileDetails = (props) => {
             >
               <TextField
                 fullWidth
-                label="Select State"
-                name="state"
+                label="Город"
+                name="city"
                 onChange={handleChange}
                 required
-                select
-                SelectProps={{ native: true }}
-                value={values.state}
+                value={values.city}
                 variant="outlined"
-              >
-                {states.map((option) => (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </option>
-                ))}
-              </TextField>
+              />
             </Grid>
           </Grid>
         </CardContent>
@@ -174,8 +176,9 @@ export const AccountProfileDetails = (props) => {
           <Button
             color="primary"
             variant="contained"
+            type="submit"
           >
-            Save details
+            Сохранить детали
           </Button>
         </Box>
       </Card>

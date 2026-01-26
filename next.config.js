@@ -17,8 +17,12 @@ const nextConfig = {
         destination: '/api/logos/:path*',
       },
       {
+        source: '/api/auth/:path*',
+        destination: 'http://127.0.0.1:5002/:path*',
+      },
+      {
         source: '/api/:path*',
-        destination: 'http://localhost:5001/:path*',
+        destination: 'http://127.0.0.1:5001/:path*',
       },
     ];
   },

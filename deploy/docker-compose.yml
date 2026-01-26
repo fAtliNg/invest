@@ -32,11 +32,34 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_PORT: 5432
       PORT: 5001
+    ports:
+      - "5001:5001"
     depends_on:
       db:
         condition: service_healthy
       liquibase:
         condition: service_completed_successfully
+    networks:
+      - backend_network
+      - frontend_network
+
+  auth-service:
+    build:
+      context: ../auth-service
+    restart: always
+    environment:
+      PORT: 5002
+      JWT_SECRET: ${JWT_SECRET:-dev_secret_key}
+      DB_USER: ${DB_USER:-postgres}
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-invest}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_PORT: 5432
+    ports:
+      - "5002:5002"
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - backend_network
       - frontend_network
