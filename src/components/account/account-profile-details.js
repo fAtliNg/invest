@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import InputMask from 'react-input-mask';
 import {
   Box,
   Button,
@@ -7,12 +8,16 @@ import {
   CardHeader,
   Divider,
   Grid,
-  TextField
+  TextField,
+  Snackbar,
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import { useAuthContext } from '../../contexts/auth-context';
 
 export const AccountProfileDetails = (props) => {
   const { user, updateProfile } = useAuthContext();
+  const [loading, setLoading] = useState(false);
   const [values, setValues] = useState({
     firstName: '',
     lastName: '',
@@ -20,6 +25,11 @@ export const AccountProfileDetails = (props) => {
     phone: '',
     city: '',
     country: ''
+  });
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
   });
 
   useEffect(() => {
@@ -42,16 +52,42 @@ export const AccountProfileDetails = (props) => {
     });
   };
 
+  const handleCloseNotification = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setNotification({ ...notification, open: false });
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setLoading(true);
     try {
       await updateProfile(values);
-      alert('Профиль обновлен');
+      setNotification({
+        open: true,
+        message: 'Профиль обновлен',
+        severity: 'success'
+      });
     } catch (err) {
       console.error(err);
-      alert('Ошибка обновления профиля');
+      setNotification({
+        open: true,
+        message: 'Ошибка обновления профиля',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
     }
   };
+
+  const isDirty = user && (
+    (user.firstName || '') !== values.firstName ||
+    (user.lastName || '') !== values.lastName ||
+    (user.phone || '') !== values.phone ||
+    (user.city || '') !== values.city ||
+    (user.country || '') !== values.country
+  );
 
   return (
     <form
@@ -115,7 +151,7 @@ export const AccountProfileDetails = (props) => {
                 required
                 value={values.email}
                 variant="outlined"
-                disabled // Email usually shouldn't be changed easily or needs verification
+                disabled
               />
             </Grid>
             <Grid
@@ -123,15 +159,22 @@ export const AccountProfileDetails = (props) => {
               md={6}
               xs={12}
             >
-              <TextField
-                fullWidth
-                label="Номер телефона"
-                name="phone"
-                onChange={handleChange}
-                type="text"
+              <InputMask
+                mask="+7 (999) 999-99-99"
                 value={values.phone}
-                variant="outlined"
-              />
+                onChange={handleChange}
+              >
+                {(inputProps) => (
+                  <TextField
+                    {...inputProps}
+                    fullWidth
+                    label="Номер телефона"
+                    name="phone"
+                    type="text"
+                    variant="outlined"
+                  />
+                )}
+              </InputMask>
             </Grid>
             <Grid
               item
@@ -143,7 +186,6 @@ export const AccountProfileDetails = (props) => {
                 label="Страна"
                 name="country"
                 onChange={handleChange}
-                required
                 value={values.country}
                 variant="outlined"
               />
@@ -158,7 +200,7 @@ export const AccountProfileDetails = (props) => {
                 label="Город"
                 name="city"
                 onChange={handleChange}
-                required
+                // required
                 value={values.city}
                 variant="outlined"
               />
@@ -177,11 +219,26 @@ export const AccountProfileDetails = (props) => {
             color="primary"
             variant="contained"
             type="submit"
+            disabled={loading || !isDirty}
           >
-            Сохранить детали
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Сохранить детали'}
           </Button>
         </Box>
       </Card>
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </form>
   );
 };

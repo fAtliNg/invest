@@ -39,14 +39,14 @@ export const AccountPopover = (props) => {
           px: 2
         }}
       >
-        <Typography variant="overline">
-          Аккаунт
+        <Typography variant="subtitle1">
+          {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'Пользователь'}
         </Typography>
         <Typography
-          color="textPrimary"
+          color="textSecondary"
           variant="body2"
         >
-          {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : (user?.email || 'Пользователь')}
+          {user?.email || ''}
         </Typography>
       </Box>
       <MenuList

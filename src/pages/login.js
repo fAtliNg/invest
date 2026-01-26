@@ -3,16 +3,46 @@ import NextLink from 'next/link';
 import { useRouter } from 'next/router';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { Box, Button, Container, Divider, Grid, Link, TextField, Typography } from '@mui/material';
+import { Box, Button, Container, Divider, Grid, Link, TextField, Typography, FormHelperText, Snackbar, Alert } from '@mui/material';
 import { useAuthContext } from '../contexts/auth-context';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Logo } from '../components/logo';
 import { Google as GoogleIcon } from '../icons/google';
 import { Vk as VkIcon } from '../icons/vk';
+import { useGoogleLogin } from '@react-oauth/google';
 
 const Login = () => {
   const router = useRouter();
-  const { signIn, isAuthenticated } = useAuthContext();
+  const { signIn, signInWithGoogle, isAuthenticated } = useAuthContext();
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  const handleCloseNotification = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setNotification({ ...notification, open: false });
+  };
+
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        // Send access token to backend
+        await signInWithGoogle(tokenResponse.access_token);
+        router.push('/');
+      } catch (err) {
+        console.error('Google login failed', err);
+      }
+    },
+    onError: () => {
+      console.error('Google login error');
+    }
+  });
+  
+
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -39,12 +69,22 @@ const Login = () => {
       try {
         await signIn(values.email, values.password);
         localStorage.setItem('email', values.email);
+        localStorage.setItem('loginSuccess', 'true');
         router.push('/');
       } catch (err) {
         console.error('Login error', err);
         helpers.setStatus({ success: false });
-        helpers.setErrors({ submit: err.message || 'Ошибка входа' });
+        
+        // Extract error message from backend
+        const errorMessage = err.response?.data?.error || err.message || 'Ошибка входа';
+        
+        helpers.setErrors({ submit: errorMessage });
         helpers.setSubmitting(false);
+        setNotification({
+          open: true,
+          message: errorMessage,
+          severity: 'error'
+        });
       }
     }
   });
@@ -176,7 +216,7 @@ const Login = () => {
                     </Link>
                   </NextLink>
                 </Typography>
-                <Box
+                {/* <Box
                   sx={{
                     pb: 1,
                     pt: 3
@@ -186,7 +226,7 @@ const Login = () => {
                     color="inherit"
                     fullWidth
                     startIcon={<GoogleIcon />}
-                    onClick={() => {}}
+                    onClick={() => handleGoogleLogin()}
                     size="large"
                     variant="outlined"
                     sx={{
@@ -229,7 +269,7 @@ const Login = () => {
                       или
                     </Typography>
                   </Divider>
-                </Box>
+                </Box> */}
                 <form onSubmit={formik.handleSubmit}>
                   <Box sx={{ my: 3 }}>
                     <Typography
@@ -312,6 +352,20 @@ const Login = () => {
           </Grid>
         </Grid>
       </Box>
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Avatar,
   Box,
@@ -9,9 +10,31 @@ import {
   Typography
 } from '@mui/material';
 import { useAuthContext } from '../../contexts/auth-context';
+import { AvatarUploadModal } from './avatar-upload-modal';
 
 export const AccountProfile = (props) => {
-  const { user } = useAuthContext();
+  const { user, uploadAvatar, deleteAvatar } = useAuthContext();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const getInitials = (firstName, lastName) => {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  };
+
+  const handleUpload = async (file) => {
+    try {
+      await uploadAvatar(file);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteAvatar();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <Card {...props}>
@@ -24,26 +47,15 @@ export const AccountProfile = (props) => {
           }}
         >
           <Avatar
-            src={user?.avatar || '/static/images/avatars/avatar_1.png'}
+            src={user?.avatar}
             sx={{
               height: 64,
               mb: 2,
               width: 64
             }}
-          />
-          <Typography
-            color="textPrimary"
-            gutterBottom
-            variant="h5"
           >
-            {user?.firstName || user?.email} {user?.lastName}
-          </Typography>
-          <Typography
-            color="textSecondary"
-            variant="body2"
-          >
-            {user?.city} {user?.country}
-          </Typography>
+            {getInitials(user?.firstName, user?.lastName)}
+          </Avatar>
         </Box>
       </CardContent>
       <Divider />
@@ -52,10 +64,26 @@ export const AccountProfile = (props) => {
           color="primary"
           fullWidth
           variant="text"
+          onClick={() => setIsModalOpen(true)}
         >
           Загрузить фото
         </Button>
+        {user?.avatar && (
+            <Button
+                color="error"
+                fullWidth
+                variant="text"
+                onClick={handleDelete}
+            >
+                Удалить фото
+            </Button>
+        )}
       </CardActions>
+      <AvatarUploadModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onUpload={handleUpload}
+      />
     </Card>
   );
 };

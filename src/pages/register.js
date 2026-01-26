@@ -58,10 +58,16 @@ const Register = () => {
     onSubmit: async (values, helpers) => {
       try {
         await signUp(values.email, values.password, values.firstName, values.lastName);
+        localStorage.setItem('loginSuccess', 'true');
         router.push('/');
       } catch (err) {
+        console.error('Registration error', err);
         helpers.setStatus({ success: false });
-        helpers.setErrors({ submit: err.message || 'Ошибка регистрации' });
+        
+        // Extract error message from backend
+        const errorMessage = err.response?.data?.error || err.message || 'Ошибка регистрации';
+        
+        helpers.setErrors({ submit: errorMessage });
         helpers.setSubmitting(false);
       }
     }
@@ -186,7 +192,7 @@ const Register = () => {
                     </Link>
                   </NextLink>
                 </Typography>
-                <Box
+                {/* <Box
                   sx={{
                     pb: 1,
                     pt: 3
@@ -239,7 +245,7 @@ const Register = () => {
                       или
                     </Typography>
                   </Divider>
-                </Box>
+                </Box> */}
                 <form onSubmit={formik.handleSubmit}>
                   <TextField
                     error={Boolean(formik.touched.firstName && formik.errors.firstName)}
@@ -348,7 +354,7 @@ const Register = () => {
                   <Box sx={{ py: 2 }}>
                     <Button
                       color="primary"
-                      disabled={formik.isSubmitting}
+                      disabled={formik.isSubmitting || !formik.isValid || !formik.dirty}
                       fullWidth
                       size="large"
                       type="submit"

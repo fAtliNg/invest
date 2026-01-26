@@ -74,9 +74,9 @@ export const DashboardNavbar = (props) => {
                   width: 40,
                   ml: 1
                 }}
-                src={user?.avatar || '/static/images/avatars/avatar_1.png'}
+                src={user?.avatar}
               >
-                <UserCircleIcon fontSize="small" />
+                {`${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase()}
               </Avatar>
             ) : (
               <>

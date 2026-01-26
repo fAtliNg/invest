@@ -10,6 +10,7 @@ import TagManager from 'react-gtm-module';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { AuthProvider } from '../contexts/auth-context';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const tagManagerArgs = {
   gtmId: 'GTM-KSWNJ4R',
@@ -49,9 +50,11 @@ const App = (props) => {
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <AuthProvider>
-            {getLayout(<Component {...pageProps} />)}
-          </AuthProvider>
+          <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
+            <AuthProvider>
+              {getLayout(<Component {...pageProps} />)}
+            </AuthProvider>
+          </GoogleOAuthProvider>
         </ThemeProvider>
       </LocalizationProvider>
     </CacheProvider>

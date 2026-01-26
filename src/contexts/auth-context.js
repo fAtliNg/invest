@@ -81,7 +81,10 @@ export const AuthProvider = (props) => {
         payload: user
       });
     } catch (err) {
-      console.error('Auth initialization failed', err);
+      // Don't log 401 errors as they are expected for unauthenticated users
+      if (err.response?.status !== 401) {
+        console.error('Auth initialization failed', err);
+      }
       dispatch({
         type: HANDLERS.INITIALIZE
       });
@@ -133,6 +136,18 @@ export const AuthProvider = (props) => {
     });
   };
 
+  const signInWithGoogle = async (token) => {
+    await axios.post('/api/auth/google', { token });
+    
+    const response = await axios.get('/api/auth/me');
+    const { user } = response.data;
+
+    dispatch({
+      type: HANDLERS.SIGN_IN,
+      payload: user
+    });
+  };
+
   const signOut = async () => {
     try {
       await axios.post('/api/auth/logout');
@@ -155,14 +170,44 @@ export const AuthProvider = (props) => {
     });
   };
 
+  const uploadAvatar = async (file) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await axios.post('/api/auth/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    const { user } = response.data;
+
+    dispatch({
+      type: HANDLERS.SIGN_IN,
+      payload: user
+    });
+  };
+
+  const deleteAvatar = async () => {
+    const response = await axios.delete('/api/auth/avatar');
+    const { user } = response.data;
+
+    dispatch({
+      type: HANDLERS.SIGN_IN,
+      payload: user
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
         ...state,
         signIn,
         signUp,
+        signInWithGoogle,
         signOut,
-        updateProfile
+        updateProfile,
+        uploadAvatar,
+        deleteAvatar
       }}
     >
       {children}
