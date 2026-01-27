@@ -50,6 +50,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check
+app.get('/health', (req, res) => res.status(200).send('OK'));
+
 // Helper to generate token
 const generateToken = (userId, email) => {
   return jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '24h' });

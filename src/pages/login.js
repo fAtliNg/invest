@@ -76,9 +76,16 @@ const Login = () => {
         helpers.setStatus({ success: false });
         
         // Extract error message from backend
-        const errorMessage = err.response?.data?.error || err.message || 'Ошибка входа';
+        let errorMessage = err.response?.data?.error || err.message || 'Ошибка входа';
         
-        helpers.setErrors({ submit: errorMessage });
+        if (err.response?.status === 404) {
+             errorMessage = 'Сервер недоступен (404)';
+        } else if (err.response?.status === 502) {
+             errorMessage = 'Сервис временно недоступен (502)';
+        } else if (err.response?.status >= 500) {
+             errorMessage = `Внутренняя ошибка сервера (${err.response.status})`;
+        }
+        
         helpers.setSubmitting(false);
         setNotification({
           open: true,
@@ -339,13 +346,6 @@ const Login = () => {
                         </Link>
                      </NextLink>
                   </Box>
-                  {formik.errors.submit && (
-                    <Box sx={{ mt: 3 }}>
-                      <FormHelperText error>
-                        {formik.errors.submit}
-                      </FormHelperText>
-                    </Box>
-                  )}
                 </form>
               </Container>
             </Box>

@@ -7,6 +7,9 @@ RUN npm install --omit=dev
 
 COPY src ./src
 
+# Create uploads directory and set permissions
+RUN mkdir -p uploads && chown -R node:node /app
+
 USER node
 
 EXPOSE 5002

@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import NextLink from 'next/link';
 import { useRouter } from 'next/router';
+import { useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import {
@@ -13,7 +14,9 @@ import {
   Grid,
   Link,
   TextField,
-  Typography
+  Typography,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useAuthContext } from '../contexts/auth-context';
@@ -24,6 +27,18 @@ import { Vk as VkIcon } from '../icons/vk';
 const Register = () => {
   const router = useRouter();
   const { signUp } = useAuthContext();
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  const handleCloseNotification = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setNotification({ ...notification, open: false });
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -65,10 +80,22 @@ const Register = () => {
         helpers.setStatus({ success: false });
         
         // Extract error message from backend
-        const errorMessage = err.response?.data?.error || err.message || 'Ошибка регистрации';
+        let errorMessage = err.response?.data?.error || err.message || 'Ошибка регистрации';
         
-        helpers.setErrors({ submit: errorMessage });
+        if (err.response?.status === 404) {
+             errorMessage = 'Сервер недоступен (404)';
+        } else if (err.response?.status === 502) {
+             errorMessage = 'Сервис временно недоступен (502)';
+        } else if (err.response?.status >= 500) {
+             errorMessage = `Внутренняя ошибка сервера (${err.response.status})`;
+        }
+
         helpers.setSubmitting(false);
+        setNotification({
+          open: true,
+          message: errorMessage,
+          severity: 'error'
+        });
       }
     }
   });
@@ -370,6 +397,20 @@ const Register = () => {
           </Grid>
         </Grid>
       </Box>
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };

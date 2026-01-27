@@ -64,6 +64,11 @@ services:
     networks:
       - backend_network
       - frontend_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:5002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   logo-service:
     build:
