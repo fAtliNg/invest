@@ -70,6 +70,30 @@ services:
       timeout: 5s
       retries: 5
 
+  email-service:
+    build:
+      context: ../email-service
+      dockerfile: ../deploy/email.Dockerfile
+    restart: always
+    environment:
+      PORT: 5003
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_SECURE: ${SMTP_SECURE}
+      SMTP_FROM: ${SMTP_FROM}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL}
+    ports:
+      - "5003:5003"
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:5003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   logo-service:
     build:
       context: .

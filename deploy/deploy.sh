@@ -79,15 +79,17 @@ SCRIPT_DIR=$(dirname "$0")
 DEPLOY_DB="$SCRIPT_DIR/deploy_db.sh"
 DEPLOY_BACKEND="$SCRIPT_DIR/deploy_backend.sh"
 DEPLOY_AUTH="$SCRIPT_DIR/deploy_auth.sh"
+DEPLOY_EMAIL="$SCRIPT_DIR/deploy_email.sh"
 DEPLOY_LOGOS="$SCRIPT_DIR/deploy_logos.sh"
 DEPLOY_FRONTEND="$SCRIPT_DIR/deploy_frontend.sh"
 
-if [ ! -x "$DEPLOY_DB" ] || [ ! -x "$DEPLOY_BACKEND" ] || [ ! -x "$DEPLOY_AUTH" ] || [ ! -x "$DEPLOY_LOGOS" ] || [ ! -x "$DEPLOY_FRONTEND" ]; then
+if [ ! -x "$DEPLOY_DB" ] || [ ! -x "$DEPLOY_BACKEND" ] || [ ! -x "$DEPLOY_AUTH" ] || [ ! -x "$DEPLOY_EMAIL" ] || [ ! -x "$DEPLOY_LOGOS" ] || [ ! -x "$DEPLOY_FRONTEND" ]; then
     echo "❌ Ошибка: Один или несколько скриптов деплоя не найдены или не исполняемые."
     echo "Ожидаются:"
     echo "  - $DEPLOY_DB"
     echo "  - $DEPLOY_BACKEND"
     echo "  - $DEPLOY_AUTH"
+    echo "  - $DEPLOY_EMAIL"
     echo "  - $DEPLOY_LOGOS"
     echo "  - $DEPLOY_FRONTEND"
     exit 1
@@ -172,6 +174,17 @@ echo "=========================================="
 "$DEPLOY_AUTH" "$TARGET" -p "$PASSWORD"
 if [ $? -ne 0 ]; then
     echo "❌ Ошибка при деплое Auth сервиса. Прерывание."
+    exit 1
+fi
+
+# 2.2. Деплой Email сервиса
+echo ""
+echo "=========================================="
+echo "📧 ШАГ 2.2: Деплой Email Service"
+echo "=========================================="
+"$DEPLOY_EMAIL" "$TARGET" -p "$PASSWORD"
+if [ $? -ne 0 ]; then
+    echo "❌ Ошибка при деплое Email сервиса. Прерывание."
     exit 1
 fi
 
