@@ -2,4 +2,4 @@ User-agent: *
 Disallow: /equities/
 
 Sitemap: https://profit-case.ru/sitemap.xml
-Host: https://profit-case.ru
+Host: profit-case.ru
