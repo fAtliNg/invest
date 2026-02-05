@@ -94,6 +94,24 @@ services:
       timeout: 5s
       retries: 5
 
+  news-service:
+    build:
+      context: ../news-service
+      dockerfile: ../deploy/news.Dockerfile
+    restart: always
+    environment:
+      PORT: 5004
+    ports:
+      - "5004:5004"
+    networks:
+      - backend_network
+      - frontend_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:5004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   logo-service:
     build:
       context: .

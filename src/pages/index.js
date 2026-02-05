@@ -17,6 +17,7 @@ import { CalcForm } from '../components/calc/calc-form';
 import { useState, useEffect } from 'react';
 import { PieChart } from '../components/PieChart';
 import { BarGraph } from '../components/BarGraph/BarGraph';
+import { NewsBlock } from '../components/news-block';
 
 const Calc = () => {
   const [values, setValues] = useState({});
@@ -139,6 +140,10 @@ const Calc = () => {
             </Grid>
           </Grid>
           
+          <Box sx={{ mt: 8 }}>
+            <NewsBlock />
+          </Box>
+
           <Box sx={{ mt: 8 }}>
             <Typography
               variant="h4"
