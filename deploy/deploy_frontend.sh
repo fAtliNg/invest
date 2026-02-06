@@ -99,39 +99,16 @@ SCP_CMD="scp -o ControlPath=$SOCKET"
 echo "🚀 Начинаем деплой фронтенда на $TARGET..."
 
 # 1. Локальная сборка и упаковка артефактов
-echo "🏗 Локальная сборка проекта..."
+echo "🏗 Локальная сборка фронтенда (SSR)..."
 NEXT_PUBLIC_WS_URL="wss://$DOMAIN/api/ws"
 export NEXT_PUBLIC_WS_URL
 export NEXT_PUBLIC_IS_DEV="$IS_DEV"
-
-# Убедимся, что зависимости установлены
 if [ ! -d "node_modules" ]; then
-    echo "📦 Установка зависимостей..."
-    npm ci --legacy-peer-deps
+  npm ci --legacy-peer-deps
 fi
-
-echo "⚙️ Запуск build & export..."
-# Clean previous build
-rm -rf out .next
-
-npm run build && npm run export
-
-if [ $? -ne 0 ]; then
-    echo "❌ Ошибка сборки!"
-    exit 1
-fi
-
-echo "📦 Упаковка артефактов..."
-rm -rf temp_deploy_pkg
-mkdir -p temp_deploy_pkg
-
-cp -r out temp_deploy_pkg/
-cp deploy/nginx.conf temp_deploy_pkg/
-cp deploy/nginx-static.Dockerfile temp_deploy_pkg/Dockerfile
-cp deploy/docker-compose.yml temp_deploy_pkg/
-
-COPYFILE_DISABLE=1 tar -C temp_deploy_pkg -czf "$TAR_NAME" .
-rm -rf temp_deploy_pkg
+npm run build
+echo "📦 Упаковка исходников с готовым билдом (.next)..."
+COPYFILE_DISABLE=1 tar --exclude=node_modules -czf "$TAR_NAME" .
 
 # 2. Отправка архива на сервер
 echo "📤 Отправка исходного кода на сервер..."
@@ -213,46 +190,25 @@ echo "🏗 Сборка Docker образа и запуск на сервере.
 # Экранируем $ в переменных, которые должны раскрываться на удаленном сервере, а не локально
 REMOTE_COMMANDS="
 set -e
-cd ~/$PROJECT_DIR/deploy
-
-echo '📥 Распаковка артефактов...'
-rm -rf temp_build
-mkdir -p temp_build
-tar -xzf $TAR_NAME -C temp_build
-rm $TAR_NAME
-
-echo '🐳 Сборка Docker образа из статики ($IMAGE_NAME)...'
-cd temp_build
-
-# Обновляем server_name в nginx.conf
-if [ -f \"nginx.conf\" ]; then
-    sed -i \"s/server_name .*/server_name $DOMAIN www.$DOMAIN localhost;/g\" nginx.conf
-else
-    echo \"❌ Ошибка: nginx.conf не найден!\"
-    exit 1
+cd ~/$PROJECT_DIR
+rm -rf src_deploy
+mkdir -p src_deploy
+tar -xzf deploy/$TAR_NAME -C src_deploy
+rm deploy/$TAR_NAME
+cd src_deploy
+if [ -f \"deploy/nginx.conf\" ]; then
+  sed -i \"s/server_name .*/server_name $DOMAIN www.$DOMAIN localhost;/g\" deploy/nginx.conf
 fi
-
-# Копируем docker-compose.yml выше
-cp docker-compose.yml ..
-
-# Строим образ (быстро, так как статика)
-docker build -t $IMAGE_NAME .
-
-echo '🚀 Перезапуск сервиса nginx...'
-cd ..
-docker compose up -d --no-deps --no-build --force-recreate nginx
-
-echo '🔍 Проверка статуса...'
+cp deploy/docker-compose.yml ../deploy/docker-compose.yml
+cp deploy/nginx.conf ../deploy/nginx.conf
+cp deploy/frontend.Dockerfile ../deploy/frontend.Dockerfile
+cp deploy/nginx.Dockerfile ../deploy/nginx.Dockerfile
+cd ../deploy
+export NEXT_PUBLIC_WS_URL=\"wss://$DOMAIN/api/ws\"
+export NEXT_PUBLIC_IS_DEV=\"$IS_DEV\"
+docker compose up -d --no-deps --build --force-recreate frontend nginx
 sleep 5
-if ! docker ps | grep -q \"deploy-nginx-1\"; then
-    echo \"⚠️ ОШИБКА: Контейнер nginx не запустился!\"
-    echo \"📋 Логи контейнера:\"
-    docker logs deploy-nginx-1
-    exit 1
-fi
-
-echo '🧹 Очистка...'
-rm -rf temp_build
+docker ps
 "
 
 $SSH_CMD "$TARGET" "$REMOTE_COMMANDS"

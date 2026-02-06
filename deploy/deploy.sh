@@ -57,11 +57,7 @@ if [ -z "$TARGET" ]; then
     exit 1
 fi
 
-if [ -z "$PASSWORD" ]; then
-    # -s скрывает ввод пароля
-    read -s -p "Введите пароль: " PASSWORD
-    echo "" # Перенос строки после ввода пароля
-fi
+# Если пароль не передан, используем SSH-ключи без интерактива
 
 if [ -z "$DOMAIN" ]; then
     read -p "Введите доменное имя (например, example.com): " DOMAIN

@@ -72,13 +72,17 @@ const Calc = () => {
     <DashboardLayout controls={controls}>
       <Head>
         <title>
-          Инвестиционный калькулятор сложного процента онлайн Profit Case
+          Калькулятор сложного процента с пополнением онлайн | Profit Case
         </title>
         <meta
           name="description"
-          content="Инвестиционный калькулятор позволяет выполнить бесплатный расчет динамики роста
-          капитала онлайн. Калькулятор сложного процента Profit Case с удобной визуализацией."
+          content="Бесплатный калькулятор сложного процента с пополнением и реинвестированием. Рассчитайте доходность инвестиций онлайн. Точный прогноз роста капитала от Profit Case."
         />
+        <meta property="og:title" content="Калькулятор сложного процента с пополнением онлайн | Profit Case" />
+        <meta property="og:description" content="Бесплатный калькулятор сложного процента с пополнением и реинвестированием. Рассчитайте доходность инвестиций онлайн. Точный прогноз роста капитала от Profit Case." />
+        <meta property="og:url" content="https://profit-case.ru/" />
+        <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://profit-case.ru/" />
       </Head>
       <Box
         component="main"
@@ -91,8 +95,9 @@ const Calc = () => {
           <Typography
             sx={{ mb: 3 }}
             variant="h4"
+            component="h1"
           >
-            Сложный процент
+            Калькулятор сложного процента
           </Typography>
           <Grid
             container

@@ -6,7 +6,7 @@ import { createEmotionCache } from '../utils/create-emotion-cache';
 class CustomDocument extends Document {
   render() {
     return (
-      <Html lang="en">
+      <Html lang="ru">
         <Head>
           <link
             rel="preconnect"

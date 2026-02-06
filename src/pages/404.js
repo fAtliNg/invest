@@ -9,6 +9,7 @@ const NotFound = () => (
       <title>
         404 | Profit Case
       </title>
+      <meta name="robots" content="noindex, nofollow" />
     </Head>
     <Box
       component="main"

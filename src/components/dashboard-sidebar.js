@@ -27,11 +27,6 @@ const items = [
     icon: (<ShowChartIcon fontSize="small" />),
     title: 'Котировки'
   },
-  // {
-  //   href: ROUTES.DIVIDEND_CALENDAR,
-  //   // icon: (<ChartBarIcon fontSize="small" />),
-  //   title: 'Календарь дивидендов'
-  // },
   {
     href: ROUTES.CHANGELOG,
     icon: (<ClockIcon fontSize="small" />),
@@ -48,7 +43,7 @@ export const DashboardSidebar = (props) => {
   const { open, onClose } = props;
   const router = useRouter();
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up('lg'), {
-    defaultMatches: true,
+    defaultMatches: false,
     noSsr: false
   });
 

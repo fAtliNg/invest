@@ -19,9 +19,15 @@ const clientSideEmotionCache = createEmotionCache();
 const App = (props) => {
   const { Component, emotionCache = clientSideEmotionCache, pageProps } = props;
   const router = useRouter();
+  
+  // Logic to generate canonical URL
+  const domain = process.env.NEXT_PUBLIC_IS_DEV === 'true' ? 'https://profit-case-dev.ru' : 'https://profit-case.ru';
+  const canonicalUrl = `${domain}${router.asPath === '/' ? '' : router.asPath.split('?')[0]}`;
+  const isDev = process.env.NEXT_PUBLIC_IS_DEV === 'true';
 
   useEffect(() => {
-    if (process.env.NODE_ENV === 'production') {
+    const isDevEnv = process.env.NEXT_PUBLIC_IS_DEV === 'true';
+    if (process.env.NODE_ENV === 'production' && !isDevEnv) {
       TagManager.initialize(tagManagerArgs);
     }
   }, []);
@@ -44,6 +50,8 @@ const App = (props) => {
           name="viewport"
           content="initial-scale=1, width=device-width"
         />
+        {isDev && <meta name="robots" content="noindex, nofollow" />}
+        <link rel="canonical" href={canonicalUrl} />
       </Head>
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <ThemeProvider theme={theme}>

@@ -10,6 +10,14 @@ import { QuoteLogo } from './quote-logo';
 const VIRTUAL_OVERSCAN = 5;
 const TABS = ['share', 'bond', 'fund', 'currency', 'future'];
 
+const PAGE_TITLES = {
+  share: 'Акции Московской биржи',
+  bond: 'Облигации и ОФЗ',
+  fund: 'Фонды (ETF и БПИФ)',
+  currency: 'Курсы валют',
+  future: 'Фьючерсы'
+};
+
 const getFutureCost = (row) => {
   if (row.price && row.min_step && row.step_price) {
     return (row.price / row.min_step) * row.step_price;
@@ -85,17 +93,17 @@ export const QuotesList = (props) => {
   useEffect(() => {
     // Connect to WebSocket
     let wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-    
-    // Если переменная окружения не задана, определяем URL динамически
-    if (!wsUrl) {
+    if (typeof window !== 'undefined') {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      // В продакшене (через nginx) вебсокеты доступны по /api/ws
-      // При локальной разработке обычно localhost:5001
-      if (window.location.hostname === 'localhost') {
-        wsUrl = 'ws://localhost:5001';
-      } else {
-        wsUrl = `${protocol}//${window.location.host}/api/ws`;
-      }
+      const defaultUrl =
+        window.location.hostname === 'localhost'
+          ? 'ws://localhost:5001'
+          : `${protocol}//${window.location.host}/api/ws`;
+      const isValidEnv =
+        wsUrl &&
+        /^wss?:\/\//.test(wsUrl) &&
+        !/localhost/i.test(wsUrl);
+      wsUrl = isValidEnv ? wsUrl : defaultUrl;
     }
     
     const ws = new WebSocket(wsUrl);
@@ -356,14 +364,16 @@ export const QuotesList = (props) => {
           >
             <Typography
               variant="h4"
+              component="h1"
               sx={{ m: 0 }}
             >
-              {isMobile ? 'Котировки' : 'Котировки (MOEX)'}
+              {isMobile ? (PAGE_TITLES[currentTab] || 'Котировки') : (PAGE_TITLES[currentTab] ? `${PAGE_TITLES[currentTab]}` : 'Котировки')}
             </Typography>
             <Chip
               label={connected ? 'Онлайн' : 'Оффлайн'}
               color={connected ? 'success' : 'error'}
               size="small"
+              sx={{ display: { xs: 'none', sm: 'flex' } }}
             />
           </Box>
 

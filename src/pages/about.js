@@ -26,6 +26,11 @@ const About = () => {
           name="description"
           content="Profit Case — бесплатный сервис для расчета инвестиционных стратегий. Калькуляторы сложного процента, кредитов и инструменты прогнозирования роста капитала."
         />
+        <meta property="og:title" content="О проекте Profit Case — Инструменты для умного инвестора" />
+        <meta property="og:description" content="Profit Case — бесплатный сервис для расчета инвестиционных стратегий. Калькуляторы сложного процента, кредитов и инструменты прогнозирования роста капитала." />
+        <meta property="og:url" content="https://profit-case.ru/about" />
+        <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://profit-case.ru/about" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

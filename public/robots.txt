@@ -1,5 +1,0 @@
-User-agent: *
-Disallow: /equities/
-
-Sitemap: https://profit-case.ru/sitemap.xml
-Host: profit-case.ru

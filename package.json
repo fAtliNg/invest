@@ -4,10 +4,10 @@
     "dev": "next",
     "build": "next build",
     "start": "next start",
-    "export": "next export",
     "lint": "next lint",
     "lint-fix": "next lint --fix",
-    "download-bonds": "node download_bond_icons.js"
+    "download-bonds": "node download_bond_icons.js",
+    "postbuild": "next-sitemap && node scripts/fix-robots-host.js"
   },
   "dependencies": {
     "@emotion/cache": "^11.5.0",
@@ -25,6 +25,7 @@
     "formik": "^2.1.5",
     "history": "^5.0.0",
     "next": "^12.0.3-canary.7",
+    "next-sitemap": "^4.2.3",
     "nprogress": "^0.2.0",
     "prop-types": "^15.7.2",
     "react": "^17.0.2",

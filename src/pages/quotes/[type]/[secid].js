@@ -66,15 +66,87 @@ const PERIODS = [
   { value: 'ALL', label: 'все', short: 'все', interval: 31, duration: 365 * 5 }
 ];
 
-const QuoteDetails = () => {
+const parseMoexData = (json, tableName) => {
+  if (!json || !json[tableName]) return [];
+  const columns = json[tableName].columns;
+  const data = json[tableName].data;
+  return data.map(row => {
+    const obj = {};
+    columns.forEach((col, i) => {
+      obj[col] = row[i];
+    });
+    return obj;
+  });
+};
+
+const fetchSecurityInfoHelper = async (secid) => {
+  const infoRes = await axios.get(`https://iss.moex.com/iss/securities/${secid}.json`);
+  const boards = parseMoexData(infoRes.data, 'boards');
+  const description = parseMoexData(infoRes.data, 'description');
+  
+  let targetBoard = boards.find(b => b.is_primary === 1);
+  if (!targetBoard) {
+    targetBoard = boards.find(b => ['TQBR', 'TQCB', 'TQOB', 'TQTF'].includes(b.boardid));
+  }
+  if (!targetBoard && boards.length > 0) targetBoard = boards[0];
+  
+  if (!targetBoard) throw new Error('Board not found');
+
+  const descMap = {};
+  description.forEach(item => { descMap[item.name] = item.value; });
+
+  const rawType = descMap['TYPE'] || '';
+  const typeMap = {
+    common_share: 'Обыкновенная акция',
+    preferred_share: 'Привилегированная акция',
+    depositary_receipt: 'Депозитарная расписка',
+    exchange_bond: 'Торговая облигация',
+    corporate_bond: 'Корпоративная облигация',
+    government_bond: 'Государственная облигация',
+    subfederal_bond: 'Региональная облигация',
+    municipal_bond: 'Муниципальная облигация',
+    etf: 'Биржевой фонд (ETF)',
+    ppif: 'ПИФ',
+    exchange_ppif: 'БПИФ',
+    stock_ppif: 'Биржевой ПИФ',
+    futures: 'Фьючерсный контракт',
+    option: 'Опционный контракт',
+    currency: 'Валюта'
+  };
+
+  return {
+    secid,
+    typeCode: rawType,
+    fullName: descMap['NAME'] || null,
+    shortname: descMap['SHORTNAME'] || descMap['NAME'] || secid,
+    description: typeMap[rawType] || rawType,
+    issuesize: descMap['ISSUESIZE'] ? Number(descMap['ISSUESIZE']) : null,
+    isin: descMap['ISIN'] || null,
+    regNumber: descMap['REGNUMBER'] || null,
+    faceValue: descMap['FACEVALUE'] ? Number(descMap['FACEVALUE']) : null,
+    faceUnit: descMap['FACEUNIT'] || null,
+    issueDate: descMap['ISSUEDATE'] || null,
+    listLevel: descMap['LISTLEVEL'] || null,
+    isQualifiedInvestors: descMap['ISQUALIFIEDINVESTORS'] || null,
+    morningSession: descMap['MORNINGSESSION'] || null,
+    eveningSession: descMap['EVENINGSESSION'] || null,
+    groupCode: descMap['GROUP'] || null,
+    emitentTitle: descMap['EMITENT_TITLE'] || null,
+    emitentInn: descMap['EMITENT_INN'] || null,
+    emitentOkved: descMap['EMITENT_OKVED'] || null,
+    ...targetBoard
+  };
+};
+
+const QuoteDetails = ({ initialSecurityInfo }) => {
   const router = useRouter();
   const { secid, type } = router.query;
 
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialSecurityInfo);
   const [error, setError] = useState(null);
-  const [securityInfo, setSecurityInfo] = useState(null);
+  const [securityInfo, setSecurityInfo] = useState(initialSecurityInfo || null);
   const [marketData, setMarketData] = useState(null);
   const [lastDayStats, setLastDayStats] = useState(null);
   const [chartData, setChartData] = useState(null);
@@ -177,84 +249,20 @@ const QuoteDetails = () => {
     }
   }, [secid]);
 
-  const parseMoexData = (json, tableName) => {
-    if (!json || !json[tableName]) return [];
-    const columns = json[tableName].columns;
-    const data = json[tableName].data;
-    return data.map(row => {
-      const obj = {};
-      columns.forEach((col, i) => {
-        obj[col] = row[i];
-      });
-      return obj;
-    });
-  };
+// Moved to module scope
 
   useEffect(() => {
     if (!secid) return;
 
     const fetchBaseData = async () => {
-      setLoading(true);
       try {
-        const infoRes = await axios.get(`https://iss.moex.com/iss/securities/${secid}.json`);
-        const boards = parseMoexData(infoRes.data, 'boards');
-        const description = parseMoexData(infoRes.data, 'description');
-        
-        let targetBoard = boards.find(b => b.is_primary === 1);
-        if (!targetBoard) {
-          targetBoard = boards.find(b => ['TQBR', 'TQCB', 'TQOB', 'TQTF'].includes(b.boardid));
+        let secInfo = securityInfo;
+        if (!secInfo || secInfo.secid !== secid) {
+          setLoading(true);
+          secInfo = await fetchSecurityInfoHelper(secid);
+          setSecurityInfo(secInfo);
         }
-        if (!targetBoard && boards.length > 0) targetBoard = boards[0];
-        
-        if (!targetBoard) throw new Error('Board not found');
-
-        const { engine, market, boardid } = targetBoard;
-
-        const descMap = {};
-        description.forEach(item => { descMap[item.name] = item.value; });
-
-        const rawType = descMap['TYPE'] || '';
-        const typeMap = {
-          common_share: 'Обыкновенная акция',
-          preferred_share: 'Привилегированная акция',
-          depositary_receipt: 'Депозитарная расписка',
-          exchange_bond: 'Торговая облигация',
-          corporate_bond: 'Корпоративная облигация',
-          government_bond: 'Государственная облигация',
-          subfederal_bond: 'Региональная облигация',
-          municipal_bond: 'Муниципальная облигация',
-          etf: 'Биржевой фонд (ETF)',
-          ppif: 'ПИФ',
-          exchange_ppif: 'БПИФ',
-          stock_ppif: 'Биржевой ПИФ',
-          futures: 'Фьючерсный контракт',
-          option: 'Опционный контракт',
-          currency: 'Валюта'
-        };
-
-        const secInfo = {
-            secid,
-            typeCode: rawType,
-            fullName: descMap['NAME'] || null,
-            shortname: descMap['SHORTNAME'] || descMap['NAME'] || secid,
-            description: typeMap[rawType] || rawType,
-            issuesize: descMap['ISSUESIZE'] ? Number(descMap['ISSUESIZE']) : null,
-            isin: descMap['ISIN'] || null,
-            regNumber: descMap['REGNUMBER'] || null,
-            faceValue: descMap['FACEVALUE'] ? Number(descMap['FACEVALUE']) : null,
-            faceUnit: descMap['FACEUNIT'] || null,
-            issueDate: descMap['ISSUEDATE'] || null,
-            listLevel: descMap['LISTLEVEL'] || null,
-            isQualifiedInvestors: descMap['ISQUALIFIEDINVESTORS'] || null,
-            morningSession: descMap['MORNINGSESSION'] || null,
-            eveningSession: descMap['EVENINGSESSION'] || null,
-            groupCode: descMap['GROUP'] || null,
-            emitentTitle: descMap['EMITENT_TITLE'] || null,
-            emitentInn: descMap['EMITENT_INN'] || null,
-            emitentOkved: descMap['EMITENT_OKVED'] || null,
-            ...targetBoard
-        };
-        setSecurityInfo(secInfo);
+        const { engine, market, boardid } = secInfo;
 
         const marketRes = await axios.get(`https://iss.moex.com/iss/engines/${engine}/markets/${market}/boards/${boardid}/securities/${secid}.json`);
         const marketDataParsed = parseMoexData(marketRes.data, 'marketdata');
@@ -560,18 +568,17 @@ const QuoteDetails = () => {
     if (!secid) return;
 
     let wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-
-    if (!wsUrl && typeof window !== 'undefined') {
+    if (typeof window !== 'undefined') {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      if (window.location.hostname === 'localhost') {
-        wsUrl = 'ws://localhost:5001';
-      } else {
-        wsUrl = `${protocol}//${window.location.host}/api/ws`;
-      }
-    }
-
-    if (!wsUrl) {
-      return;
+      const defaultUrl =
+        window.location.hostname === 'localhost'
+          ? 'ws://localhost:5001'
+          : `${protocol}//${window.location.host}/api/ws`;
+      const isValidEnv =
+        wsUrl &&
+        /^wss?:\/\//.test(wsUrl) &&
+        !/localhost/i.test(wsUrl);
+      wsUrl = isValidEnv ? wsUrl : defaultUrl;
     }
 
     const ws = new WebSocket(wsUrl);
@@ -1093,8 +1100,12 @@ const QuoteDetails = () => {
     <DashboardLayout controls={mobileHeaderContent}>
       <Head>
         <title>
-          {securityInfo?.shortname ? `${securityInfo.shortname} | Profit Case` : 'Profit Case'}
+          {securityInfo ? `${securityInfo.shortname || securityInfo.secid} (${securityInfo.secid}) - котировки, график | Profit Case` : 'Котировки | Profit Case'}
         </title>
+        <meta
+          name="description"
+          content={securityInfo ? `Актуальная информация о ${securityInfo.fullName || securityInfo.shortname} (${securityInfo.secid}). График котировок, дивиденды, новости и аналитика на Profit Case.` : 'Аналитика и котировки ценных бумаг на Profit Case.'}
+        />
       </Head>
       <Box
         component="main"
@@ -1480,5 +1491,28 @@ const QuoteDetails = () => {
     </DashboardLayout>
   );
 };
+
+export async function getServerSideProps(context) {
+  const { secid } = context.params;
+  
+  try {
+    const initialSecurityInfo = await fetchSecurityInfoHelper(secid);
+    return {
+      props: {
+        initialSecurityInfo
+      }
+    };
+  } catch (error) {
+    console.error('Error in getServerSideProps:', error);
+    return {
+      props: {
+        initialSecurityInfo: {
+          secid,
+          shortname: secid
+        }
+      }
+    };
+  }
+}
 
 export default QuoteDetails;
