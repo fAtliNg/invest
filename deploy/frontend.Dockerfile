@@ -2,6 +2,7 @@ FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
+RUN rm -rf /app/src /app/public /app/pages 2>/dev/null || true
 COPY . .
 ARG NEXT_PUBLIC_WS_URL
 ARG NEXT_PUBLIC_IS_DEV

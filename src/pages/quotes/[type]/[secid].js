@@ -181,6 +181,39 @@ const QuoteDetails = ({ initialSecurityInfo }) => {
   const color = isPositive ? 'success.main' : 'error.main';
   const chartColor = isPositive ? theme.palette.success.main : theme.palette.error.main;
 
+  const isDev = process.env.NEXT_PUBLIC_IS_DEV === 'true';
+  const domain = isDev ? 'https://profit-case-dev.ru' : 'https://profit-case.ru';
+  const typeLabelMap = {
+    share: 'Акции',
+    bond: 'Облигации',
+    fund: 'Фонды',
+    currency: 'Валюты',
+    future: 'Фьючерсы'
+  };
+  const resolveType = () => {
+    if (type) return String(type);
+    const code = securityInfo?.typeCode;
+    if (!code) return 'share';
+    if (['common_share', 'preferred_share', 'depositary_receipt'].includes(code)) return 'share';
+    if (['exchange_bond', 'corporate_bond', 'government_bond', 'subfederal_bond', 'municipal_bond', 'ofz_bond'].includes(code)) return 'bond';
+    if (['etf', 'ppif', 'exchange_ppif', 'stock_ppif'].includes(code)) return 'fund';
+    if (['futures', 'option'].includes(code)) return 'future';
+    if (code === 'currency' || securityInfo?.groupCode === 'currency_selt') return 'currency';
+    return 'share';
+  };
+  const pageType = resolveType();
+  const canonicalUrl = `${domain}/quotes/${pageType}/${securityInfo?.secid || secid || ''}`;
+  const breadcrumbsLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Главная', item: `${domain}/` },
+      { '@type': 'ListItem', position: 2, name: 'Котировки', item: `${domain}/quotes/` },
+      { '@type': 'ListItem', position: 3, name: typeLabelMap[pageType] || 'Инструменты', item: `${domain}/quotes/${pageType}` },
+      { '@type': 'ListItem', position: 4, name: securityInfo?.shortname || secid || '', item: canonicalUrl }
+    ]
+  };
+
   useEffect(() => {
     if (candles.length === 0) return;
 
@@ -1106,6 +1139,11 @@ const QuoteDetails = ({ initialSecurityInfo }) => {
           name="description"
           content={securityInfo ? `Актуальная информация о ${securityInfo.fullName || securityInfo.shortname} (${securityInfo.secid}). График котировок, дивиденды, новости и аналитика на Profit Case.` : 'Аналитика и котировки ценных бумаг на Profit Case.'}
         />
+        <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:title" content={securityInfo ? `${securityInfo.shortname || securityInfo.secid} (${securityInfo.secid}) — котировки и график` : 'Котировки'} />
+        <meta property="og:description" content={securityInfo ? `Данные по инструменту ${securityInfo.fullName || securityInfo.shortname} (${securityInfo.secid}). Цена, изменение, объём.` : 'Котировки и аналитика финансовых инструментов.'} />
+        <meta property="og:url" content={canonicalUrl} />
+        <script type="application/ld+json">{JSON.stringify(breadcrumbsLd)}</script>
       </Head>
       <Box
         component="main"

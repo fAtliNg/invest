@@ -6,24 +6,30 @@ import { createEmotionCache } from '../utils/create-emotion-cache';
 class CustomDocument extends Document {
   render() {
     return (
-      <Html lang="ru">
+      <Html lang="ru" {...(this.props.inAmpMode ? { amp: true } : {})}>
         <Head>
-          <link
-            rel="preconnect"
-            href="https://fonts.googleapis.com"
-          />
-          <link
-            rel="preconnect"
-            href="https://fonts.gstatic.com"
-          />
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
-          />
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css?family=Roboto+Mono|Roboto+Slab|Roboto:300,400,500,700&display=optional"
-          />
+          <meta charSet="utf-8" />
+          <meta name="viewport" content="width=device-width,minimum-scale=1" />
+          {!this.props.inAmpMode && (
+            <>
+              <link
+                rel="preconnect"
+                href="https://fonts.googleapis.com"
+              />
+              <link
+                rel="preconnect"
+                href="https://fonts.gstatic.com"
+              />
+              <link
+                rel="stylesheet"
+                href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
+              />
+              <link
+                rel="stylesheet"
+                href="https://fonts.googleapis.com/css?family=Roboto+Mono|Roboto+Slab|Roboto:300,400,500,700&display=optional"
+              />
+            </>
+          )}
           <link
             rel="apple-touch-icon"
             sizes="180x180"
@@ -32,6 +38,11 @@ class CustomDocument extends Document {
           <link
             rel="icon"
             href="/favicon.ico"
+          />
+          <link
+            rel="icon"
+            type="image/svg+xml"
+            href="/favicon.svg"
           />
           <link
             rel="icon"
@@ -89,7 +100,9 @@ CustomDocument.getInitialProps = async (ctx) => {
 
   return {
     ...initialProps,
-    styles: [...Children.toArray(initialProps.styles), ...emotionStyleTags]
+    styles: initialProps.inAmpMode
+      ? [...Children.toArray(initialProps.styles)]
+      : [...Children.toArray(initialProps.styles), ...emotionStyleTags]
   };
 };
 

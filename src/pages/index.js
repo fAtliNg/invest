@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { useAmp } from 'next/amp';
 import { resolve } from '../business/calculator'
 import {
   Box,
@@ -18,7 +19,11 @@ import { useState, useEffect } from 'react';
 import { PieChart } from '../components/PieChart';
 import { BarGraph } from '../components/BarGraph/BarGraph';
 
+export const config = { amp: 'hybrid' };
+
 const Calc = () => {
+  const isAmp = useAmp();
+
   const [values, setValues] = useState({});
   const [result, setResult] = useState({
     initialAmount: 0, // стартовый капитал
@@ -52,6 +57,41 @@ const Calc = () => {
     onCalc();
   };
 
+  if (isAmp) {
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      'name': 'Profit Case',
+      'url': 'https://profit-case.ru/',
+      'description': 'Калькулятор сложного процента с пополнением и реинвестированием'
+    };
+
+    return (
+      <>
+        <Head>
+          <meta charSet="utf-8" />
+          <meta name="viewport" content="width=device-width,minimum-scale=1" />
+          <title>Калькулятор сложного процента | AMP версия</title>
+          <link rel="canonical" href="https://profit-case.ru/" />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          />
+        </Head>
+        <main>
+          <h1>Калькулятор сложного процента</h1>
+          <p>
+            Лёгкая AMP-версия главной страницы для быстрой загрузки. Полный функционал доступен
+            на основной версии сайта.
+          </p>
+          <p>
+            Перейти к полной версии: <a href="https://profit-case.ru/">profit-case.ru</a>
+          </p>
+        </main>
+      </>
+    );
+  }
+
   const controls = (
     <Box
       width="100%"
@@ -71,6 +111,8 @@ const Calc = () => {
   return (
     <DashboardLayout controls={controls}>
       <Head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width,minimum-scale=1" />
         <title>
           Калькулятор сложного процента с пополнением онлайн | Profit Case
         </title>

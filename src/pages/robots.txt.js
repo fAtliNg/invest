@@ -14,6 +14,7 @@ export async function getServerSideProps({ res }) {
     'Host: ' + domain,
     '',
     'Sitemap: https://' + domain + '/sitemap.xml',
+    'Sitemap: https://' + domain + '/server-sitemap.xml',
   ];
 
   res.setHeader('Content-Type', 'text/plain');

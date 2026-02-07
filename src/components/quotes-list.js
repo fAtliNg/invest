@@ -6,6 +6,7 @@ import { formatPrice, formatPercent, formatNumber } from '../utils/format';
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { QuoteLogo } from './quote-logo';
+import NextLink from 'next/link';
 
 const VIRTUAL_OVERSCAN = 5;
 const TABS = ['share', 'bond', 'fund', 'currency', 'future'];
@@ -596,17 +597,21 @@ export const QuotesList = (props) => {
                   {currentTab === 'future' ? (
                     <>
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <QuoteLogo row={row} debugMode={debugMode} onIconLoaded={handleIconLoaded} size={isMobile ? 32 : 40} />
-                          <Box sx={{ ml: 1.5 }}>
-                            <Typography variant="subtitle2" sx={{ lineHeight: 1.2 }}>
-                              {row.secid}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary" sx={{ lineHeight: 1.2 }}>
-                              {row.shortname}
-                            </Typography>
-                          </Box>
-                        </Box>
+                        <NextLink href={`/quotes/${currentTab}/${row.secid}`} passHref>
+                          <a style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <QuoteLogo row={row} debugMode={debugMode} onIconLoaded={handleIconLoaded} size={isMobile ? 32 : 40} />
+                              <Box sx={{ ml: 1.5 }}>
+                                <Typography variant="subtitle2" sx={{ lineHeight: 1.2 }}>
+                                  {row.secid}
+                                </Typography>
+                                <Typography variant="body2" color="textSecondary" sx={{ lineHeight: 1.2 }}>
+                                  {row.shortname}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </a>
+                        </NextLink>
                       </TableCell>
                       <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <Typography variant="body2" fontWeight="bold">
@@ -657,23 +662,27 @@ export const QuotesList = (props) => {
                         component="th"
                         scope="row"
                       >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <QuoteLogo row={row} debugMode={debugMode} onIconLoaded={handleIconLoaded} size={isMobile ? 32 : 40} />
-                          <Box sx={{ ml: 1.5 }}>
-                            <Typography
-                              variant="body2"
-                              fontWeight="bold"
-                              sx={{ lineHeight: 1.2 }}
-                            >
-                              {currencyNames[row.secid] || row.shortname}
-                            </Typography>
-                            {isMobile && (
-                              <Typography variant="caption" color="textSecondary" sx={{ display: 'block', lineHeight: 1.2 }}>
-                                {row.secid}
-                              </Typography>
-                            )}
-                          </Box>
-                        </Box>
+                          <NextLink href={`/quotes/${currentTab}/${row.secid}`} passHref>
+                            <a style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <QuoteLogo row={row} debugMode={debugMode} onIconLoaded={handleIconLoaded} size={isMobile ? 32 : 40} />
+                                <Box sx={{ ml: 1.5 }}>
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight="bold"
+                                    sx={{ lineHeight: 1.2 }}
+                                  >
+                                    {currencyNames[row.secid] || row.shortname}
+                                  </Typography>
+                                  {isMobile && (
+                                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', lineHeight: 1.2 }}>
+                                      {row.secid}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              </Box>
+                            </a>
+                          </NextLink>
                       </TableCell>
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <Typography variant="body2">
