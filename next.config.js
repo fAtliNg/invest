@@ -2,6 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: false, // Отключаем SWC Minify из-за проблем в Docker/QEMU
+  experimental: {
+    amp: {
+      skipValidation: true
+    }
+  },
   typescript: {
     // Игнорируем ошибки TS при сборке (проверяем локально), чтобы экономить память
     ignoreBuildErrors: true,

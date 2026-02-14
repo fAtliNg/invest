@@ -1,0 +1,18 @@
+{
+  "date": "2026-02-11",
+  "source": "Яндекс RU (Россия) и Google RU (Россия)",
+  "phrases": [
+    { "query": "profit case", "yandex_position": 25, "delta": "+10", "google_position": 1, "popularity": 28 },
+    { "query": "калькулятор сложного процента с пополнением", "yandex_position": 29, "delta": "+64", "google_position": null, "popularity": 2522 },
+    { "query": "профит кейс", "yandex_position": 30, "delta": "+5", "google_position": "out", "popularity": 32 },
+    { "query": "сложный процент онлайн", "yandex_position": 39, "delta": "new", "google_position": null, "popularity": 6314 },
+    { "query": "инвестиционный калькулятор сложного процента", "yandex_position": 70, "delta": "+2", "google_position": null, "popularity": 1609 },
+    { "query": "калькулятор сложного процента", "yandex_position": 83, "delta": "new", "google_position": null, "popularity": 46204 },
+    { "query": "инвестиционный калькулятор", "yandex_position": 100, "delta": "new", "google_position": null, "popularity": 8019 },
+    { "query": "аннуитетный платеж формула", "yandex_position": null, "delta": null, "google_position": null, "popularity": 1992 },
+    { "query": "визуализация инвестиций", "yandex_position": null, "delta": null, "google_position": null, "popularity": 29 },
+    { "query": "график платежей по кредиту", "yandex_position": null, "delta": null, "google_position": null, "popularity": 4248 },
+    { "query": "инструменты для инвестора", "yandex_position": null, "delta": null, "google_position": null, "popularity": 551 }
+  ],
+  "screenshot_hint": "Поместите скриншот в data/seo/seo-2026-02-11.png"
+}

@@ -9,7 +9,7 @@ export async function getServerSideProps({ res }) {
   const lines = [
     'User-agent: *',
     isDev ? 'Disallow: /' : 'Allow: /',
-    ...(isDev ? [] : ['Disallow: /customers', 'Disallow: /equities']),
+    ...(isDev ? [] : ['Disallow: /customers', 'Disallow: /equities', 'Disallow: /404']),
     '',
     'Host: ' + domain,
     '',

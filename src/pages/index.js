@@ -70,7 +70,6 @@ const Calc = () => {
       <>
         <Head>
           <meta charSet="utf-8" />
-          <meta name="viewport" content="width=device-width,minimum-scale=1" />
           <title>Калькулятор сложного процента | AMP версия</title>
           <link rel="canonical" href="https://profit-case.ru/" />
           <script

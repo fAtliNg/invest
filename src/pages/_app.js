@@ -24,6 +24,7 @@ const App = (props) => {
   const domain = process.env.NEXT_PUBLIC_IS_DEV === 'true' ? 'https://profit-case-dev.ru' : 'https://profit-case.ru';
   const canonicalUrl = `${domain}${router.asPath === '/' ? '' : router.asPath.split('?')[0]}`;
   const isDev = process.env.NEXT_PUBLIC_IS_DEV === 'true';
+  const is404 = router.pathname === '/404';
 
   useEffect(() => {
     const isDevEnv = process.env.NEXT_PUBLIC_IS_DEV === 'true';
@@ -51,7 +52,7 @@ const App = (props) => {
           content="initial-scale=1, width=device-width"
         />
         {isDev && <meta name="robots" content="noindex, nofollow" />}
-        <link rel="canonical" href={canonicalUrl} />
+        {!is404 && <link rel="canonical" href={canonicalUrl} />}
       </Head>
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <ThemeProvider theme={theme}>
