@@ -10,10 +10,16 @@ import { ROUTES } from '../constants';
 import EmailIcon from '@mui/icons-material/Email';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
+import ArticleIcon from '@mui/icons-material/Article';
 
 const items = [
   {
     href: ROUTES.MAIN,
+    icon: (<ArticleIcon fontSize="small" />),
+    title: 'Новости'
+  },
+  {
+    href: ROUTES.CALC,
     icon: (<ChartBarIcon fontSize="small" />),
     title: 'Сложный процент'
   },
@@ -100,9 +106,13 @@ export const DashboardSidebar = (props) => {
         />
         <Box sx={{ flexGrow: 1 }}>
           {items.map((item) => {
-            const active = item.title === 'Котировки' 
-              ? router.asPath.startsWith('/quotes') 
-              : undefined;
+            let active = undefined;
+
+            if (item.title === 'Котировки') {
+              active = router.asPath.startsWith('/quotes');
+            } else if (item.title === 'Новости') {
+              active = router.asPath === '/' || router.asPath.startsWith('/news');
+            }
 
             return (
               <NavItem

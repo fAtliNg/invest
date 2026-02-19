@@ -2,8 +2,8 @@ const isDev = process.env.NEXT_PUBLIC_IS_DEV === 'true';
 
 module.exports = {
   siteUrl: isDev ? 'https://profit-case-dev.ru' : 'https://profit-case.ru',
-  generateRobotsTxt: false,
-  exclude: ['/server-sitemap.xml', '/404'],
+  generateRobotsTxt: true,
+  exclude: ['/server-sitemap.xml', '/404', '/customers', '/equities', '/robots.txt'],
   robotsTxtOptions: {
     policies: isDev
       ? [
@@ -11,7 +11,7 @@ module.exports = {
         ]
       : [
           { userAgent: '*', allow: '/' },
-          { userAgent: '*', disallow: ['/customers', '/equities'] }
+          { userAgent: '*', disallow: ['/customers', '/equities', '/404'] }
         ],
   },
 }

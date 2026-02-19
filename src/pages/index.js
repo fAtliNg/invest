@@ -1,280 +1,161 @@
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Head from 'next/head';
-import { useAmp } from 'next/amp';
-import { resolve } from '../business/calculator'
-import {
-  Box,
-  Button,
-  Container,
-  Grid,
-  Typography,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Paper
-} from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { DashboardLayout } from '../components/dashboard-layout';
-import { CalcForm } from '../components/calc/calc-form';
-import { useState, useEffect } from 'react';
-import { PieChart } from '../components/PieChart';
-import { BarGraph } from '../components/BarGraph/BarGraph';
+import { Box, Container, Typography, Grid, CircularProgress } from '@mui/material';
+import { NewsCard } from '../components/news/news-card';
+import { fetchNews } from '../api/news';
 
-export const config = { amp: 'hybrid' };
+const PAGE_SIZE = 12;
 
-const Calc = () => {
-  const isAmp = useAmp();
+const News = () => {
+  const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const observerTarget = useRef(null);
 
-  const [values, setValues] = useState({});
-  const [result, setResult] = useState({
-    initialAmount: 0, // стартовый капитал
-    totalReplenishmentAmount: 0, // всего пополнений
-    totalPercentAmount: 0, // всего процентов
-    passiveIncomePerMonth: 0, // пассивный доход
-  });
-  const [barGraphValues, setBarGraphValues] = useState({
-    initialAmounts: [], // стартовый капитал
-    totalReplenishmentAmounts: [], // всего пополнений
-    totalPercentAmounts: [], // всего процентов
-    passiveIncomePerMonths: [], // пассивный доход
-    labels: [],
-  });
+  const loadNews = useCallback(async () => {
+    if (loading) return;
+    
+    setLoading(true);
+    try {
+      const { items, total } = await fetchNews({ limit: PAGE_SIZE, offset });
+      
+      const formattedNews = items.map(item => {
+        const mainItem = item.newsItems[0] || {};
+        return {
+          id: item.id,
+          title: item.title,
+          description: mainItem.description,
+          date: item.createdAt,
+          category: mainItem.category || 'Новости',
+          source: { 
+            abbr: (mainItem.source || 'N').charAt(0), 
+            color: '#10B981' 
+          },
+          image: '/static/images/products/product_1.png' 
+        };
+      });
 
-  const onCalc = () => {
-    const results = resolve(values);
-    setResult(results.summary);
-    setBarGraphValues(results.details);
-  };
+      setNews(prev => {
+        // Prevent duplicates in case of strict mode double-invocation or race conditions
+        const newItems = formattedNews.filter(n => !prev.some(p => p.id === n.id));
+        return [...prev, ...newItems];
+      });
+
+      // Update hasMore based on total count
+      if (total > 0) {
+        setHasMore(offset + items.length < total);
+      } else {
+        // Fallback if total is not available or 0
+        setHasMore(items.length === PAGE_SIZE);
+      }
+      
+    } catch (error) {
+      console.error("Failed to load news", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [offset]);
 
   useEffect(() => {
-    const results = resolve(values);
-    setResult(results.summary);
-    setBarGraphValues(results.details);
-  }, [values]);
+    loadNews();
+  }, [loadNews]);
 
-  const onSubmit = () => {
-    const resultElement = document.getElementById('result');
-    resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    onCalc();
-  };
-
-  if (isAmp) {
-    const jsonLd = {
-      '@context': 'https://schema.org',
-      '@type': 'WebSite',
-      'name': 'Profit Case',
-      'url': 'https://profit-case.ru/',
-      'description': 'Калькулятор сложного процента с пополнением и реинвестированием'
-    };
-
-    return (
-      <>
-        <Head>
-          <meta charSet="utf-8" />
-          <title>Калькулятор сложного процента | AMP версия</title>
-          <link rel="canonical" href="https://profit-case.ru/" />
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-          />
-        </Head>
-        <main>
-          <h1>Калькулятор сложного процента</h1>
-          <p>
-            Лёгкая AMP-версия главной страницы для быстрой загрузки. Полный функционал доступен
-            на основной версии сайта.
-          </p>
-          <p>
-            Перейти к полной версии: <a href="https://profit-case.ru/">profit-case.ru</a>
-          </p>
-        </main>
-      </>
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          setOffset(prev => prev + PAGE_SIZE);
+        }
+      },
+      { threshold: 0.1 }
     );
-  }
 
-  const controls = (
-    <Box
-      width="100%"
-      justifyContent="flex-end"
-      display="flex"
-    >
-      <Button
-        color="primary"
-        variant="contained"
-        onClick={onSubmit}
-      >
-        Результат
-      </Button>
-    </Box>
-  )
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [hasMore, loading]);
 
   return (
-    <DashboardLayout controls={controls}>
+    <DashboardLayout>
       <Head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,minimum-scale=1" />
-        <title>
-          Калькулятор сложного процента с пополнением онлайн | Profit Case
-        </title>
-        <meta
-          name="description"
-          content="Бесплатный калькулятор сложного процента с пополнением и реинвестированием. Рассчитайте доходность инвестиций онлайн. Точный прогноз роста капитала от Profit Case."
-        />
-        <meta property="og:title" content="Калькулятор сложного процента с пополнением онлайн | Profit Case" />
-        <meta property="og:description" content="Бесплатный калькулятор сложного процента с пополнением и реинвестированием. Рассчитайте доходность инвестиций онлайн. Точный прогноз роста капитала от Profit Case." />
-        <meta property="og:url" content="https://profit-case.ru/" />
+        <title>Новости финансовых рынков и инвестиций | Profit Case</title>
+        <meta name="description" content="Читайте актуальные новости экономики, финансов и инвестиций. Аналитика рынков, котировки акций и облигаций, инструменты для инвесторов на Profit Case." />
+        <meta name="keywords" content="новости финансов, инвестиции, экономика, котировки, акции, облигации, аналитика, биржа, profit case" />
+        
+        {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <link rel="canonical" href="https://profit-case.ru/" />
+        <meta property="og:url" content="https://profit-case.ru/" />
+        <meta property="og:title" content="Новости финансовых рынков и инвестиций | Profit Case" />
+        <meta property="og:description" content="Читайте актуальные новости экономики, финансов и инвестиций. Аналитика рынков, котировки акций и облигаций, инструменты для инвесторов на Profit Case." />
+        <meta property="og:site_name" content="Profit Case" />
+        <meta property="og:locale" content="ru_RU" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://profit-case.ru/" />
+        <meta name="twitter:title" content="Новости финансовых рынков и инвестиций | Profit Case" />
+        <meta name="twitter:description" content="Читайте актуальные новости экономики, финансов и инвестиций. Аналитика рынков, котировки акций и облигаций, инструменты для инвесторов на Profit Case." />
+
+        {/* Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebPage",
+              "name": "Новости финансовых рынков и инвестиций",
+              "description": "Актуальные новости экономики, финансов и инвестиций. Аналитика рынков, котировки акций и облигаций.",
+              "url": "https://profit-case.ru/",
+              "publisher": {
+                "@type": "Organization",
+                "name": "Profit Case",
+                "logo": {
+                  "@type": "ImageObject",
+                  "url": "https://profit-case.ru/static/logo.svg"
+                }
+              }
+            })
+          }}
+        />
       </Head>
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          py: 8
-        }}
-      >
+      <Box component="main" sx={{ flexGrow: 1, py: 8 }}>
         <Container maxWidth="lg">
-          <Typography
-            sx={{ mb: 3 }}
-            variant="h4"
-            component="h1"
-          >
-            Калькулятор сложного процента
+          <Typography sx={{ mb: 3 }} variant="h4" component="h1">
+            Лента новостей
           </Typography>
-          <Grid
-            container
-            spacing={3}
-          >
-            <Grid
-              item
-              lg={5}
-              md={6}
-              xs={12}
-            >
-              <CalcForm
-                onSubmit={onSubmit}
-                onChangeValues={(data) => { setValues(data); }}
-              />
-            </Grid>
-            <Grid
-              item
-              lg={7}
-              md={6}
-              xs={12}
-            >
-              <Box id="result">
-                <PieChart
-                  totalBalance={result.totalBalance}
-                  initialAmount={result.initialAmount}
-                  totalReplenishmentAmount={result.totalReplenishmentAmount}
-                  totalPercentAmount={result.totalPercentAmount}
-                  passiveIncomePerMonth={result.passiveIncomePerMonth}
-                />
-              </Box>
-            </Grid>
-            <Grid
-              item
-              xs={12}
-            >
-              <BarGraph
-                initialAmounts={barGraphValues.initialAmounts}
-                totalPercentAmounts={barGraphValues.totalPercentAmounts}
-                totalReplenishmentAmounts={barGraphValues.totalReplenishmentAmounts}
-                labels={barGraphValues.labels}
-              />
-            </Grid>
+          
+          <Grid container spacing={3}>
+            {news.map((item) => (
+              <Grid item xs={12} md={6} key={item.id}>
+                <NewsCard news={item} />
+              </Grid>
+            ))}
           </Grid>
           
-          <Box sx={{ mt: 8 }}>
-            <Typography
-              variant="h4"
-              gutterBottom
-            >
-              Формула расчета сложного процента
-            </Typography>
-            <Paper
-              elevation={2}
-              sx={{ p: 3, mb: 4, bgcolor: 'background.default' }}
-            >
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', p: 2, borderRadius: 1 }}
-              >
-                A = P × (1 + r/n)<sup>n×t</sup>
+          {/* Loading indicator / Sentinel */}
+          <Box 
+            ref={observerTarget} 
+            sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              py: 4,
+              minHeight: '50px'
+            }}
+          >
+            {loading && <CircularProgress />}
+            {!hasMore && news.length > 0 && (
+              <Typography variant="body2" color="textSecondary">
+                Все новости загружены
               </Typography>
-              <Typography
-                paragraph
-                sx={{ mt: 2 }}
-              >
-                Где:
-              </Typography>
-              <ul style={{ paddingLeft: '20px' }}>
-                <li><Typography variant="body1"><strong>A</strong> — итоговая сумма в конце срока.</Typography></li>
-                <li><Typography variant="body1"><strong>P</strong> — начальная сумма инвестиций (тело вклада).</Typography></li>
-                <li><Typography variant="body1"><strong>r</strong> — годовая процентная ставка (в десятичном виде, например, 0.1 для 10%).</Typography></li>
-                <li><Typography variant="body1"><strong>n</strong> — количество периодов капитализации процентов в год (например, 12 для ежемесячной капитализации).</Typography></li>
-                <li><Typography variant="body1"><strong>t</strong> — общий срок инвестирования в годах.</Typography></li>
-              </ul>
-              <Typography
-                variant="body2"
-                color="textSecondary"
-                sx={{ mt: 2 }}
-              >
-                Наш онлайн калькулятор также учитывает регулярные ежемесячные пополнения, используя расширенную формулу аннуитетов для максимально точного прогноза роста вашего капитала.
-              </Typography>
-            </Paper>
-          </Box>
-
-          <Box sx={{ mt: 8 }}>
-            <Typography
-              variant="h4"
-              gutterBottom
-            >
-              Частые вопросы
-            </Typography>
-            <Accordion>
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                aria-controls="panel1a-content"
-                id="panel1a-header"
-              >
-                <Typography variant="h6">Что такое сложный процент?</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Typography paragraph>
-                  Сложный процент — это метод расчета дохода, при котором проценты начисляются не только на первоначальную сумму вложений, но и на уже накопленные проценты. Это создает эффект «снежного кома», позволяя капиталу расти экспоненциально с течением времени.
-                </Typography>
-                <Typography paragraph>
-                  В инвестициях сложный процент работает особенно эффективно на длительных горизонтах (от 5-10 лет), значительно увеличивая итоговую доходность портфеля за счет реинвестирования дивидендов и купонов.
-                </Typography>
-              </AccordionDetails>
-            </Accordion>
-            <Accordion>
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                aria-controls="panel2a-content"
-                id="panel2a-header"
-              >
-                <Typography variant="h6">Как пользоваться калькулятором?</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Typography paragraph>
-                  1. Введите <strong>Стартовый капитал</strong> — сумму, с которой вы начинаете инвестировать.
-                </Typography>
-                <Typography paragraph>
-                  2. Укажите <strong>Срок инвестирования</strong> в годах.
-                </Typography>
-                <Typography paragraph>
-                  3. Задайте <strong>Ставку</strong> (ожидаемую годовую доходность).
-                </Typography>
-                <Typography paragraph>
-                  4. Добавьте <strong>Ежемесячное пополнение</strong>, если планируете регулярно вносить средства.
-                </Typography>
-                <Typography>
-                  Калькулятор автоматически построит график роста капитала и покажет итоговую сумму с учетом реинвестирования.
-                </Typography>
-              </AccordionDetails>
-            </Accordion>
+            )}
           </Box>
         </Container>
       </Box>
@@ -282,4 +163,4 @@ const Calc = () => {
   );
 };
 
-export default Calc;
+export default News;
