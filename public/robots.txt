@@ -1,0 +1,15 @@
+# *
+User-agent: *
+Allow: /
+
+# *
+User-agent: *
+Disallow: /customers
+Disallow: /equities
+Disallow: /404
+
+# Host
+Host: https://profit-case.ru
+
+# Sitemaps
+Sitemap: https://profit-case.ru/sitemap.xml

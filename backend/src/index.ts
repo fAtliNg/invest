@@ -34,6 +34,28 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
+app.get(['/news', '/api/news'], async (req, res) => {
+  try {
+    const { limit, offset } = req.query;
+    const response = await axios.get('http://denisenkodenis.ru:5555/api/v1/news', {
+      params: {
+        limit,
+        offset
+      }
+    });
+    
+    // Pass pagination headers to the client
+    if (response.headers['x-total-count']) {
+      res.setHeader('x-total-count', response.headers['x-total-count']);
+    }
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error proxying news:', error);
+    res.status(500).json({ error: 'Failed to fetch news' });
+  }
+});
+
 app.get(['/changelog', '/api/changelog'], async (req, res) => {
   try {
     const result = await query('SELECT * FROM changelog ORDER BY date DESC');
@@ -138,7 +160,7 @@ const broadcast = (data: any) => {
 };
 
 // Polling loop
-const POLLING_INTERVAL = 2000;
+const POLLING_INTERVAL = 60000;
 let isPolling = false;
 
 // Minimal safe fallback to avoid empty UI when MOEX and DB are unavailable
