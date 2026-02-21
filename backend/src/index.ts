@@ -56,6 +56,21 @@ app.get(['/news', '/api/news'], async (req, res) => {
   }
 });
 
+app.get(['/news/:id', '/api/news/:id'], async (req, res) => {
+  try {
+    const { id } = req.params;
+    const response = await axios.get(`http://denisenkodenis.ru:5555/api/v1/news/${id}`);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error proxying news details:', error);
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      res.status(404).json({ error: 'News not found' });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch news details' });
+    }
+  }
+});
+
 app.get(['/changelog', '/api/changelog'], async (req, res) => {
   try {
     const result = await query('SELECT * FROM changelog ORDER BY date DESC');

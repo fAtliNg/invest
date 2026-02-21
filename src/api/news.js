@@ -23,10 +23,8 @@ export const fetchNews = async ({ limit, offset } = {}) => {
 
 export const getNewsById = async (id) => {
   try {
-    // Fetch a large number of items to increase chance of finding the ID
-    // ideally the backend should support fetching by ID directly
-    const { items } = await fetchNews({ limit: 1000, offset: 0 });
-    return items.find(item => item.id === id);
+    const response = await axios.get(`${API_URL}/${id}`);
+    return response.data;
   } catch (error) {
     console.error('Error fetching news details:', error);
     return null;
