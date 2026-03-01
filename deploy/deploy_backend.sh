@@ -92,44 +92,54 @@ $SCP_CMD "$TAR_NAME" "$TARGET:~/$PROJECT_DIR/backend/"
 # Отправляем Dockerfile и docker-compose.yml
 $SCP_CMD "deploy/backend.Dockerfile" "$TARGET:~/$PROJECT_DIR/deploy/backend.Dockerfile"
 
-if [ -f "deploy/docker-compose.yml" ]; then
-    $SCP_CMD "deploy/docker-compose.yml" "$TARGET:~/$PROJECT_DIR/deploy/docker-compose.yml"
-else
-    echo "⚠️ docker-compose.yml не найден в deploy/! Используется существующий на сервере (если есть)."
-fi
+    if [ -f "deploy/docker-compose.yml" ]; then
+        $SCP_CMD "deploy/docker-compose.yml" "$TARGET:~/$PROJECT_DIR/deploy/docker-compose.yml"
+    else
+        echo "⚠️ docker-compose.yml не найден в deploy/! Используется существующий на сервере (если есть)."
+    fi
 
-# 3. Сборка и перезапуск
-echo "🏗 Сборка и перезапуск на сервере..."
-REMOTE_COMMANDS="
-set -e
-cd ~/$PROJECT_DIR/backend
-
-echo '📥 Распаковка исходного кода...'
-# Очищаем папку перед распаковкой, но сохраняем liquibase если он там есть (хотя мы его деплоили отдельно, но лучше перезаписать все кодом)
-# Внимание: rm -rf * удалит все, включая скрытые файлы если не настроено иначе.
-# Лучше просто распаковать поверх, tar перезапишет.
-tar -xzf $TAR_NAME
-rm $TAR_NAME
-
-cd ../deploy
-
-echo '🔄 Пересборка и перезапуск контейнера backend...'
-# Используем --build чтобы пересобрать образ из обновленного кода
-docker compose up -d --build --force-recreate backend
-
-echo '⏳ Проверка статуса...'
-sleep 5
-if docker ps | grep -q \"deploy-backend-1\"; then
-    echo '✅ Контейнер backend запущен!'
-    docker logs --tail 20 deploy-backend-1
-else
-    echo '❌ Ошибка: Контейнер backend не запущен!'
-    docker logs deploy-backend-1
-    exit 1
-fi
-"
-
-$SSH_CMD "$TARGET" "$REMOTE_COMMANDS"
+    echo "📦 Упаковка исходного кода..."
+    if [ -d "backend" ]; then
+        # Упаковываем содержимое папки backend
+        tar --exclude='node_modules' --exclude='.git' --exclude='dist' --exclude='.DS_Store' --exclude='._*' --exclude='__MACOSX' -czf "$TAR_NAME" -C backend .
+    else
+        echo "❌ Ошибка: Папка backend не найдена!"
+        exit 1
+    fi
+    
+    echo "📤 Отправка файлов на сервер..."
+    $SSH_CMD "$TARGET" "mkdir -p ~/$PROJECT_DIR/backend ~/$PROJECT_DIR/deploy"
+    $SCP_CMD "$TAR_NAME" "$TARGET:~/$PROJECT_DIR/backend/"
+    $SCP_CMD "deploy/backend.Dockerfile" "$TARGET:~/$PROJECT_DIR/deploy/backend.Dockerfile"
+    
+    echo "🏗 Сборка и перезапуск на сервере..."
+    REMOTE_COMMANDS="
+    set -e
+    
+    # 1. Распаковка архива в папку backend
+    mkdir -p ~/$PROJECT_DIR/backend
+    tar -xzf ~/$PROJECT_DIR/backend/$TAR_NAME -C ~/$PROJECT_DIR/backend
+    rm ~/$PROJECT_DIR/backend/$TAR_NAME
+    
+    # 2. Переход в папку deploy для запуска docker compose
+    cd ~/$PROJECT_DIR/deploy
+    
+    echo '🔄 Пересборка и перезапуск контейнера backend...'
+    docker compose up -d --build --force-recreate backend
+    
+    echo '⏳ Проверка статуса...'
+    sleep 5
+    if docker ps | grep -q \"deploy-backend-1\"; then
+        echo '✅ Контейнер backend запущен!'
+        docker logs --tail 20 deploy-backend-1
+    else
+        echo '❌ Ошибка: Контейнер backend не запущен!'
+        docker logs deploy-backend-1
+        exit 1
+    fi
+    "
+    
+    $SSH_CMD "$TARGET" "$REMOTE_COMMANDS"
 
 # Очистка локального архива
 rm "$TAR_NAME"

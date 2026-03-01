@@ -1,13 +1,13 @@
 {
   "private": false,
-  "scripts": {
+  "scripts": { н
     "dev": "next",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "lint-fix": "next lint --fix",
     "download-bonds": "node download_bond_icons.js",
-    "postbuild": "next-sitemap && node scripts/fix-robots-host.js"
+    "postbuild": "next-sitemap"
   },
   "dependencies": {
     "@emotion/cache": "^11.5.0",

@@ -34,10 +34,8 @@ const App = (props) => {
   }, []);
 
   useEffect(() => {
-    if (router.pathname === '/' && router.asPath !== '/') {
-      router.replace(router.asPath);
-    }
-  }, [router]);
+    // Only fix legacy hash routing or similar if needed, avoiding loops
+  }, []);
 
   const getLayout = Component.getLayout ?? ((page) => page);
 
