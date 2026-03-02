@@ -409,6 +409,486 @@ app.get(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: an
   }
 });
 
+app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+    const content = String(req.query.content || '').trim();
+
+    if (!content) {
+      res.status(400).json({ error: 'Message content is required' });
+      return;
+    }
+
+    // Check ownership and get portfolio details
+    const portfolioResult = await query(
+      `SELECT p.id, p.title, p.description FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (portfolioResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    const portfolio = portfolioResult.rows[0];
+    const portfolioId = portfolio.id;
+
+    // Store user message
+    await query(
+      'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+      [portfolioId, 'user', content]
+    );
+
+    // Get chat history for context
+    const chatHistory = await query(
+      'SELECT role, content FROM portfolio_chats WHERE portfolio_id = $1 ORDER BY created_at ASC',
+      [portfolioId]
+    );
+
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    if (!DEEPSEEK_API_KEY) {
+      res.status(500).json({ error: 'DeepSeek API key is not configured' });
+      return;
+    }
+
+    // SSE headers
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if ((res as any).flushHeaders) (res as any).flushHeaders();
+
+    const send = (data: string) => {
+      res.write(`data: ${data}\n\n`);
+    };
+
+    const messages = [
+      { 
+        role: 'system', 
+        content: `Ты — финансовый помощник. Отвечай строго на русском в чистом Markdown (GFM).
+Всегда возвращай только Markdown без дополнительных символов и эмодзи. Следи за парностью символов форматирования (*, **, \`\`\`).
+Используй списки и заголовки по необходимости, не добавляй декоративные конструкции вроде "— *".
+Контекст: портфель "${portfolio.title}". Описание: "${portfolio.description}".` 
+      },
+      ...chatHistory.rows.map(row => ({ role: row.role, content: row.content }))
+    ];
+
+    try {
+      const aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages,
+          max_tokens: 2000,
+          stream: true
+        })
+      });
+
+      let assistantContent = '';
+      if (!aiResponse.ok || !aiResponse.body) {
+        const errorText = await aiResponse.text().catch(() => '');
+        console.error('DeepSeek API error (SSE):', errorText);
+        // Fallback: request non-streaming response
+        try {
+          const fallbackResp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+            },
+            body: JSON.stringify({
+              model: 'deepseek-chat',
+              messages,
+              max_tokens: 1200,
+              stream: false
+            })
+          });
+          const fbText = await fallbackResp.text();
+          if (fallbackResp.ok) {
+            const fbJson = JSON.parse(fbText);
+            const content = fbJson.choices?.[0]?.message?.content || '';
+            if (content) {
+              assistantContent += content;
+              send(content);
+              // Save and finish
+              await query(
+                'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+                [portfolioId, 'assistant', assistantContent]
+              );
+              send('[DONE]');
+              res.end();
+              return;
+            }
+          }
+          send(JSON.stringify({ type: 'error', message: 'AI non-streaming fallback failed', detail: fbText.slice(0, 500) }));
+        } catch (fbErr: any) {
+          send(JSON.stringify({ type: 'error', message: 'AI fallback exception', detail: fbErr?.message }));
+        }
+        res.end();
+        return;
+      }
+
+      let buffer = '';
+
+      // Use Web ReadableStream reader to avoid async-iterability issues
+      const reader = (aiResponse.body as ReadableStream).getReader();
+      const decoder = new TextDecoder('utf-8');
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunkStr = decoder.decode(value, { stream: true });
+        buffer += chunkStr;
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          if (line.trim() === 'data: [DONE]') continue;
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              const delta = data.choices?.[0]?.delta?.content || '';
+              if (delta) {
+                assistantContent += delta;
+                // Send plain text chunk as SSE data line
+                send(delta);
+              }
+            } catch (e) {
+              console.error('Chunk parse error (SSE):', e);
+            }
+          }
+        }
+      }
+
+      // Flush remaining buffer
+      if (buffer.trim() && buffer.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(buffer.slice(6));
+          const delta = data.choices?.[0]?.delta?.content || '';
+          if (delta) {
+            assistantContent += delta;
+            send(delta);
+          }
+        } catch (e) {
+          console.error('Final chunk parse error (SSE):', e);
+        }
+      }
+
+      // Save assistant message
+      if (assistantContent) {
+        await query(
+          'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+          [portfolioId, 'assistant', assistantContent]
+        );
+      }
+
+      // Signal done
+      send('[DONE]');
+      res.end();
+    } catch (err: any) {
+      console.error('DeepSeek SSE error:', err.message);
+      // Fallback inside catch
+      try {
+        const fallbackResp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages,
+            max_tokens: 1200,
+            stream: false
+          })
+        });
+        const fbText = await fallbackResp.text();
+        if (fallbackResp.ok) {
+          const fbJson = JSON.parse(fbText);
+          const content = fbJson.choices?.[0]?.message?.content || '';
+          if (content) {
+            await query(
+              'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+              [portfolioId, 'assistant', content]
+            );
+            send(content);
+            send('[DONE]');
+            res.end();
+            return;
+          }
+        }
+        send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: fbText.slice(0, 500) }));
+      } catch (fbErr: any) {
+        try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: fbErr?.message })); } catch {}
+      }
+      res.end();
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to process chat message (stream)' });
+  }
+});
+
+app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+    const { content } = req.body || {};
+
+    if (!content || typeof content !== 'string' || !content.trim()) {
+      res.status(400).json({ error: 'Message content is required' });
+      return;
+    }
+
+    const portfolioResult = await query(
+      `SELECT p.id, p.title, p.description FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (portfolioResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    const portfolio = portfolioResult.rows[0];
+    const portfolioId = portfolio.id;
+
+    await query(
+      'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+      [portfolioId, 'user', content]
+    );
+
+    const chatHistory = await query(
+      'SELECT role, content FROM portfolio_chats WHERE portfolio_id = $1 ORDER BY created_at ASC',
+      [portfolioId]
+    );
+
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    if (!DEEPSEEK_API_KEY) {
+      res.status(500).json({ error: 'DeepSeek API key is not configured' });
+      return;
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if ((res as any).flushHeaders) (res as any).flushHeaders();
+
+    const send = (data: string) => {
+      res.write(`data: ${data}\n\n`);
+    };
+
+    const history = chatHistory.rows;
+    const limitedHistory = history.slice(Math.max(history.length - 30, 0));
+
+    const messages = [
+      { 
+        role: 'system', 
+        content: `Ты — финансовый помощник. Отвечай строго на русском в чистом Markdown (GFM).
+Всегда возвращай только Markdown без дополнительных символов и эмодзи. Следи за парностью символов форматирования (*, **, \`\`\`).
+Используй списки и заголовки по необходимости, не добавляй декоративные конструкции вроде "— *".
+Контекст: портфель "${portfolio.title}". Описание: "${portfolio.description}".` 
+      },
+      ...limitedHistory.map(row => ({ role: row.role, content: row.content }))
+    ];
+
+    try {
+      const aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages,
+          max_tokens: 2000,
+          stream: true
+        })
+      });
+
+      let assistantContent = '';
+      if (!aiResponse.ok || !aiResponse.body) {
+        const errorText = await aiResponse.text().catch(() => '');
+        // Fallback: request non-streaming response
+        try {
+          const fallbackResp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+            },
+            body: JSON.stringify({
+              model: 'deepseek-chat',
+              messages,
+              max_tokens: 1200,
+              stream: false
+            })
+          });
+          const fbText = await fallbackResp.text();
+          if (fallbackResp.ok) {
+            const fbJson = JSON.parse(fbText);
+            const content = fbJson.choices?.[0]?.message?.content || '';
+            if (content) {
+              assistantContent += content;
+              send(content);
+              await query(
+                'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+                [portfolioId, 'assistant', assistantContent]
+              );
+              send('[DONE]');
+              res.end();
+              return;
+            }
+          }
+          send(JSON.stringify({ type: 'error', message: 'AI non-streaming fallback failed', detail: fbText.slice(0, 500) }));
+        } catch (fbErr: any) {
+          send(JSON.stringify({ type: 'error', message: 'AI fallback exception', detail: fbErr?.message }));
+        }
+        res.end();
+        return;
+      }
+
+      let buffer = '';
+
+      const reader = (aiResponse.body as ReadableStream).getReader();
+      const decoder = new TextDecoder('utf-8');
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunkStr = decoder.decode(value, { stream: true });
+        buffer += chunkStr;
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          if (line.trim() === 'data: [DONE]') continue;
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              const delta = data.choices?.[0]?.delta?.content || '';
+              if (delta) {
+                assistantContent += delta;
+                send(delta);
+              }
+            } catch {}
+          }
+        }
+      }
+
+      if (buffer.trim() && buffer.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(buffer.slice(6));
+          const delta = data.choices?.[0]?.delta?.content || '';
+          if (delta) {
+            assistantContent += delta;
+            send(delta);
+          }
+        } catch {}
+      }
+
+      if (assistantContent) {
+        await query(
+          'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+          [portfolioId, 'assistant', assistantContent]
+        );
+      }
+
+      send('[DONE]');
+      res.end();
+    } catch (err: any) {
+      // Fallback inside catch
+      try {
+        const fallbackResp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages,
+            max_tokens: 1200,
+            stream: false
+          })
+        });
+        const fbText = await fallbackResp.text();
+        if (fallbackResp.ok) {
+          const fbJson = JSON.parse(fbText);
+          const content = fbJson.choices?.[0]?.message?.content || '';
+          if (content) {
+            await query(
+              'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+              [portfolioId, 'assistant', content]
+            );
+            send(content);
+            send('[DONE]');
+            res.end();
+            return;
+          }
+        }
+        send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: fbText.slice(0, 500) }));
+      } catch (fbErr: any) {
+        try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: fbErr?.message })); } catch {}
+      }
+      res.end();
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to process chat message (stream)' });
+  }
+});
+
 app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: any, res) => {
   try {
     const token = req.cookies?.token;
@@ -478,41 +958,115 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
     const messages = [
       { 
         role: 'system', 
-        content: `Вы - экспертный финансовый помощник. Вы помогаете пользователю управлять его инвестиционным портфелем под названием "${portfolio.title}". 
-        Описание портфеля: "${portfolio.description}". 
-        Будьте профессиональны, лаконичны и полезны. Ответы давайте на русском языке.` 
+        content: `Ты — финансовый помощник. Отвечай строго на русском в чистом Markdown (GFM).
+Всегда возвращай только Markdown без дополнительных символов и эмодзи. Следи за парностью символов форматирования (*, **, \`\`\`).
+Используй списки и заголовки по необходимости, не добавляй декоративные конструкции вроде "— *".
+Контекст: портфель "${portfolio.title}". Описание: "${portfolio.description}".` 
       },
       ...chatHistory.rows.map(row => ({ role: row.role, content: row.content }))
     ];
 
     try {
-      const aiResponse = await axios.post(
-        'https://api.deepseek.com/v1/chat/completions',
-        {
+      const aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
           model: 'deepseek-chat',
           messages: messages,
-          max_tokens: 2000
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-            'Content-Type': 'application/json'
+          max_tokens: 2000,
+          stream: true
+        })
+      });
+
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error('DeepSeek API error:', errorText);
+        res.status(500).json({ error: 'Failed to get response from AI' });
+        return;
+      }
+
+      if (!aiResponse.body) {
+        console.error('DeepSeek API response has no body');
+        res.status(500).json({ error: 'Failed to get response from AI' });
+        return;
+      }
+
+      // Let's use raw text chunks for simplicity on client side as per user request "type like other AI chats"
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Transfer-Encoding', 'chunked');
+      // Flush headers immediately
+      if (res.flushHeaders) res.flushHeaders();
+
+      let assistantContent = '';
+      let buffer = '';
+
+      console.log('Starting stream from DeepSeek...');
+
+      // Iterate over the stream
+      // @ts-ignore: fetch is global in Node 18+ and body is iterable
+      for await (const chunk of aiResponse.body) {
+        const chunkStr = Buffer.from(chunk).toString('utf8');
+        // console.log(`Received chunk: ${chunkStr.length} chars`);
+        buffer += chunkStr;
+        
+        const lines = buffer.split('\n');
+        // Keep the last potentially incomplete line in buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.trim() === '') continue;
+          if (line.trim() === 'data: [DONE]') continue;
+          
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              const content = data.choices[0]?.delta?.content || '';
+              if (content) {
+                assistantContent += content;
+                res.write(content);
+                // Flush explicitly if possible (Node.js doesn't always need this but helps with proxies)
+                // if ((res as any).flush) (res as any).flush();
+              }
+            } catch (e) {
+              console.error('Error parsing chunk:', e);
+            }
           }
         }
-      );
+      }
 
-      const assistantContent = aiResponse.data.choices[0].message.content;
+      // Process remaining buffer if any
+      if (buffer.trim() && buffer.startsWith('data: ')) {
+         try {
+            const data = JSON.parse(buffer.slice(6));
+            const content = data.choices[0]?.delta?.content || '';
+            if (content) {
+              assistantContent += content;
+              res.write(content);
+            }
+         } catch (e) {
+            console.error('Error parsing final chunk:', e);
+         }
+      }
 
-      // Store assistant message
-      await query(
-        'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
-        [portfolioId, 'assistant', assistantContent]
-      );
+      if (assistantContent) {
+        // Store assistant message
+        await query(
+          'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+          [portfolioId, 'assistant', assistantContent]
+        );
+      }
+      res.end();
 
-      res.json({ role: 'assistant', content: assistantContent });
     } catch (aiErr: any) {
-      console.error('DeepSeek API error:', aiErr.response?.data || aiErr.message);
-      res.status(500).json({ error: 'Failed to get response from AI' });
+      console.error('DeepSeek API error:', aiErr.message);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to get response from AI' });
+      } else {
+        res.end();
+      }
     }
   } catch (err) {
     console.error(err);

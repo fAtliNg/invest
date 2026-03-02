@@ -11,6 +11,19 @@ import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import Head from 'next/head';
+
+const preprocessLaTeX = (content) => {
+  if (!content) return '';
+  // Replace block math \[ ... \] with $$ ... $$
+  const blockReplaced = content.replace(/\\\[([\s\S]*?)\\\]/g, (_, equation) => `$$${equation}$$`);
+  // Replace inline math \( ... \) with $ ... $
+  const inlineReplaced = blockReplaced.replace(/\\\(([\s\S]*?)\\\)/g, (_, equation) => `$${equation}$`);
+  return inlineReplaced;
+};
 
 export const AIChat = ({ portfolioName, uuid }) => {
   const [message, setMessage] = useState('');
@@ -18,6 +31,8 @@ export const AIChat = ({ portfolioName, uuid }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Removed custom formatting: rely on pure Markdown from the model and react-markdown renderer only.
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -43,24 +58,78 @@ export const AIChat = ({ portfolioName, uuid }) => {
     fetchChatHistory();
   }, [uuid]);
 
+  useEffect(() => {
+    if (!isLoading) {
+      const t = setTimeout(() => {
+        scrollToBottom();
+      }, 0);
+      return () => clearTimeout(t);
+    }
+  }, [isLoading]);
+
   const handleSendMessage = async () => {
     if (!message.trim() || isSending) return;
 
     const userMessage = { role: 'user', content: message };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMessage, { role: 'assistant', content: '' }]);
     setMessage('');
     setIsSending(true);
 
     try {
-      const response = await axios.post(`/api/portfolios/${uuid}/chat`, {
-        content: userMessage.content
+      const response = await fetch(`/api/portfolios/${uuid}/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: userMessage.content })
       });
-      setMessages(prev => [...prev, response.data]);
-    } catch (err) {
-      console.error('Failed to send message:', err);
-      // Fallback or error message could be added here
-    } finally {
+      if (!response.ok || !response.body) {
+        throw new Error('Streaming request failed');
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let assistantContent = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+        const parts = buffer.split('\n');
+        buffer = parts.pop() || '';
+        for (const line of parts) {
+          if (!line.trim()) continue;
+          if (line === 'data: [DONE]') {
+            setIsSending(false);
+            return;
+          }
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            assistantContent += data;
+            setMessages(prev => {
+              const newMessages = [...prev];
+              const lastIndex = newMessages.length - 1;
+              if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+                newMessages[lastIndex] = { ...newMessages[lastIndex], content: assistantContent };
+              }
+              return newMessages;
+            });
+          }
+        }
+      }
       setIsSending(false);
+    } catch (err) {
+      setIsSending(false);
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const lastIndex = newMessages.length - 1;
+        if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+          newMessages[lastIndex].content = newMessages[lastIndex].content 
+            ? newMessages[lastIndex].content + '\n[Ошибка получения ответа]'
+            : 'Произошла ошибка при получении ответа.';
+        } else {
+          newMessages.push({ role: 'assistant', content: 'Произошла ошибка при получении ответа.' });
+        }
+        return newMessages;
+      });
     }
   };
 
@@ -74,26 +143,32 @@ export const AIChat = ({ portfolioName, uuid }) => {
   return (
     <Box 
       sx={{ 
-        height: 'calc(100vh - 212px)', 
-        display: 'flex', 
+        display: 'flex',
         flexDirection: 'column',
         backgroundColor: 'background.paper', // System background
         borderRadius: 1,
         border: '1px solid',
         borderColor: 'divider',
         overflow: 'hidden',
-        position: 'relative'
+        height: '100%'
       }}
     >
+      <Head>
+        <link 
+          rel="stylesheet" 
+          href="https://cdn.jsdelivr.net/npm/katex@0.16.33/dist/katex.min.css" 
+        />
+      </Head>
       {/* Messages Area */}
-      <Box 
+      <Box
         sx={{ 
-          flexGrow: 1, 
-          overflowY: 'auto', 
+          overflowY: 'auto',
+          minHeight: 0,
           p: 3,
           display: 'flex',
           flexDirection: 'column',
-          gap: 3
+          gap: 3,
+          flex: '1 1 auto'
         }}
       >
         {isLoading ? (
@@ -138,37 +213,45 @@ export const AIChat = ({ portfolioName, uuid }) => {
               ) : (
                 /* Assistant Message */
                 <Box sx={{ width: '100%' }}>
-                  <Typography 
-                    variant="body1" 
-                    sx={{ 
-                      whiteSpace: 'pre-wrap',
-                      color: 'text.primary',
-                      lineHeight: 1.6
+                  <Box
+                    sx={{
+                      '& p': { lineHeight: 1.6, color: 'text.primary', m: 0 },
+                      '& ul, & ol': {
+                        pl: 0,
+                        ml: 0,
+                        listStylePosition: 'inside',
+                        mt: 1,
+                        mb: 1,
+                      },
+                      '& li': { mb: 0.5 },
+                      '& h1, & h2, & h3, & h4, & h5, & h6': {
+                        mt: 2,
+                        mb: 1,
+                        lineHeight: 1.3,
+                        color: 'text.primary',
+                      },
                     }}
                   >
-                    {msg.content}
-                  </Typography>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkMath]}
+                      rehypePlugins={[[rehypeKatex, { output: 'html' }]]}
+                      components={{
+                        a: ({ href, children }) => (
+                          <a href={href} target="_blank" rel="noopener noreferrer">
+                            {children}
+                          </a>
+                        ),
+                      }}
+                    >
+                      {preprocessLaTeX(msg.content || '')}
+                    </ReactMarkdown>
+                  </Box>
                 </Box>
               )}
             </Box>
           ))
         )}
-        {isSending && (
-          <Box 
-            sx={{ 
-              maxWidth: '850px', 
-              width: '100%', 
-              mx: 'auto',
-              display: 'flex',
-              gap: 1,
-              alignItems: 'center',
-              color: 'text.secondary'
-            }}
-          >
-            <CircularProgress size={16} color="inherit" />
-            <Typography variant="caption">DeepSeek печатает...</Typography>
-          </Box>
-        )}
+        {/* Loading indicator removed as we stream the response directly */}
         <div ref={messagesEndRef} />
       </Box>
 
@@ -247,4 +330,3 @@ export const AIChat = ({ portfolioName, uuid }) => {
     </Box>
   );
 };
-

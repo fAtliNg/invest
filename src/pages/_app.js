@@ -34,6 +34,18 @@ const App = (props) => {
     }
   }, [router]);
 
+  useEffect(() => {
+    const setVh = () => {
+      if (typeof window !== 'undefined') {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--app-vh', `${vh}px`);
+      }
+    };
+    setVh();
+    window.addEventListener('resize', setVh);
+    return () => window.removeEventListener('resize', setVh);
+  }, []);
+
   const getLayout = Component.getLayout ?? ((page) => page);
 
   return (

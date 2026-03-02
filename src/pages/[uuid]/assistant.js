@@ -65,15 +65,18 @@ const PortfolioAssistant = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          py: 8
+          height: 'calc(100vh - 16px)',
+          overflow: 'hidden',
+          pt: 8,
+          pb: 2
         }}
       >
-        <Container maxWidth={false} sx={{ px: 3 }}>
-          <Grid container spacing={3}>
-            <Grid item>
+        <Container maxWidth={false} sx={{ px: 3, height: '100%', overflow: 'hidden' }}>
+          <Grid container spacing={3} sx={{ height: '100%', minHeight: 0 }}>
+            <Grid item sx={{ display: 'flex' }}>
               <PortfolioSidebar />
             </Grid>
-            <Grid item xs>
+            <Grid item xs sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {isFetching ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
                   <CircularProgress />
@@ -81,11 +84,13 @@ const PortfolioAssistant = () => {
               ) : error ? (
                 <Alert severity="error">{error}</Alert>
               ) : (
-                <Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
                   <Typography variant="h4" sx={{ mb: 3 }}>
                     Помощник
                   </Typography>
-                  <AIChat portfolioName={portfolio?.title} uuid={uuid} />
+                  <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <AIChat portfolioName={portfolio?.title} uuid={uuid} />
+                  </Box>
                 </Box>
               )}
             </Grid>
