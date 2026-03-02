@@ -2,6 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import axios from 'axios';
+import cookieParser from 'cookie-parser';
+import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { query } from './db';
 import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
@@ -13,7 +18,27 @@ const app = express();
 const port = process.env.PORT || 5001;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(cookieParser());
+app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Multer storage configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'uploads/portfolios';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, 'portfolio-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage });
 
 // Create HTTP server manually to attach WS
 const server = http.createServer(app);
@@ -51,6 +76,447 @@ app.get(['/currency-names', '/api/currency-names'], async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch currency names' });
+  }
+});
+
+app.get(['/portfolios', '/api/portfolios'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      console.error('JWT_SECRET is not defined in backend .env');
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    if (!email) {
+      res.status(400).json({ error: 'Email not found in token' });
+      return;
+    }
+
+    const result = await query(
+      `SELECT p.* FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 
+       ORDER BY p.created_at ASC`,
+      [email]
+    );
+    
+    res.json(result.rows.map(row => ({
+      id: row.id,
+      uuid: row.uuid,
+      title: row.title,
+      description: row.description,
+      image: row.image_url,
+      value: parseFloat(row.current_value)
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch portfolios' });
+  }
+});
+
+app.post(['/portfolios', '/api/portfolios'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { title, description, image } = req.body;
+
+    if (!title) {
+      res.status(400).json({ error: 'Title is required' });
+      return;
+    }
+
+    // Get user id
+    const userResult = await query('SELECT id FROM users WHERE email = $1', [email]);
+    if (userResult.rows.length === 0) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+    const userId = userResult.rows[0].id;
+
+    const result = await query(
+      `INSERT INTO portfolios (user_id, title, description, image_url, current_value)
+       VALUES ($1, $2, $3, $4, 0)
+       RETURNING *`,
+      [userId, title, description, image]
+    );
+
+    const row = result.rows[0];
+    res.status(201).json({
+      id: row.id,
+      uuid: row.uuid,
+      title: row.title,
+      description: row.description,
+      image: row.image_url,
+      value: parseFloat(row.current_value)
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create portfolio' });
+  }
+});
+
+app.get(['/portfolios/:uuid', '/api/portfolios/:uuid'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      console.error('JWT_SECRET is not defined');
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+
+    const result = await query(
+      `SELECT p.* FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    const row = result.rows[0];
+    res.json({
+      id: row.id,
+      uuid: row.uuid,
+      title: row.title,
+      description: row.description,
+      image: row.image_url,
+      value: parseFloat(row.current_value)
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch portfolio details' });
+  }
+});
+
+app.put(['/portfolios/:uuid', '/api/portfolios/:uuid'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+    const { title, description, image } = req.body;
+
+    if (!title) {
+      res.status(400).json({ error: 'Title is required' });
+      return;
+    }
+
+    // Check ownership before update
+    const checkResult = await query(
+      `SELECT p.id FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (checkResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    const result = await query(
+      `UPDATE portfolios 
+       SET title = $1, description = $2, image_url = $3 
+       WHERE uuid = $4 
+       RETURNING *`,
+      [title, description, image, uuid]
+    );
+
+    const row = result.rows[0];
+    res.json({
+      id: row.id,
+      uuid: row.uuid,
+      title: row.title,
+      description: row.description,
+      image: row.image_url,
+      value: parseFloat(row.current_value)
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update portfolio' });
+  }
+});
+
+app.delete(['/portfolios/:uuid', '/api/portfolios/:uuid'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+
+    // Check ownership before delete
+    const checkResult = await query(
+      `SELECT p.id FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (checkResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    await query('DELETE FROM portfolios WHERE uuid = $1', [uuid]);
+    
+    res.json({ message: 'Portfolio deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete portfolio' });
+  }
+});
+
+app.get(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+
+    // Check ownership and get portfolio id
+    const portfolioResult = await query(
+      `SELECT p.id FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (portfolioResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    const portfolioId = portfolioResult.rows[0].id;
+
+    const chatResult = await query(
+      'SELECT role, content, created_at FROM portfolio_chats WHERE portfolio_id = $1 ORDER BY created_at ASC',
+      [portfolioId]
+    );
+
+    res.json(chatResult.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch chat history' });
+  }
+});
+
+app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+    const { content } = req.body;
+
+    if (!content) {
+      res.status(400).json({ error: 'Message content is required' });
+      return;
+    }
+
+    // Check ownership and get portfolio details
+    const portfolioResult = await query(
+      `SELECT p.id, p.title, p.description FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (portfolioResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    const portfolio = portfolioResult.rows[0];
+    const portfolioId = portfolio.id;
+
+    // Store user message
+    await query(
+      'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+      [portfolioId, 'user', content]
+    );
+
+    // Get chat history for context
+    const chatHistory = await query(
+      'SELECT role, content FROM portfolio_chats WHERE portfolio_id = $1 ORDER BY created_at ASC',
+      [portfolioId]
+    );
+
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    if (!DEEPSEEK_API_KEY) {
+      res.status(500).json({ error: 'DeepSeek API key is not configured' });
+      return;
+    }
+
+    // Call DeepSeek API
+    const messages = [
+      { 
+        role: 'system', 
+        content: `Вы - экспертный финансовый помощник. Вы помогаете пользователю управлять его инвестиционным портфелем под названием "${portfolio.title}". 
+        Описание портфеля: "${portfolio.description}". 
+        Будьте профессиональны, лаконичны и полезны. Ответы давайте на русском языке.` 
+      },
+      ...chatHistory.rows.map(row => ({ role: row.role, content: row.content }))
+    ];
+
+    try {
+      const aiResponse = await axios.post(
+        'https://api.deepseek.com/v1/chat/completions',
+        {
+          model: 'deepseek-chat',
+          messages: messages,
+          max_tokens: 2000
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const assistantContent = aiResponse.data.choices[0].message.content;
+
+      // Store assistant message
+      await query(
+        'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+        [portfolioId, 'assistant', assistantContent]
+      );
+
+      res.json({ role: 'assistant', content: assistantContent });
+    } catch (aiErr: any) {
+      console.error('DeepSeek API error:', aiErr.response?.data || aiErr.message);
+      res.status(500).json({ error: 'Failed to get response from AI' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to process chat message' });
   }
 });
 

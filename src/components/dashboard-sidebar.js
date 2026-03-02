@@ -5,6 +5,7 @@ import { Box, Button, Divider, Drawer, Typography, useMediaQuery, Chip } from '@
 import { ChartBar as ChartBarIcon } from '../icons/chart-bar';
 import { Info as InfoIcon } from '../icons/info';
 import { Clock as ClockIcon } from '../icons/clock';
+import { ShoppingBag as PortfoliosIcon } from '../icons/shopping-bag';
 import { NavItem } from './nav-item';
 import { ROUTES } from '../constants';
 import EmailIcon from '@mui/icons-material/Email';
@@ -108,6 +109,15 @@ export const DashboardSidebar = (props) => {
           }}
         />
         <Box sx={{ flexGrow: 1 }}>
+          {user && (
+            <NavItem
+              key="Портфели"
+              icon={<PortfoliosIcon fontSize="small" />}
+              href={ROUTES.PORTFOLIOS}
+              title="Портфели"
+              active={router.asPath === ROUTES.PORTFOLIOS || router.asPath === ROUTES.PORTFOLIO_CREATE || (router.query.uuid !== undefined)}
+            />
+          )}
           {items.map((item) => {
             const active = item.title === 'Котировки' 
               ? router.asPath.startsWith('/quotes') 

@@ -74,7 +74,7 @@ const Register = () => {
       try {
         await signUp(values.email, values.password, values.firstName, values.lastName);
         localStorage.setItem('loginSuccess', 'true');
-        router.push('/');
+        router.push('/portfolios');
       } catch (err) {
         console.error('Registration error', err);
         helpers.setStatus({ success: false });

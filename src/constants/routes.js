@@ -1,5 +1,7 @@
 export const ROUTES = {
   MAIN: "/",
+  PORTFOLIOS: "/portfolios",
+  PORTFOLIO_CREATE: "/portfolios/create",
   ABOUT: "/about",
   CALC: "/calc",
   EQUITIES: "/quotes/share",

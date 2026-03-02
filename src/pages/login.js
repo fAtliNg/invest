@@ -32,7 +32,7 @@ const Login = () => {
       try {
         // Send access token to backend
         await signInWithGoogle(tokenResponse.access_token);
-        router.push('/');
+        router.push('/portfolios');
       } catch (err) {
         console.error('Google login failed', err);
       }
@@ -46,7 +46,7 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/');
+      router.push('/portfolios');
     }
   }, [isAuthenticated, router]);
 
@@ -70,7 +70,7 @@ const Login = () => {
         await signIn(values.email, values.password);
         localStorage.setItem('email', values.email);
         localStorage.setItem('loginSuccess', 'true');
-        router.push('/');
+        router.push('/portfolios');
       } catch (err) {
         console.error('Login error', err);
         helpers.setStatus({ success: false });
