@@ -247,7 +247,7 @@ app.get(['/portfolios', '/api/portfolios'], async (req: any, res) => {
        ORDER BY p.created_at ASC`,
       [email]
     );
-    
+
     res.json(result.rows.map(row => ({
       id: row.id,
       uuid: row.uuid,
@@ -484,7 +484,7 @@ app.delete(['/portfolios/:uuid', '/api/portfolios/:uuid'], async (req: any, res)
     }
 
     await query('DELETE FROM portfolios WHERE uuid = $1', [uuid]);
-    
+
     res.json({ message: 'Portfolio deleted successfully' });
   } catch (err) {
     console.error(err);
@@ -670,7 +670,7 @@ app.post(['/portfolios/:uuid/assets', '/api/portfolios/:uuid/assets'], async (re
       buy_price: parseFloat(row.buy_price || 0),
       created_at: row.created_at
     });
-    
+
     try {
       const summary = await buildPortfolioAssetsSummary(portfolioId);
       await appendPortfolioSystemMessage(portfolioId, `Обновление портфеля: добавлена позиция ${secidValue}.\n\n${summary}`);
@@ -765,7 +765,7 @@ app.put(['/portfolios/:uuid/assets/:secid', '/api/portfolios/:uuid/assets/:secid
       buy_price: parseFloat(row.buy_price || 0),
       created_at: row.created_at
     });
-    
+
     try {
       const summary = await buildPortfolioAssetsSummary(portfolioId);
       await appendPortfolioSystemMessage(portfolioId, `Обновление портфеля: изменена позиция ${secidValue}.\n\n${summary}`);
@@ -839,7 +839,7 @@ app.post(['/portfolios/:uuid/assets/delete', '/api/portfolios/:uuid/assets/delet
     );
 
     res.json({ deleted: result.rowCount || 0 });
-    
+
     try {
       const summary = await buildPortfolioAssetsSummary(portfolioId);
       await appendPortfolioSystemMessage(portfolioId, `Обновление портфеля: удалены позиции ${normalized.join(', ')}.\n\n${summary}`);
@@ -851,6 +851,197 @@ app.post(['/portfolios/:uuid/assets/delete', '/api/portfolios/:uuid/assets/delet
     res.status(500).json({ error: 'Failed to delete portfolio assets' });
   }
 });
+
+// ---------- Portfolio Dynamics (aggregated chart) ----------
+const DYNAMICS_PERIODS: Record<string, { interval: number; duration: number }> = {
+  '1D': { interval: 10, duration: 1 },
+  '1W': { interval: 60, duration: 7 },
+  '1M': { interval: 24, duration: 30 },
+  '6M': { interval: 24, duration: 180 },
+  '1Y': { interval: 24, duration: 365 },
+  'ALL': { interval: 31, duration: 365 * 5 }
+};
+
+// Simple in-memory cache for board lookups (secid -> board info)
+const boardCache = new Map<string, { engine: string; market: string; boardid: string }>();
+
+async function resolveMoexBoard(secid: string) {
+  if (boardCache.has(secid)) return boardCache.get(secid)!;
+  try {
+    const res = await axios.get(`https://iss.moex.com/iss/securities/${secid}.json?iss.meta=off&iss.only=boards`);
+    const columns = res.data?.boards?.columns || [];
+    const rows = res.data?.boards?.data || [];
+    const boards = rows.map((row: any[]) => {
+      const obj: any = {};
+      columns.forEach((col: string, i: number) => { obj[col] = row[i]; });
+      return obj;
+    });
+    let target = boards.find((b: any) => b.is_primary === 1);
+    if (!target) target = boards.find((b: any) => ['TQBR', 'TQCB', 'TQOB', 'TQTF'].includes(b.boardid));
+    if (!target && boards.length > 0) target = boards[0];
+    if (!target) return null;
+    const info = { engine: target.engine, market: target.market, boardid: target.boardid };
+    boardCache.set(secid, info);
+    return info;
+  } catch (e) {
+    console.error(`Failed to resolve board for ${secid}:`, e);
+    return null;
+  }
+}
+
+function parseMoexTable(json: any, tableName: string) {
+  if (!json || !json[tableName]) return [];
+  const columns = json[tableName].columns;
+  const data = json[tableName].data;
+  return data.map((row: any[]) => {
+    const obj: any = {};
+    columns.forEach((col: string, i: number) => { obj[col] = row[i]; });
+    return obj;
+  });
+}
+
+app.get(['/portfolios/:uuid/dynamics', '/api/portfolios/:uuid/dynamics'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) { res.status(500).json({ error: 'Internal server configuration error' }); return; }
+
+    let decoded: any;
+    try { decoded = jwt.verify(token, JWT_SECRET); } catch { res.status(401).json({ error: 'Invalid token' }); return; }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+    const periodKey = String(req.query.period || '1Y').toUpperCase();
+    const periodConfig = DYNAMICS_PERIODS[periodKey] || DYNAMICS_PERIODS['1Y'];
+
+    const portfolioResult = await query(
+      `SELECT p.id FROM portfolios p JOIN users u ON p.user_id = u.id WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+    if (portfolioResult.rows.length === 0) { res.status(403).json({ error: 'Access denied or portfolio not found' }); return; }
+    const portfolioId = portfolioResult.rows[0].id;
+
+    // Get portfolio assets
+    let assetsRows: any[] = [];
+    try {
+      const result = await query(
+        `SELECT pa.secid, pa.quantity, pa.buy_price, q.price AS current_price
+         FROM portfolio_assets pa LEFT JOIN quotes q ON q.secid = pa.secid
+         WHERE pa.portfolio_id = $1 AND pa.quantity > 0`,
+        [portfolioId]
+      );
+      assetsRows = result.rows;
+    } catch (e: any) {
+      if (String(e?.message || '').includes('relation "portfolio_assets" does not exist')) {
+        assetsRows = [];
+      } else throw e;
+    }
+
+    if (assetsRows.length === 0) {
+      res.json({ points: [], totalCurrent: 0, totalPurchase: 0, changeAbs: 0, changePct: 0 });
+      return;
+    }
+
+    const till = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - periodConfig.duration);
+    const fromStr = from.toISOString().split('T')[0];
+    const tillStr = till.toISOString().split('T')[0];
+
+    // Fetch candle data for each asset in parallel
+    const assetCandles = await Promise.all(assetsRows.map(async (asset) => {
+      const quantity = parseFloat(asset.quantity || 0);
+      if (quantity <= 0) return { secid: asset.secid, quantity, candles: [] };
+
+      const board = await resolveMoexBoard(asset.secid);
+      if (!board) return { secid: asset.secid, quantity, candles: [] };
+
+      try {
+        const url = `https://iss.moex.com/iss/engines/${board.engine}/markets/${board.market}/boards/${board.boardid}/securities/${asset.secid}/candles.json?from=${fromStr}&till=${tillStr}&interval=${periodConfig.interval}&iss.meta=off`;
+        const candlesRes = await axios.get(url, { timeout: 10000 });
+        let candles = parseMoexTable(candlesRes.data, 'candles');
+
+        // For 1D period, filter to last trading day only
+        if (periodKey === '1D' && candles.length > 0) {
+          const dates = candles.map((c: any) => new Date(c.end));
+          const maxDate = dates.reduce((max: Date, d: Date) => (d > max ? d : max), dates[0]);
+          const maxDateStr = maxDate.toDateString();
+          candles = candles.filter((c: any) => new Date(c.end).toDateString() === maxDateStr);
+        }
+
+        return { secid: asset.secid, quantity, candles };
+      } catch (e) {
+        console.error(`Failed to fetch candles for ${asset.secid}:`, e);
+        return { secid: asset.secid, quantity, candles: [] };
+      }
+    }));
+
+    // Merge all candles into a unified timeline with carry-forward
+    // First, build per-asset date->close maps and collect a unified date set
+    const allDates = new Set<string>();
+    const assetDateMaps: { quantity: number; dateCloseMap: Map<string, number> }[] = [];
+
+    for (const { quantity, candles } of assetCandles) {
+      const dateCloseMap = new Map<string, number>();
+      for (const c of candles) {
+        const dateKey = periodKey === '1D'
+          ? new Date(c.end).toISOString()
+          : (c.end ? c.end.split(' ')[0] || c.end.split('T')[0] : c.begin?.split(' ')[0] || '');
+        if (!dateKey) continue;
+        const close = c.close != null ? parseFloat(c.close) : 0;
+        dateCloseMap.set(dateKey, close);
+        allDates.add(dateKey);
+      }
+      assetDateMaps.push({ quantity, dateCloseMap });
+    }
+
+    // Sort all dates
+    const sortedDates = Array.from(allDates).sort();
+
+    // For each date, sum value across all assets using carry-forward
+    const points: { date: string; value: number }[] = [];
+    const lastKnownPrice = new Array(assetDateMaps.length).fill(0);
+
+    for (const date of sortedDates) {
+      let totalValue = 0;
+      for (let i = 0; i < assetDateMaps.length; i++) {
+        const { quantity, dateCloseMap } = assetDateMaps[i];
+        if (dateCloseMap.has(date)) {
+          lastKnownPrice[i] = dateCloseMap.get(date)!;
+        }
+        totalValue += lastKnownPrice[i] * quantity;
+      }
+      points.push({ date, value: Math.round(totalValue * 100) / 100 });
+    }
+
+    // Compute totals
+    let totalPurchase = 0;
+    let totalCurrent = 0;
+    for (const asset of assetsRows) {
+      const qty = parseFloat(asset.quantity || 0);
+      const buyPrice = parseFloat(asset.buy_price || 0);
+      const curPrice = asset.current_price != null ? parseFloat(asset.current_price) : 0;
+      totalPurchase += qty * buyPrice;
+      totalCurrent += qty * curPrice;
+    }
+    const changeAbs = totalCurrent - totalPurchase;
+    const changePct = totalPurchase > 0 ? ((totalCurrent / totalPurchase) - 1) * 100 : 0;
+
+    res.json({
+      points,
+      totalCurrent: Math.round(totalCurrent * 100) / 100,
+      totalPurchase: Math.round(totalPurchase * 100) / 100,
+      changeAbs: Math.round(changeAbs * 100) / 100,
+      changePct: Math.round(changePct * 100) / 100
+    });
+  } catch (err) {
+    console.error('Failed to fetch portfolio dynamics:', err);
+    res.status(500).json({ error: 'Failed to fetch portfolio dynamics' });
+  }
+});
+
 app.get(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: any, res) => {
   try {
     const token = req.cookies?.token;
@@ -1028,8 +1219,25 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
     res.setHeader('X-Accel-Buffering', 'no');
     if ((res as any).flushHeaders) (res as any).flushHeaders();
 
+    // Abort controller for DeepSeek API — aborts on timeout or client disconnect
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    let clientDisconnected = false;
+
+    req.on('close', () => {
+      clientDisconnected = true;
+      controller.abort();
+      clearTimeout(timeout);
+    });
+
     const send = (data: string) => {
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
+      if (clientDisconnected) return;
+      try {
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      } catch (e) {
+        clientDisconnected = true;
+        controller.abort();
+      }
     };
 
     let portfolioContext = '';
@@ -1060,7 +1268,8 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
           messages,
           max_tokens: 2000,
           stream: true
-        })
+        }),
+        signal: controller.signal
       });
 
       let assistantContent = '';
@@ -1162,9 +1371,11 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
       }
 
       // Signal done
+      clearTimeout(timeout);
       send('[DONE]');
-      res.end();
+      if (!clientDisconnected) res.end();
     } catch (err: any) {
+      clearTimeout(timeout);
       console.error('DeepSeek SSE error:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
       // Fallback inside catch
       try {
@@ -1195,9 +1406,9 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
         send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: 'Empty response from fallback' }));
       } catch (fbErr: any) {
         const detail = fbErr.response?.data ? JSON.stringify(fbErr.response.data) : fbErr.message;
-        try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail })); } catch {}
+        try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail })); } catch { }
       }
-      res.end();
+      if (!clientDisconnected) res.end();
     }
   } catch (err) {
     console.error(err);
@@ -1273,8 +1484,25 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
     res.setHeader('X-Accel-Buffering', 'no');
     if ((res as any).flushHeaders) (res as any).flushHeaders();
 
+    // Abort controller for DeepSeek API — aborts on timeout or client disconnect
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    let clientDisconnected = false;
+
+    req.on('close', () => {
+      clientDisconnected = true;
+      controller.abort();
+      clearTimeout(timeout);
+    });
+
     const send = (data: string) => {
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
+      if (clientDisconnected) return;
+      try {
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      } catch (e) {
+        clientDisconnected = true;
+        controller.abort();
+      }
     };
 
     const history = chatHistory.rows;
@@ -1340,7 +1568,8 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
           stream: true,
           tools: tools,
           tool_choice: 'auto'
-        })
+        }),
+        signal: controller.signal
       });
 
       let assistantContent = '';
@@ -1376,7 +1605,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
           send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: 'Empty response from fallback' }));
         } catch (fbErr: any) {
           const detail = fbErr.response?.data ? JSON.stringify(fbErr.response.data) : fbErr.message;
-          try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail })); } catch {}
+          try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail })); } catch { }
         }
         res.end();
         return;
@@ -1403,29 +1632,29 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
             try {
               const data = JSON.parse(line.slice(6));
               const delta = data.choices?.[0]?.delta;
-              
+
               if (delta) {
-                 if (delta.content) {
-                    assistantContent += delta.content;
-                    send(delta.content);
-                 }
-                 
-                 if (delta.tool_calls) {
-                    delta.tool_calls.forEach((toolCall: any) => {
-                       if (toolCall.function) {
-                          if (toolCall.function.name) {
-                             toolCallName = toolCall.function.name;
-                             console.log('Stream Tool call:', toolCallName);
-                          }
-                          if (toolCall.function.arguments) {
-                             toolCallArguments += toolCall.function.arguments;
-                          }
-                       }
-                    });
-                 }
+                if (delta.content) {
+                  assistantContent += delta.content;
+                  send(delta.content);
+                }
+
+                if (delta.tool_calls) {
+                  delta.tool_calls.forEach((toolCall: any) => {
+                    if (toolCall.function) {
+                      if (toolCall.function.name) {
+                        toolCallName = toolCall.function.name;
+                        console.log('Stream Tool call:', toolCallName);
+                      }
+                      if (toolCall.function.arguments) {
+                        toolCallArguments += toolCall.function.arguments;
+                      }
+                    }
+                  });
+                }
               }
             } catch (e) {
-               console.error('Error parsing stream chunk:', e);
+              console.error('Error parsing stream chunk:', e);
             }
           }
         }
@@ -1435,7 +1664,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
       if (toolCallName) {
         console.log('Final tool call detected:', toolCallName);
         console.log('Tool call arguments:', toolCallArguments);
-        
+
         if (toolCallName === 'set_strategy') {
           try {
             const args = JSON.parse(toolCallArguments);
@@ -1446,35 +1675,35 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
                 [args.strategy, portfolioId]
               );
             } else {
-               console.error('Missing strategy argument in tool call');
+              console.error('Missing strategy argument in tool call');
             }
           } catch (e) {
-             console.error('Failed to parse tool arguments:', e);
+            console.error('Failed to parse tool arguments:', e);
           }
         }
       } else {
-         // Fallback check: sometimes the model just outputs JSON in the content
-         try {
-            const jsonRegex = /({[\s\S]*?"action":\s*"set_strategy"[\s\S]*?})/i;
-            const match = assistantContent.match(jsonRegex);
-            if (match) {
-               console.log('Found fallback JSON in content');
-               try {
-                  const action = JSON.parse(match[1]);
-                  if (action.strategy) {
-                      console.log('Updating strategy via fallback JSON');
-                      await query(
-                        'UPDATE portfolios SET strategy = $1 WHERE id = $2',
-                        [action.strategy, portfolioId]
-                      );
-                  }
-               } catch (e) {
-                  console.error('Failed to parse fallback JSON strict:', e);
-               }
+        // Fallback check: sometimes the model just outputs JSON in the content
+        try {
+          const jsonRegex = /({[\s\S]*?"action":\s*"set_strategy"[\s\S]*?})/i;
+          const match = assistantContent.match(jsonRegex);
+          if (match) {
+            console.log('Found fallback JSON in content');
+            try {
+              const action = JSON.parse(match[1]);
+              if (action.strategy) {
+                console.log('Updating strategy via fallback JSON');
+                await query(
+                  'UPDATE portfolios SET strategy = $1 WHERE id = $2',
+                  [action.strategy, portfolioId]
+                );
+              }
+            } catch (e) {
+              console.error('Failed to parse fallback JSON strict:', e);
             }
-         } catch (e) {
-            console.error('Failed to parse fallback JSON regex:', e);
-         }
+          }
+        } catch (e) {
+          console.error('Failed to parse fallback JSON regex:', e);
+        }
       }
 
       if (assistantContent) {
@@ -1484,9 +1713,11 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
         );
       }
 
+      clearTimeout(timeout);
       send('[DONE]');
-      res.end();
+      if (!clientDisconnected) res.end();
     } catch (err: any) {
+      clearTimeout(timeout);
       console.error('DeepSeek SSE error:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
       // Fallback inside catch
       try {
@@ -1516,9 +1747,9 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
         send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: 'Empty response from fallback' }));
       } catch (fbErr: any) {
         const detail = fbErr.response?.data ? JSON.stringify(fbErr.response.data) : fbErr.message;
-        try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail })); } catch {}
+        try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail })); } catch { }
       }
-      res.end();
+      if (!clientDisconnected) res.end();
     }
   } catch (err) {
     res.status(500).json({ error: 'Failed to process chat message (stream)' });
@@ -1612,8 +1843,8 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
     }).filter(msg => msg.content.length > 0);
 
     const messages = [
-      { 
-        role: 'system', 
+      {
+        role: 'system',
         content: `${getSystemPrompt(portfolio)}\n\n${portfolioContext ? `Состав портфеля (актуально):\n${portfolioContext}` : ''}`.trim()
       },
       ...cleanHistory
@@ -1688,39 +1919,39 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
       for await (const chunk of aiResponse.body) {
         const chunkStr = Buffer.from(chunk).toString('utf8');
         buffer += chunkStr;
-        
+
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
         for (const line of lines) {
           if (line.trim() === '') continue;
           if (line.trim() === 'data: [DONE]') continue;
-          
+
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
               const delta = data.choices[0]?.delta;
-              
+
               if (delta) {
                 // Handle text content
                 if (delta.content) {
                   assistantContent += delta.content;
                   res.write(delta.content);
                 }
-                
+
                 // Handle tool calls
                 if (delta.tool_calls) {
-                   delta.tool_calls.forEach((toolCall: any) => {
-                     if (toolCall.function) {
-                       if (toolCall.function.name) {
-                         toolCallName = toolCall.function.name;
-                         console.log('Tool call name received:', toolCallName);
-                       }
-                       if (toolCall.function.arguments) {
-                         toolCallArguments += toolCall.function.arguments;
-                       }
-                     }
-                   });
+                  delta.tool_calls.forEach((toolCall: any) => {
+                    if (toolCall.function) {
+                      if (toolCall.function.name) {
+                        toolCallName = toolCall.function.name;
+                        console.log('Tool call name received:', toolCallName);
+                      }
+                      if (toolCall.function.arguments) {
+                        toolCallArguments += toolCall.function.arguments;
+                      }
+                    }
+                  });
                 }
               }
             } catch (e) {
@@ -1734,7 +1965,7 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
       if (toolCallName) {
         console.log('Final tool call detected:', toolCallName);
         console.log('Tool call arguments:', toolCallArguments);
-        
+
         if (toolCallName === 'set_strategy') {
           try {
             const args = JSON.parse(toolCallArguments);
@@ -1745,42 +1976,42 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
                 [args.strategy, portfolioId]
               );
             } else {
-               console.error('Missing strategy argument in tool call');
+              console.error('Missing strategy argument in tool call');
             }
           } catch (e) {
-             console.error('Failed to parse tool arguments:', e);
+            console.error('Failed to parse tool arguments:', e);
           }
         }
       } else {
-         // Fallback check: sometimes the model just outputs JSON in the content
-         // if it fails to use tool calls properly
-         try {
-            // Try to find JSON with action: set_strategy, even if not in markdown block
-            const jsonRegex = /({[\s\S]*?"action":\s*"set_strategy"[\s\S]*?})/i;
-            const match = assistantContent.match(jsonRegex);
-            if (match) {
-               console.log('Found fallback JSON in content');
-               // Try to parse the found JSON string
-               // It might be surrounded by other text, so we might need to be careful
-               // But let's try strict parse first
-               try {
-                  const action = JSON.parse(match[1]);
-                  if (action.strategy) {
-                      console.log('Updating strategy via fallback JSON');
-                      await query(
-                        'UPDATE portfolios SET strategy = $1 WHERE id = $2',
-                        [action.strategy, portfolioId]
-                      );
-                  }
-               } catch (e) {
-                  console.error('Failed to parse fallback JSON strict:', e);
-                  // If strict parse fails, maybe we captured too much or too little?
-                  // For now, let's rely on tool calls primarily.
-               }
+        // Fallback check: sometimes the model just outputs JSON in the content
+        // if it fails to use tool calls properly
+        try {
+          // Try to find JSON with action: set_strategy, even if not in markdown block
+          const jsonRegex = /({[\s\S]*?"action":\s*"set_strategy"[\s\S]*?})/i;
+          const match = assistantContent.match(jsonRegex);
+          if (match) {
+            console.log('Found fallback JSON in content');
+            // Try to parse the found JSON string
+            // It might be surrounded by other text, so we might need to be careful
+            // But let's try strict parse first
+            try {
+              const action = JSON.parse(match[1]);
+              if (action.strategy) {
+                console.log('Updating strategy via fallback JSON');
+                await query(
+                  'UPDATE portfolios SET strategy = $1 WHERE id = $2',
+                  [action.strategy, portfolioId]
+                );
+              }
+            } catch (e) {
+              console.error('Failed to parse fallback JSON strict:', e);
+              // If strict parse fails, maybe we captured too much or too little?
+              // For now, let's rely on tool calls primarily.
             }
-         } catch (e) {
-            console.error('Failed to parse fallback JSON regex:', e);
-         }
+          }
+        } catch (e) {
+          console.error('Failed to parse fallback JSON regex:', e);
+        }
       }
 
       if (assistantContent) {
@@ -1881,7 +2112,7 @@ const pollMoex = async () => {
 
   try {
     let quotes = await fetchMoexData();
-    
+
     if (quotes.length > 0) {
       await updateQuotesInDb(quotes);
     } else {
@@ -1904,14 +2135,14 @@ pollMoex();
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
-  
+
   // Send initial data immediately upon connection
   getQuotesFromDb().then(quotes => {
-     if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'QUOTES_UPDATE', data: quotes }));
-     }
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'QUOTES_UPDATE', data: quotes }));
+    }
   }).catch(err => {
-     console.error('Error sending initial data:', err);
+    console.error('Error sending initial data:', err);
   });
 
   ws.on('close', () => {

@@ -1,9 +1,9 @@
-import { 
-  Box, 
-  Typography, 
-  TextField, 
-  IconButton, 
-  Paper, 
+import {
+  Box,
+  Typography,
+  TextField,
+  IconButton,
+  Paper,
   Stack,
   CircularProgress
 } from '@mui/material';
@@ -38,15 +38,26 @@ export const AIChat = ({ portfolioName, uuid }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef(null);
-
-  // Removed custom formatting: rely on pure Markdown from the model and react-markdown renderer only.
+  const messagesContainerRef = useRef(null);
+  const abortControllerRef = useRef(null);
+  const isNearBottomRef = useRef(true);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Track whether user is near bottom of scroll
+  const handleScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const threshold = 5;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  };
+
   useEffect(() => {
-    scrollToBottom();
+    if (isNearBottomRef.current) {
+      scrollToBottom();
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -65,6 +76,15 @@ export const AIChat = ({ portfolioName, uuid }) => {
     fetchChatHistory();
   }, [uuid]);
 
+  // Abort any in-flight request on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!isLoading) {
       const t = setTimeout(() => {
@@ -74,6 +94,34 @@ export const AIChat = ({ portfolioName, uuid }) => {
     }
   }, [isLoading]);
 
+  const processLine = (line, assistantContentRef) => {
+    if (!line.trim()) return;
+    if (line === 'data: [DONE]') return 'DONE';
+    if (line.startsWith('data: ')) {
+      let data = line.slice(6);
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed === '[DONE]') return 'DONE';
+        if (typeof parsed === 'string') {
+          data = parsed;
+        }
+      } catch (e) {
+        // Ignore parse error, treat as raw string
+      }
+      assistantContentRef.value += data;
+      const content = assistantContentRef.value;
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const lastIndex = newMessages.length - 1;
+        if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+          newMessages[lastIndex] = { ...newMessages[lastIndex], content };
+        }
+        return newMessages;
+      });
+    }
+    return null;
+  };
+
   const handleSendMessage = async () => {
     if (!message.trim() || isSending) return;
 
@@ -82,11 +130,22 @@ export const AIChat = ({ portfolioName, uuid }) => {
     setMessage('');
     setIsSending(true);
 
+    // Abort previous request if any
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    // 90-second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+
     try {
       const response = await fetch(`/api/portfolios/${uuid}/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: userMessage.content })
+        body: JSON.stringify({ content: userMessage.content }),
+        signal: controller.signal
       });
       if (!response.ok || !response.body) {
         throw new Error('Streaming request failed');
@@ -94,7 +153,7 @@ export const AIChat = ({ portfolioName, uuid }) => {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let assistantContent = '';
+      const assistantContentRef = { value: '' };
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -103,54 +162,33 @@ export const AIChat = ({ portfolioName, uuid }) => {
         const parts = buffer.split('\n');
         buffer = parts.pop() || '';
         for (const line of parts) {
-          if (!line.trim()) continue;
-          if (line === 'data: [DONE]') {
-            setIsSending(false);
-            return;
-          }
-          if (line.startsWith('data: ')) {
-            let data = line.slice(6);
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed === '[DONE]') {
-                setIsSending(false);
-                return;
-              }
-              // If it's a string, use it. If object, maybe ignore or stringify?
-              // Assuming backend sends string chunks.
-              if (typeof parsed === 'string') {
-                data = parsed;
-              }
-            } catch (e) {
-              // Ignore parse error, treat as raw string
-            }
-            assistantContent += data;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastIndex = newMessages.length - 1;
-              if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
-                newMessages[lastIndex] = { ...newMessages[lastIndex], content: assistantContent };
-              }
-              return newMessages;
-            });
-          }
+          if (processLine(line, assistantContentRef) === 'DONE') return;
         }
       }
-      setIsSending(false);
+      // Process any remaining data in buffer
+      if (buffer.trim()) {
+        processLine(buffer, assistantContentRef);
+      }
     } catch (err) {
-      setIsSending(false);
+      if (err.name === 'AbortError') {
+        console.log('Chat request was aborted (timeout or navigation)');
+      }
       setMessages(prev => {
         const newMessages = [...prev];
         const lastIndex = newMessages.length - 1;
         if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
-          newMessages[lastIndex].content = newMessages[lastIndex].content 
-            ? newMessages[lastIndex].content + '\n[Ошибка получения ответа]'
-            : 'Произошла ошибка при получении ответа.';
+          if (!newMessages[lastIndex].content) {
+            newMessages[lastIndex].content = 'Произошла ошибка при получении ответа.';
+          }
         } else {
           newMessages.push({ role: 'assistant', content: 'Произошла ошибка при получении ответа.' });
         }
         return newMessages;
       });
+    } finally {
+      clearTimeout(timeoutId);
+      setIsSending(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -161,11 +199,11 @@ export const AIChat = ({ portfolioName, uuid }) => {
     }
   };
 
-      const visibleMessages = messages.filter(msg => msg.role !== 'system');
+  const visibleMessages = messages.filter(msg => msg.role !== 'system');
 
   return (
-    <Box 
-      sx={{ 
+    <Box
+      sx={{
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: 'background.paper', // System background
@@ -177,15 +215,17 @@ export const AIChat = ({ portfolioName, uuid }) => {
       }}
     >
       <Head>
-        <link 
-          rel="stylesheet" 
-          href="https://cdn.jsdelivr.net/npm/katex@0.16.33/dist/katex.min.css" 
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/katex@0.16.33/dist/katex.min.css"
         />
       </Head>
 
       {/* Messages Area */}
       <Box
-        sx={{ 
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        sx={{
           overflowY: 'auto',
           minHeight: 0,
           p: 3,
@@ -207,11 +247,11 @@ export const AIChat = ({ portfolioName, uuid }) => {
           </Box>
         ) : (
           visibleMessages.map((msg, index) => (
-            <Box 
-              key={index} 
-              sx={{ 
-                maxWidth: '850px', 
-                width: '100%', 
+            <Box
+              key={index}
+              sx={{
+                maxWidth: '850px',
+                width: '100%',
                 mx: 'auto',
                 display: 'flex',
                 flexDirection: 'column',
@@ -354,11 +394,11 @@ export const AIChat = ({ portfolioName, uuid }) => {
       </Box>
 
       {/* Input Area */}
-      <Box 
-        sx={{ 
-          p: 3, 
-          maxWidth: '850px', 
-          width: '100%', 
+      <Box
+        sx={{
+          p: 3,
+          maxWidth: '850px',
+          width: '100%',
           mx: 'auto'
         }}
       >
@@ -390,20 +430,20 @@ export const AIChat = ({ portfolioName, uuid }) => {
             }}
             sx={{ mb: 1 }}
           />
-          
+
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <IconButton size="small" sx={{ color: 'text.secondary' }}>
               <AttachFileIcon />
             </IconButton>
-            
-            <IconButton 
-              size="small" 
+
+            <IconButton
+              size="small"
               onClick={handleSendMessage}
-              sx={{ 
-                backgroundColor: message.trim() && !isSending ? 'primary.main' : 'neutral.300', 
+              sx={{
+                backgroundColor: message.trim() && !isSending ? 'primary.main' : 'neutral.300',
                 color: '#fff',
-                '&:hover': { 
-                  backgroundColor: message.trim() && !isSending ? 'primary.dark' : 'neutral.400' 
+                '&:hover': {
+                  backgroundColor: message.trim() && !isSending ? 'primary.dark' : 'neutral.400'
                 },
                 transition: 'all 0.2s'
               }}
@@ -413,13 +453,13 @@ export const AIChat = ({ portfolioName, uuid }) => {
             </IconButton>
           </Box>
         </Paper>
-        <Typography 
-          variant="caption" 
-          sx={{ 
-            display: 'block', 
-            textAlign: 'center', 
-            mt: 1.5, 
-            color: 'text.secondary' 
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            textAlign: 'center',
+            mt: 1.5,
+            color: 'text.secondary'
           }}
         >
           Сгенерировано ИИ, только для справки

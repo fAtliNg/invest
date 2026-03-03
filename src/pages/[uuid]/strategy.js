@@ -1,11 +1,11 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  CircularProgress, 
-  Alert, 
+import {
+  Box,
+  Container,
+  Typography,
+  CircularProgress,
+  Alert,
   Grid,
   Card,
   CardContent,
@@ -38,7 +38,7 @@ const PortfolioStrategy = () => {
   useEffect(() => {
     const fetchPortfolio = async () => {
       if (!uuid) return;
-      
+
       try {
         const response = await axios.get(`/api/portfolios/${uuid}`);
         setPortfolio(response.data);
@@ -70,15 +70,18 @@ const PortfolioStrategy = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          py: 8
+          height: 'calc(100vh - 16px)',
+          overflow: 'hidden',
+          pt: 8,
+          pb: 2
         }}
       >
-        <Container maxWidth={false} sx={{ px: 3 }}>
-          <Grid container spacing={3}>
-            <Grid item>
+        <Container maxWidth={false} sx={{ px: 3, height: '100%', overflow: 'hidden' }}>
+          <Grid container spacing={3} sx={{ height: '100%', minHeight: 0 }}>
+            <Grid item sx={{ display: 'flex' }}>
               <PortfolioSidebar />
             </Grid>
-            <Grid item xs>
+            <Grid item xs sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {isFetching ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
                   <CircularProgress />
@@ -86,47 +89,51 @@ const PortfolioStrategy = () => {
               ) : error ? (
                 <Alert severity="error">{error}</Alert>
               ) : (
-                <Box sx={{ maxWidth: 800 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
                   <Typography variant="h4" sx={{ mb: 3 }}>
                     Стратегия инвестирования
                   </Typography>
-                  <Card>
-                    <CardContent>
-                      {portfolio?.strategy ? (
-                        <Box
-                          sx={{
-                            '& p': { mb: 2 },
-                            '& ul, & ol': { pl: 3, mb: 2 },
-                            '& h1, & h2, & h3': { mt: 3, mb: 2, fontWeight: 600 },
-                            '& blockquote': {
-                              borderLeft: '4px solid',
-                              borderColor: 'divider',
-                              pl: 2,
-                              color: 'text.secondary',
-                              fontStyle: 'italic'
-                            }
-                          }}
-                        >
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm, remarkBreaks]}
-                            components={{
-                              a: ({ href, children }) => (
-                                <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#10B981' }}>
-                                  {children}
-                                </a>
-                              )
-                            }}
-                          >
-                            {portfolio.strategy}
-                          </ReactMarkdown>
-                        </Box>
-                      ) : (
-                        <Typography color="text.secondary">
-                          Стратегия для этого портфеля пока не определена.
-                        </Typography>
-                      )}
-                    </CardContent>
-                  </Card>
+                  <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+                    <Box>
+                      <Card>
+                        <CardContent>
+                          {portfolio?.strategy ? (
+                            <Box
+                              sx={{
+                                '& p': { mb: 2 },
+                                '& ul, & ol': { pl: 3, mb: 2 },
+                                '& h1, & h2, & h3': { mt: 3, mb: 2, fontWeight: 600 },
+                                '& blockquote': {
+                                  borderLeft: '4px solid',
+                                  borderColor: 'divider',
+                                  pl: 2,
+                                  color: 'text.secondary',
+                                  fontStyle: 'italic'
+                                }
+                              }}
+                            >
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm, remarkBreaks]}
+                                components={{
+                                  a: ({ href, children }) => (
+                                    <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#10B981' }}>
+                                      {children}
+                                    </a>
+                                  )
+                                }}
+                              >
+                                {portfolio.strategy}
+                              </ReactMarkdown>
+                            </Box>
+                          ) : (
+                            <Typography color="text.secondary">
+                              Стратегия для этого портфеля пока не определена.
+                            </Typography>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Box>
+                  </Box>
                 </Box>
               )}
             </Grid>
