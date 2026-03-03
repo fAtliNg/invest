@@ -6,13 +6,19 @@ import {
   Typography, 
   CircularProgress, 
   Alert, 
-  Button,
-  Grid
+  Grid,
+  Card,
+  CardContent,
+  CardHeader,
+  Divider
 } from '@mui/material';
 import { DashboardLayout } from '../../components/dashboard-layout';
 import { useAuthContext } from '../../contexts/auth-context';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import { PortfolioSidebar } from '../../components/portfolios/details/portfolio-sidebar';
 
 const PortfolioStrategy = () => {
@@ -80,14 +86,48 @@ const PortfolioStrategy = () => {
               ) : error ? (
                 <Alert severity="error">{error}</Alert>
               ) : (
-                <>
+                <Box sx={{ maxWidth: 800 }}>
                   <Typography variant="h4" sx={{ mb: 3 }}>
-                    Стратегия портфеля
+                    Стратегия инвестирования
                   </Typography>
-                  <Typography variant="body1">
-                    Здесь будет информация о стратегии портфеля «{portfolio?.title}».
-                  </Typography>
-                </>
+                  <Card>
+                    <CardContent>
+                      {portfolio?.strategy ? (
+                        <Box
+                          sx={{
+                            '& p': { mb: 2 },
+                            '& ul, & ol': { pl: 3, mb: 2 },
+                            '& h1, & h2, & h3': { mt: 3, mb: 2, fontWeight: 600 },
+                            '& blockquote': {
+                              borderLeft: '4px solid',
+                              borderColor: 'divider',
+                              pl: 2,
+                              color: 'text.secondary',
+                              fontStyle: 'italic'
+                            }
+                          }}
+                        >
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm, remarkBreaks]}
+                            components={{
+                              a: ({ href, children }) => (
+                                <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#10B981' }}>
+                                  {children}
+                                </a>
+                              )
+                            }}
+                          >
+                            {portfolio.strategy}
+                          </ReactMarkdown>
+                        </Box>
+                      ) : (
+                        <Typography color="text.secondary">
+                          Стратегия для этого портфеля пока не определена.
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Box>
               )}
             </Grid>
           </Grid>

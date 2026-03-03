@@ -48,6 +48,9 @@ const wss = new WebSocketServer({ server });
 const ensurePortfolioAssetsTable = async () => {
   try {
     await query(`
+      ALTER TABLE portfolios ADD COLUMN IF NOT EXISTS strategy TEXT;
+    `);
+    await query(`
       CREATE TABLE IF NOT EXISTS portfolio_assets (
         id SERIAL PRIMARY KEY,
         portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
@@ -64,6 +67,71 @@ const ensurePortfolioAssetsTable = async () => {
   } catch (e) {
     console.error('Failed to ensure portfolio_assets table', e);
   }
+};
+
+const buildPortfolioAssetsSummary = async (portfolioId: number) => {
+  const result = await query(
+    `SELECT pa.secid,
+            COALESCE(pa.shortname, q.shortname) AS shortname,
+            pa.quantity,
+            pa.buy_price,
+            q.price AS current_price
+     FROM portfolio_assets pa
+     LEFT JOIN quotes q ON q.secid = pa.secid
+     WHERE pa.portfolio_id = $1
+     ORDER BY shortname ASC`,
+    [portfolioId]
+  );
+
+  const fmt = (n: number | null) => (n == null ? '-' : n.toFixed(2));
+  const fmtPct = (n: number | null) =>
+    n == null ? '-' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
+
+  const header = `### Состав портфеля (актуально на ${new Date().toISOString()})`;
+  const tableHeader =
+    '| Тикер | Бумага | Кол-во | Покупка, ₽ | Текущая, ₽ | Стоимость покупки, ₽ | Текущая стоимость, ₽ | Изм., ₽ | Изм., % |\n' +
+    '|---|---|---:|---:|---:|---:|---:|---:|---:|';
+  const rows: string[] = [];
+  let totalPurchase = 0;
+  let totalCurrent = 0;
+  for (const r of result.rows) {
+    const secid = r.secid;
+    const shortname = r.shortname || secid;
+    const quantity = parseFloat(r.quantity || 0);
+    const buy = parseFloat(r.buy_price || 0);
+    const current = r.current_price != null ? parseFloat(r.current_price) : null;
+    const purchaseCost = quantity && buy ? quantity * buy : 0;
+    const currentCost = quantity && current != null ? quantity * current : 0;
+    totalPurchase += purchaseCost || 0;
+    totalCurrent += currentCost || 0;
+    const changeAbs = (currentCost || 0) - (purchaseCost || 0);
+    const changePct = buy > 0 && current != null ? ((current / buy) - 1) * 100 : null;
+
+    rows.push(
+      `| ${secid} | ${String(shortname).replace(/\|/g, '\\|')} | ${fmt(quantity)} | ${fmt(buy)} | ${fmt(
+        current
+      )} | ${fmt(purchaseCost)} | ${fmt(currentCost)} | ${fmt(changeAbs)} | ${fmtPct(changePct)} |`
+    );
+  }
+  const totalChange = totalCurrent - totalPurchase;
+  const totalPct = totalPurchase > 0 ? ((totalCurrent / totalPurchase) - 1) * 100 : null;
+
+  const totals = `**Итого (стоимость):** ${fmt(totalPurchase)} → ${fmt(totalCurrent)}; **изм:** ${fmt(
+    totalChange
+  )} (${fmtPct(totalPct)})`;
+
+  if (rows.length === 0) {
+    return [header, '', 'В портфеле нет бумаг.', '', totals].join('\n');
+  }
+
+  return [header, '', tableHeader, ...rows, '', totals].join('\n');
+};
+
+const appendPortfolioSystemMessage = async (portfolioId: number, content: string) => {
+  await query(
+    'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+    [portfolioId, 'system', content]
+  );
 };
 
 app.get('/', (req, res) => {
@@ -217,7 +285,7 @@ app.post(['/portfolios', '/api/portfolios'], async (req: any, res) => {
     }
 
     const email = decoded.email;
-    const { title, description, image } = req.body;
+    const { title, description, image, strategy } = req.body;
 
     if (!title) {
       res.status(400).json({ error: 'Title is required' });
@@ -233,10 +301,10 @@ app.post(['/portfolios', '/api/portfolios'], async (req: any, res) => {
     const userId = userResult.rows[0].id;
 
     const result = await query(
-      `INSERT INTO portfolios (user_id, title, description, image_url, current_value)
-       VALUES ($1, $2, $3, $4, 0)
+      `INSERT INTO portfolios (user_id, title, description, image_url, strategy, current_value)
+       VALUES ($1, $2, $3, $4, $5, 0)
        RETURNING *`,
-      [userId, title, description, image]
+      [userId, title, description, image, strategy]
     );
 
     const row = result.rows[0];
@@ -246,6 +314,7 @@ app.post(['/portfolios', '/api/portfolios'], async (req: any, res) => {
       title: row.title,
       description: row.description,
       image: row.image_url,
+      strategy: row.strategy,
       value: parseFloat(row.current_value)
     });
   } catch (err) {
@@ -299,6 +368,7 @@ app.get(['/portfolios/:uuid', '/api/portfolios/:uuid'], async (req: any, res) =>
       title: row.title,
       description: row.description,
       image: row.image_url,
+      strategy: row.strategy,
       value: parseFloat(row.current_value)
     });
   } catch (err) {
@@ -331,7 +401,7 @@ app.put(['/portfolios/:uuid', '/api/portfolios/:uuid'], async (req: any, res) =>
 
     const email = decoded.email;
     const { uuid } = req.params;
-    const { title, description, image } = req.body;
+    const { title, description, image, strategy } = req.body;
 
     if (!title) {
       res.status(400).json({ error: 'Title is required' });
@@ -353,10 +423,10 @@ app.put(['/portfolios/:uuid', '/api/portfolios/:uuid'], async (req: any, res) =>
 
     const result = await query(
       `UPDATE portfolios 
-       SET title = $1, description = $2, image_url = $3 
-       WHERE uuid = $4 
+       SET title = $1, description = $2, image_url = $3, strategy = $4
+       WHERE uuid = $5 
        RETURNING *`,
-      [title, description, image, uuid]
+      [title, description, image, strategy, uuid]
     );
 
     const row = result.rows[0];
@@ -366,6 +436,7 @@ app.put(['/portfolios/:uuid', '/api/portfolios/:uuid'], async (req: any, res) =>
       title: row.title,
       description: row.description,
       image: row.image_url,
+      strategy: row.strategy,
       value: parseFloat(row.current_value)
     });
   } catch (err) {
@@ -599,6 +670,13 @@ app.post(['/portfolios/:uuid/assets', '/api/portfolios/:uuid/assets'], async (re
       buy_price: parseFloat(row.buy_price || 0),
       created_at: row.created_at
     });
+    
+    try {
+      const summary = await buildPortfolioAssetsSummary(portfolioId);
+      await appendPortfolioSystemMessage(portfolioId, `Обновление портфеля: добавлена позиция ${secidValue}.\n\n${summary}`);
+    } catch (e) {
+      console.error('Failed to append system summary after add:', e);
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to add portfolio asset' });
@@ -687,6 +765,13 @@ app.put(['/portfolios/:uuid/assets/:secid', '/api/portfolios/:uuid/assets/:secid
       buy_price: parseFloat(row.buy_price || 0),
       created_at: row.created_at
     });
+    
+    try {
+      const summary = await buildPortfolioAssetsSummary(portfolioId);
+      await appendPortfolioSystemMessage(portfolioId, `Обновление портфеля: изменена позиция ${secidValue}.\n\n${summary}`);
+    } catch (e) {
+      console.error('Failed to append system summary after update:', e);
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update portfolio asset' });
@@ -754,6 +839,13 @@ app.post(['/portfolios/:uuid/assets/delete', '/api/portfolios/:uuid/assets/delet
     );
 
     res.json({ deleted: result.rowCount || 0 });
+    
+    try {
+      const summary = await buildPortfolioAssetsSummary(portfolioId);
+      await appendPortfolioSystemMessage(portfolioId, `Обновление портфеля: удалены позиции ${normalized.join(', ')}.\n\n${summary}`);
+    } catch (e) {
+      console.error('Failed to append system summary after delete:', e);
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete portfolio assets' });
@@ -897,7 +989,7 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
 
     // Check ownership and get portfolio details
     const portfolioResult = await query(
-      `SELECT p.id, p.title, p.description FROM portfolios p 
+      `SELECT p.id, p.title, p.description, p.strategy FROM portfolios p 
        JOIN users u ON p.user_id = u.id 
        WHERE u.email = $1 AND p.uuid = $2`,
       [email, uuid]
@@ -940,10 +1032,17 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
+    let portfolioContext = '';
+    try {
+      portfolioContext = await buildPortfolioAssetsSummary(portfolioId);
+    } catch (e) {
+      console.error('Failed to build portfolio summary for prompt:', e);
+    }
+
     const messages = [
-      { 
-        role: 'system', 
-        content: getSystemPrompt(portfolio)
+      {
+        role: 'system',
+        content: `${getSystemPrompt(portfolio)}\n\n${portfolioContext ? `Состав портфеля (актуально):\n${portfolioContext}` : ''}`.trim()
       },
       ...chatHistory.rows.map(row => ({ role: row.role, content: row.content }))
     ];
@@ -957,7 +1056,7 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
           'User-Agent': 'ProfitCase/1.0'
         },
         body: JSON.stringify({
-          model: 'deepseek-reasoner',
+          model: 'deepseek-chat',
           messages,
           max_tokens: 2000,
           stream: true
@@ -977,7 +1076,7 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
               'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
             },
             body: JSON.stringify({
-              model: 'deepseek-reasoner',
+              model: 'deepseek-chat',
               messages,
               max_tokens: 1200,
               stream: false
@@ -1070,7 +1169,7 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
       // Fallback inside catch
       try {
         const fallbackResp = await axios.post('https://api.deepseek.com/v1/chat/completions', {
-          model: 'deepseek-reasoner',
+          model: 'deepseek-chat',
           messages,
           max_tokens: 1200,
           stream: false
@@ -1138,7 +1237,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
     }
 
     const portfolioResult = await query(
-      `SELECT p.id, p.title, p.description FROM portfolios p 
+      `SELECT p.id, p.title, p.description, p.strategy FROM portfolios p 
        JOIN users u ON p.user_id = u.id 
        WHERE u.email = $1 AND p.uuid = $2`,
       [email, uuid]
@@ -1181,12 +1280,49 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
     const history = chatHistory.rows;
     const limitedHistory = history.slice(Math.max(history.length - 30, 0));
 
+    // Clean history
+    const cleanHistory = limitedHistory.map(row => {
+      let content = row.content;
+      content = content.replace(/```(?:json)?\s*(\{[\s\S]*?"action":\s*"set_strategy"[\s\S]*?\})\s*```/gi, '');
+      content = content.replace(/({[\s\S]*?"action":\s*"set_strategy"[\s\S]*?})/gi, '');
+      content = content.replace(/```json\s*\n\s*{\s*"action":\s*"SET_STRATEGY"[\s\S]*?}\s*\n\s*```/gi, '');
+      return { role: row.role, content: content.trim() };
+    }).filter(msg => msg.content.length > 0);
+
+    let portfolioContext = '';
+    try {
+      portfolioContext = await buildPortfolioAssetsSummary(portfolioId);
+    } catch (e) {
+      console.error('Failed to build portfolio summary for prompt:', e);
+    }
+
     const messages = [
-      { 
-        role: 'system', 
-        content: getSystemPrompt(portfolio)
+      {
+        role: 'system',
+        content: `${getSystemPrompt(portfolio)}\n\n${portfolioContext ? `Состав портфеля (актуально):\n${portfolioContext}` : ''}`.trim()
       },
-      ...limitedHistory.map(row => ({ role: row.role, content: row.content }))
+      ...cleanHistory
+    ];
+
+    // Define tools
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'set_strategy',
+          description: 'Сохранить согласованную стратегию инвестирования для портфеля.',
+          parameters: {
+            type: 'object',
+            properties: {
+              strategy: {
+                type: 'string',
+                description: 'Полный текст стратегии в формате Markdown.'
+              }
+            },
+            required: ['strategy']
+          }
+        }
+      }
     ];
 
     try {
@@ -1198,10 +1334,12 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
           'User-Agent': 'ProfitCase/1.0'
         },
         body: JSON.stringify({
-          model: 'deepseek-reasoner',
+          model: 'deepseek-chat',
           messages,
           max_tokens: 2000,
-          stream: true
+          stream: true,
+          tools: tools,
+          tool_choice: 'auto'
         })
       });
 
@@ -1211,7 +1349,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
         // Fallback: request non-streaming response
         try {
           const fallbackResp = await axios.post('https://api.deepseek.com/v1/chat/completions', {
-            model: 'deepseek-reasoner',
+            model: 'deepseek-chat',
             messages,
             max_tokens: 1200,
             stream: false
@@ -1245,6 +1383,8 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
       }
 
       let buffer = '';
+      let toolCallArguments = '';
+      let toolCallName = '';
 
       const reader = (aiResponse.body as ReadableStream).getReader();
       const decoder = new TextDecoder('utf-8');
@@ -1262,25 +1402,79 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              const delta = data.choices?.[0]?.delta?.content || '';
+              const delta = data.choices?.[0]?.delta;
+              
               if (delta) {
-                assistantContent += delta;
-                send(delta);
+                 if (delta.content) {
+                    assistantContent += delta.content;
+                    send(delta.content);
+                 }
+                 
+                 if (delta.tool_calls) {
+                    delta.tool_calls.forEach((toolCall: any) => {
+                       if (toolCall.function) {
+                          if (toolCall.function.name) {
+                             toolCallName = toolCall.function.name;
+                             console.log('Stream Tool call:', toolCallName);
+                          }
+                          if (toolCall.function.arguments) {
+                             toolCallArguments += toolCall.function.arguments;
+                          }
+                       }
+                    });
+                 }
               }
-            } catch {}
+            } catch (e) {
+               console.error('Error parsing stream chunk:', e);
+            }
           }
         }
       }
 
-      if (buffer.trim() && buffer.startsWith('data: ')) {
-        try {
-          const data = JSON.parse(buffer.slice(6));
-          const delta = data.choices?.[0]?.delta?.content || '';
-          if (delta) {
-            assistantContent += delta;
-            send(delta);
+      // Process tool calls if any
+      if (toolCallName) {
+        console.log('Final tool call detected:', toolCallName);
+        console.log('Tool call arguments:', toolCallArguments);
+        
+        if (toolCallName === 'set_strategy') {
+          try {
+            const args = JSON.parse(toolCallArguments);
+            if (args.strategy) {
+              console.log('Updating strategy via tool call');
+              await query(
+                'UPDATE portfolios SET strategy = $1 WHERE id = $2',
+                [args.strategy, portfolioId]
+              );
+            } else {
+               console.error('Missing strategy argument in tool call');
+            }
+          } catch (e) {
+             console.error('Failed to parse tool arguments:', e);
           }
-        } catch {}
+        }
+      } else {
+         // Fallback check: sometimes the model just outputs JSON in the content
+         try {
+            const jsonRegex = /({[\s\S]*?"action":\s*"set_strategy"[\s\S]*?})/i;
+            const match = assistantContent.match(jsonRegex);
+            if (match) {
+               console.log('Found fallback JSON in content');
+               try {
+                  const action = JSON.parse(match[1]);
+                  if (action.strategy) {
+                      console.log('Updating strategy via fallback JSON');
+                      await query(
+                        'UPDATE portfolios SET strategy = $1 WHERE id = $2',
+                        [action.strategy, portfolioId]
+                      );
+                  }
+               } catch (e) {
+                  console.error('Failed to parse fallback JSON strict:', e);
+               }
+            }
+         } catch (e) {
+            console.error('Failed to parse fallback JSON regex:', e);
+         }
       }
 
       if (assistantContent) {
@@ -1297,7 +1491,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
       // Fallback inside catch
       try {
         const fallbackResp = await axios.post('https://api.deepseek.com/v1/chat/completions', {
-          model: 'deepseek-reasoner',
+          model: 'deepseek-chat',
           messages,
           max_tokens: 1200,
           stream: false
@@ -1357,6 +1551,8 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
     const { uuid } = req.params;
     const { content } = req.body;
 
+    console.log(`Received chat message for portfolio ${uuid}: ${content.substring(0, 50)}...`);
+
     if (!content) {
       res.status(400).json({ error: 'Message content is required' });
       return;
@@ -1364,7 +1560,7 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
 
     // Check ownership and get portfolio details
     const portfolioResult = await query(
-      `SELECT p.id, p.title, p.description FROM portfolios p 
+      `SELECT p.id, p.title, p.description, p.strategy FROM portfolios p 
        JOIN users u ON p.user_id = u.id 
        WHERE u.email = $1 AND p.uuid = $2`,
       [email, uuid]
@@ -1396,16 +1592,52 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
       return;
     }
 
+    // Build context prompt
+    let portfolioContext = '';
+    try {
+      portfolioContext = await buildPortfolioAssetsSummary(portfolioId);
+    } catch (e) {
+      console.error('Failed to build portfolio summary for prompt:', e);
+    }
+
     // Call DeepSeek API
+    const cleanHistory = chatHistory.rows.map(row => {
+      let content = row.content;
+      // Remove legacy strategy JSON blocks to prevent model confusion
+      content = content.replace(/```(?:json)?\s*(\{[\s\S]*?"action":\s*"set_strategy"[\s\S]*?\})\s*```/gi, '');
+      content = content.replace(/({[\s\S]*?"action":\s*"set_strategy"[\s\S]*?})/gi, '');
+      // Also remove the old SET_STRATEGY block if present (from previous attempts)
+      content = content.replace(/```json\s*\n\s*{\s*"action":\s*"SET_STRATEGY"[\s\S]*?}\s*\n\s*```/gi, '');
+      return { role: row.role, content: content.trim() };
+    }).filter(msg => msg.content.length > 0);
+
     const messages = [
       { 
         role: 'system', 
-        content: `Ты — финансовый помощник. Отвечай строго на русском в чистом Markdown (GFM).
-Всегда возвращай только Markdown без дополнительных символов и эмодзи. Следи за парностью символов форматирования (*, **, \`\`\`).
-Используй списки и заголовки по необходимости, не добавляй декоративные конструкции вроде "— *".
-Контекст: портфель "${portfolio.title}". Описание: "${portfolio.description}".` 
+        content: `${getSystemPrompt(portfolio)}\n\n${portfolioContext ? `Состав портфеля (актуально):\n${portfolioContext}` : ''}`.trim()
       },
-      ...chatHistory.rows.map(row => ({ role: row.role, content: row.content }))
+      ...cleanHistory
+    ];
+
+    // Define tools
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'set_strategy',
+          description: 'Сохранить согласованную стратегию инвестирования для портфеля.',
+          parameters: {
+            type: 'object',
+            properties: {
+              strategy: {
+                type: 'string',
+                description: 'Полный текст стратегии в формате Markdown.'
+              }
+            },
+            required: ['strategy']
+          }
+        }
+      }
     ];
 
     try {
@@ -1416,10 +1648,12 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
           'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'deepseek-reasoner',
+          model: 'deepseek-chat',
           messages: messages,
           max_tokens: 2000,
-          stream: true
+          stream: true,
+          tools: tools,
+          tool_choice: 'auto'
         })
       });
 
@@ -1443,6 +1677,8 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
       if (res.flushHeaders) res.flushHeaders();
 
       let assistantContent = '';
+      let toolCallArguments = '';
+      let toolCallName = '';
       let buffer = '';
 
       console.log('Starting stream from DeepSeek...');
@@ -1451,11 +1687,9 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
       // @ts-ignore: fetch is global in Node 18+ and body is iterable
       for await (const chunk of aiResponse.body) {
         const chunkStr = Buffer.from(chunk).toString('utf8');
-        // console.log(`Received chunk: ${chunkStr.length} chars`);
         buffer += chunkStr;
         
         const lines = buffer.split('\n');
-        // Keep the last potentially incomplete line in buffer
         buffer = lines.pop() || '';
 
         for (const line of lines) {
@@ -1465,12 +1699,29 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              const content = data.choices[0]?.delta?.content || '';
-              if (content) {
-                assistantContent += content;
-                res.write(content);
-                // Flush explicitly if possible (Node.js doesn't always need this but helps with proxies)
-                // if ((res as any).flush) (res as any).flush();
+              const delta = data.choices[0]?.delta;
+              
+              if (delta) {
+                // Handle text content
+                if (delta.content) {
+                  assistantContent += delta.content;
+                  res.write(delta.content);
+                }
+                
+                // Handle tool calls
+                if (delta.tool_calls) {
+                   delta.tool_calls.forEach((toolCall: any) => {
+                     if (toolCall.function) {
+                       if (toolCall.function.name) {
+                         toolCallName = toolCall.function.name;
+                         console.log('Tool call name received:', toolCallName);
+                       }
+                       if (toolCall.function.arguments) {
+                         toolCallArguments += toolCall.function.arguments;
+                       }
+                     }
+                   });
+                }
               }
             } catch (e) {
               console.error('Error parsing chunk:', e);
@@ -1479,17 +1730,56 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
         }
       }
 
-      // Process remaining buffer if any
-      if (buffer.trim() && buffer.startsWith('data: ')) {
+      // Process tool calls if any
+      if (toolCallName) {
+        console.log('Final tool call detected:', toolCallName);
+        console.log('Tool call arguments:', toolCallArguments);
+        
+        if (toolCallName === 'set_strategy') {
+          try {
+            const args = JSON.parse(toolCallArguments);
+            if (args.strategy) {
+              console.log('Updating strategy via tool call');
+              await query(
+                'UPDATE portfolios SET strategy = $1 WHERE id = $2',
+                [args.strategy, portfolioId]
+              );
+            } else {
+               console.error('Missing strategy argument in tool call');
+            }
+          } catch (e) {
+             console.error('Failed to parse tool arguments:', e);
+          }
+        }
+      } else {
+         // Fallback check: sometimes the model just outputs JSON in the content
+         // if it fails to use tool calls properly
          try {
-            const data = JSON.parse(buffer.slice(6));
-            const content = data.choices[0]?.delta?.content || '';
-            if (content) {
-              assistantContent += content;
-              res.write(content);
+            // Try to find JSON with action: set_strategy, even if not in markdown block
+            const jsonRegex = /({[\s\S]*?"action":\s*"set_strategy"[\s\S]*?})/i;
+            const match = assistantContent.match(jsonRegex);
+            if (match) {
+               console.log('Found fallback JSON in content');
+               // Try to parse the found JSON string
+               // It might be surrounded by other text, so we might need to be careful
+               // But let's try strict parse first
+               try {
+                  const action = JSON.parse(match[1]);
+                  if (action.strategy) {
+                      console.log('Updating strategy via fallback JSON');
+                      await query(
+                        'UPDATE portfolios SET strategy = $1 WHERE id = $2',
+                        [action.strategy, portfolioId]
+                      );
+                  }
+               } catch (e) {
+                  console.error('Failed to parse fallback JSON strict:', e);
+                  // If strict parse fails, maybe we captured too much or too little?
+                  // For now, let's rely on tool calls primarily.
+               }
             }
          } catch (e) {
-            console.error('Error parsing final chunk:', e);
+            console.error('Failed to parse fallback JSON regex:', e);
          }
       }
 

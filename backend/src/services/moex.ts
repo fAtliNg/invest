@@ -149,7 +149,7 @@ export const fetchMoexData = async (): Promise<MoexData[]> => {
   try {
     const results = await Promise.all(SOURCES.map(source => fetchFromSource(source)));
     const allQuotes = results.flat();
-    console.log(`Fetched total ${allQuotes.length} quotes from MOEX`);
+    // console.log(`Fetched total ${allQuotes.length} quotes from MOEX`);
     return allQuotes;
   } catch (error) {
     console.error('Error fetching from MOEX:', error);
@@ -161,7 +161,7 @@ export const updateQuotesInDb = async (quotes: MoexData[]) => {
   if (quotes.length === 0) return;
 
   try {
-    console.log(`Updating ${quotes.length} quotes in DB...`); 
+    // console.log(`Updating ${quotes.length} quotes in DB...`); 
     
     // Batch processing to avoid huge Promise.all if list is very long?
     // 260 shares + bonds + etc could be 1000+ items.
@@ -201,7 +201,7 @@ export const updateQuotesInDb = async (quotes: MoexData[]) => {
     });
 
     await Promise.all(updatePromises);
-    console.log('DB update complete');
+    // console.log('DB update complete');
     
   } catch (error) {
     console.error('Error updating DB:', error);

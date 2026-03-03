@@ -161,6 +161,8 @@ export const AIChat = ({ portfolioName, uuid }) => {
     }
   };
 
+      const visibleMessages = messages.filter(msg => msg.role !== 'system');
+
   return (
     <Box 
       sx={{ 
@@ -197,14 +199,14 @@ export const AIChat = ({ portfolioName, uuid }) => {
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
-        ) : messages.length === 0 ? (
+        ) : visibleMessages.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 8, color: 'text.secondary' }}>
             <Typography variant="body1">
               История переписки пуста. Спросите что-нибудь у помощника!
             </Typography>
           </Box>
         ) : (
-          messages.map((msg, index) => (
+          visibleMessages.map((msg, index) => (
             <Box 
               key={index} 
               sx={{ 
