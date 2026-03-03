@@ -11,6 +11,7 @@ import { query } from './db';
 import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import { fetchMoexData, updateQuotesInDb, getQuotesFromDb } from './services/moex';
+import { getSystemPrompt } from './prompts';
 
 dotenv.config();
 
@@ -398,7 +399,7 @@ app.get(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: an
     const portfolioId = portfolioResult.rows[0].id;
 
     const chatResult = await query(
-      'SELECT role, content, created_at FROM portfolio_chats WHERE portfolio_id = $1 ORDER BY created_at ASC',
+      "SELECT role, content, created_at FROM portfolio_chats WHERE portfolio_id = $1 AND (status = 'active' OR status IS NULL) ORDER BY created_at ASC",
       [portfolioId]
     );
 
@@ -406,6 +407,59 @@ app.get(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: an
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch chat history' });
+  }
+});
+
+app.post(['/portfolios/:uuid/chat/archive', '/api/portfolios/:uuid/chat/archive'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+
+    // Check ownership and get portfolio id
+    const portfolioResult = await query(
+      `SELECT p.id FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (portfolioResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    const portfolioId = portfolioResult.rows[0].id;
+
+    const result = await query(
+      "UPDATE portfolio_chats SET status = 'archived' WHERE portfolio_id = $1",
+      [portfolioId]
+    );
+    console.log(`Archived ${result.rowCount} messages for portfolio ${portfolioId}`);
+
+    res.json({ message: 'Chat history archived successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to archive chat history' });
   }
 });
 
@@ -464,7 +518,7 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
 
     // Get chat history for context
     const chatHistory = await query(
-      'SELECT role, content FROM portfolio_chats WHERE portfolio_id = $1 ORDER BY created_at ASC',
+      "SELECT role, content FROM portfolio_chats WHERE portfolio_id = $1 AND (status = 'active' OR status IS NULL) ORDER BY created_at ASC",
       [portfolioId]
     );
 
@@ -482,16 +536,13 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
     if ((res as any).flushHeaders) (res as any).flushHeaders();
 
     const send = (data: string) => {
-      res.write(`data: ${data}\n\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
     const messages = [
       { 
         role: 'system', 
-        content: `Ты — финансовый помощник. Отвечай строго на русском в чистом Markdown (GFM).
-Всегда возвращай только Markdown без дополнительных символов и эмодзи. Следи за парностью символов форматирования (*, **, \`\`\`).
-Используй списки и заголовки по необходимости, не добавляй декоративные конструкции вроде "— *".
-Контекст: портфель "${portfolio.title}". Описание: "${portfolio.description}".` 
+        content: getSystemPrompt(portfolio)
       },
       ...chatHistory.rows.map(row => ({ role: row.role, content: row.content }))
     ];
@@ -501,10 +552,11 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+          'User-Agent': 'ProfitCase/1.0'
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: 'deepseek-reasoner',
           messages,
           max_tokens: 2000,
           stream: true
@@ -524,7 +576,7 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
               'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
             },
             body: JSON.stringify({
-              model: 'deepseek-chat',
+              model: 'deepseek-reasoner',
               messages,
               max_tokens: 1200,
               stream: false
@@ -613,40 +665,37 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
       send('[DONE]');
       res.end();
     } catch (err: any) {
-      console.error('DeepSeek SSE error:', err.message);
+      console.error('DeepSeek SSE error:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
       // Fallback inside catch
       try {
-        const fallbackResp = await fetch('https://api.deepseek.com/v1/chat/completions', {
-          method: 'POST',
+        const fallbackResp = await axios.post('https://api.deepseek.com/v1/chat/completions', {
+          model: 'deepseek-reasoner',
+          messages,
+          max_tokens: 1200,
+          stream: false
+        }, {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: 'deepseek-chat',
-            messages,
-            max_tokens: 1200,
-            stream: false
-          })
-        });
-        const fbText = await fallbackResp.text();
-        if (fallbackResp.ok) {
-          const fbJson = JSON.parse(fbText);
-          const content = fbJson.choices?.[0]?.message?.content || '';
-          if (content) {
-            await query(
-              'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
-              [portfolioId, 'assistant', content]
-            );
-            send(content);
-            send('[DONE]');
-            res.end();
-            return;
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+            'User-Agent': 'ProfitCase/1.0'
           }
+        });
+
+        const content = fallbackResp.data.choices?.[0]?.message?.content || '';
+        if (content) {
+          await query(
+            'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+            [portfolioId, 'assistant', content]
+          );
+          send(content);
+          send('[DONE]');
+          res.end();
+          return;
         }
-        send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: fbText.slice(0, 500) }));
+        send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: 'Empty response from fallback' }));
       } catch (fbErr: any) {
-        try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: fbErr?.message })); } catch {}
+        const detail = fbErr.response?.data ? JSON.stringify(fbErr.response.data) : fbErr.message;
+        try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail })); } catch {}
       }
       res.end();
     }
@@ -708,7 +757,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
     );
 
     const chatHistory = await query(
-      'SELECT role, content FROM portfolio_chats WHERE portfolio_id = $1 ORDER BY created_at ASC',
+      "SELECT role, content FROM portfolio_chats WHERE portfolio_id = $1 AND (status = 'active' OR status IS NULL) ORDER BY created_at ASC",
       [portfolioId]
     );
 
@@ -725,7 +774,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
     if ((res as any).flushHeaders) (res as any).flushHeaders();
 
     const send = (data: string) => {
-      res.write(`data: ${data}\n\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
     const history = chatHistory.rows;
@@ -734,10 +783,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
     const messages = [
       { 
         role: 'system', 
-        content: `Ты — финансовый помощник. Отвечай строго на русском в чистом Markdown (GFM).
-Всегда возвращай только Markdown без дополнительных символов и эмодзи. Следи за парностью символов форматирования (*, **, \`\`\`).
-Используй списки и заголовки по необходимости, не добавляй декоративные конструкции вроде "— *".
-Контекст: портфель "${portfolio.title}". Описание: "${portfolio.description}".` 
+        content: getSystemPrompt(portfolio)
       },
       ...limitedHistory.map(row => ({ role: row.role, content: row.content }))
     ];
@@ -747,10 +793,11 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+          'User-Agent': 'ProfitCase/1.0'
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: 'deepseek-reasoner',
           messages,
           max_tokens: 2000,
           stream: true
@@ -762,38 +809,35 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
         const errorText = await aiResponse.text().catch(() => '');
         // Fallback: request non-streaming response
         try {
-          const fallbackResp = await fetch('https://api.deepseek.com/v1/chat/completions', {
-            method: 'POST',
+          const fallbackResp = await axios.post('https://api.deepseek.com/v1/chat/completions', {
+            model: 'deepseek-reasoner',
+            messages,
+            max_tokens: 1200,
+            stream: false
+          }, {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-            },
-            body: JSON.stringify({
-              model: 'deepseek-chat',
-              messages,
-              max_tokens: 1200,
-              stream: false
-            })
-          });
-          const fbText = await fallbackResp.text();
-          if (fallbackResp.ok) {
-            const fbJson = JSON.parse(fbText);
-            const content = fbJson.choices?.[0]?.message?.content || '';
-            if (content) {
-              assistantContent += content;
-              send(content);
-              await query(
-                'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
-                [portfolioId, 'assistant', assistantContent]
-              );
-              send('[DONE]');
-              res.end();
-              return;
+              'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+              'User-Agent': 'ProfitCase/1.0'
             }
+          });
+
+          const content = fallbackResp.data.choices?.[0]?.message?.content || '';
+          if (content) {
+            assistantContent += content;
+            send(content);
+            await query(
+              'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+              [portfolioId, 'assistant', assistantContent]
+            );
+            send('[DONE]');
+            res.end();
+            return;
           }
-          send(JSON.stringify({ type: 'error', message: 'AI non-streaming fallback failed', detail: fbText.slice(0, 500) }));
+          send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: 'Empty response from fallback' }));
         } catch (fbErr: any) {
-          send(JSON.stringify({ type: 'error', message: 'AI fallback exception', detail: fbErr?.message }));
+          const detail = fbErr.response?.data ? JSON.stringify(fbErr.response.data) : fbErr.message;
+          try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail })); } catch {}
         }
         res.end();
         return;
@@ -848,39 +892,36 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
       send('[DONE]');
       res.end();
     } catch (err: any) {
+      console.error('DeepSeek SSE error:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
       // Fallback inside catch
       try {
-        const fallbackResp = await fetch('https://api.deepseek.com/v1/chat/completions', {
-          method: 'POST',
+        const fallbackResp = await axios.post('https://api.deepseek.com/v1/chat/completions', {
+          model: 'deepseek-reasoner',
+          messages,
+          max_tokens: 1200,
+          stream: false
+        }, {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: 'deepseek-chat',
-            messages,
-            max_tokens: 1200,
-            stream: false
-          })
-        });
-        const fbText = await fallbackResp.text();
-        if (fallbackResp.ok) {
-          const fbJson = JSON.parse(fbText);
-          const content = fbJson.choices?.[0]?.message?.content || '';
-          if (content) {
-            await query(
-              'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
-              [portfolioId, 'assistant', content]
-            );
-            send(content);
-            send('[DONE]');
-            res.end();
-            return;
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+            'User-Agent': 'ProfitCase/1.0'
           }
+        });
+        const content = fallbackResp.data.choices?.[0]?.message?.content || '';
+        if (content) {
+          await query(
+            'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
+            [portfolioId, 'assistant', content]
+          );
+          send(content);
+          send('[DONE]');
+          res.end();
+          return;
         }
-        send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: fbText.slice(0, 500) }));
+        send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: 'Empty response from fallback' }));
       } catch (fbErr: any) {
-        try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail: fbErr?.message })); } catch {}
+        const detail = fbErr.response?.data ? JSON.stringify(fbErr.response.data) : fbErr.message;
+        try { send(JSON.stringify({ type: 'error', message: 'AI streaming failed', detail })); } catch {}
       }
       res.end();
     }
@@ -974,7 +1015,7 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
           'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: 'deepseek-reasoner',
           messages: messages,
           max_tokens: 2000,
           stream: true

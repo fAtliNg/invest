@@ -9,6 +9,7 @@ import {
   Button,
   Grid
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { DashboardLayout } from '../../components/dashboard-layout';
 import { useAuthContext } from '../../contexts/auth-context';
 import { useEffect, useState } from 'react';
@@ -23,6 +24,17 @@ const PortfolioAssistant = () => {
   const [portfolio, setPortfolio] = useState(null);
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState(null);
+  const [chatKey, setChatKey] = useState(0);
+
+  const handleNewChat = async () => {
+    if (!uuid) return;
+    try {
+      await axios.post(`/api/portfolios/${uuid}/chat/archive`);
+      setChatKey(prev => prev + 1);
+    } catch (err) {
+      console.error('Failed to start new chat:', err);
+    }
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -85,11 +97,20 @@ const PortfolioAssistant = () => {
                 <Alert severity="error">{error}</Alert>
               ) : (
                 <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-                  <Typography variant="h4" sx={{ mb: 3 }}>
-                    Помощник
-                  </Typography>
+                  <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h4">
+                      Помощник
+                    </Typography>
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<AddIcon />} 
+                      onClick={handleNewChat}
+                    >
+                      Новый чат
+                    </Button>
+                  </Box>
                   <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <AIChat portfolioName={portfolio?.title} uuid={uuid} />
+                    <AIChat key={chatKey} portfolioName={portfolio?.title} uuid={uuid} />
                   </Box>
                 </Box>
               )}

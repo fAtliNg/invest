@@ -13,13 +13,20 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import rehypeKatex from 'rehype-katex';
 import Head from 'next/head';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 const preprocessLaTeX = (content) => {
   if (!content) return '';
   // Replace block math \[ ... \] with $$ ... $$
-  const blockReplaced = content.replace(/\\\[([\s\S]*?)\\\]/g, (_, equation) => `$$${equation}$$`);
+  // Only match if \[ is at the start of the string or follows a newline (ignoring whitespace)
+  const blockReplaced = content.replace(/(^|\n)(\s*)\\\[([\s\S]*?)\\\]/g, (_, prefix, whitespace, equation) => {
+    return `${prefix}${whitespace}$$${equation}$$`;
+  });
   // Replace inline math \( ... \) with $ ... $
   const inlineReplaced = blockReplaced.replace(/\\\(([\s\S]*?)\\\)/g, (_, equation) => `$${equation}$`);
   return inlineReplaced;
@@ -102,7 +109,21 @@ export const AIChat = ({ portfolioName, uuid }) => {
             return;
           }
           if (line.startsWith('data: ')) {
-            const data = line.slice(6);
+            let data = line.slice(6);
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed === '[DONE]') {
+                setIsSending(false);
+                return;
+              }
+              // If it's a string, use it. If object, maybe ignore or stringify?
+              // Assuming backend sends string chunks.
+              if (typeof parsed === 'string') {
+                data = parsed;
+              }
+            } catch (e) {
+              // Ignore parse error, treat as raw string
+            }
             assistantContent += data;
             setMessages(prev => {
               const newMessages = [...prev];
@@ -159,6 +180,7 @@ export const AIChat = ({ portfolioName, uuid }) => {
           href="https://cdn.jsdelivr.net/npm/katex@0.16.33/dist/katex.min.css" 
         />
       </Head>
+
       {/* Messages Area */}
       <Box
         sx={{ 
@@ -217,23 +239,57 @@ export const AIChat = ({ portfolioName, uuid }) => {
                     sx={{
                       '& p': { lineHeight: 1.6, color: 'text.primary', m: 0 },
                       '& ul, & ol': {
-                        pl: 0,
+                        pl: 2,
                         ml: 0,
-                        listStylePosition: 'inside',
+                        listStylePosition: 'outside',
                         mt: 1,
                         mb: 1,
                       },
-                      '& li': { mb: 0.5 },
+                      '& li': { mb: 0.5, pl: 0.5 },
                       '& h1, & h2, & h3, & h4, & h5, & h6': {
                         mt: 2,
                         mb: 1,
                         lineHeight: 1.3,
                         color: 'text.primary',
                       },
+                      '& table': {
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        mt: 2,
+                        mb: 2,
+                      },
+                      '& th': {
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        p: 1,
+                        backgroundColor: 'neutral.100',
+                        fontWeight: 'bold',
+                        textAlign: 'left',
+                      },
+                      '& td': {
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        p: 1,
+                      },
+                      '& blockquote': {
+                        borderLeft: '4px solid',
+                        borderColor: 'primary.main',
+                        pl: 2,
+                        ml: 0,
+                        my: 2,
+                        color: 'text.secondary',
+                        fontStyle: 'italic',
+                      },
+                      '& hr': {
+                        border: 'none',
+                        height: '1px',
+                        backgroundColor: 'divider',
+                        my: 2,
+                      },
                     }}
                   >
                     <ReactMarkdown
-                      remarkPlugins={[remarkMath]}
+                      remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
                       rehypePlugins={[[rehypeKatex, { output: 'html' }]]}
                       components={{
                         a: ({ href, children }) => (
@@ -241,6 +297,46 @@ export const AIChat = ({ portfolioName, uuid }) => {
                             {children}
                           </a>
                         ),
+                        img: ({ src, alt }) => (
+                          <img
+                            src={src}
+                            alt={alt}
+                            style={{
+                              maxWidth: '100%',
+                              height: 'auto',
+                              borderRadius: '8px',
+                              marginTop: '8px',
+                              marginBottom: '8px',
+                            }}
+                          />
+                        ),
+                        code({ node, inline, className, children, ...props }) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline ? (
+                            <SyntaxHighlighter
+                              style={vscDarkPlus}
+                              language={match ? match[1] : 'text'}
+                              PreTag="div"
+                              {...props}
+                            >
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                          ) : (
+                            <code
+                              className={className}
+                              {...props}
+                              style={{
+                                backgroundColor: 'rgba(0,0,0,0.05)',
+                                padding: '2px 4px',
+                                borderRadius: '4px',
+                                fontFamily: 'monospace',
+                                fontSize: '0.9em',
+                              }}
+                            >
+                              {children}
+                            </code>
+                          );
+                        },
                       }}
                     >
                       {preprocessLaTeX(msg.content || '')}
