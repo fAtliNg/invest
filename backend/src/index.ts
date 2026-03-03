@@ -45,6 +45,27 @@ const upload = multer({ storage });
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
+const ensurePortfolioAssetsTable = async () => {
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS portfolio_assets (
+        id SERIAL PRIMARY KEY,
+        portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
+        secid VARCHAR(32) NOT NULL,
+        shortname VARCHAR(255),
+        quantity NUMERIC NOT NULL DEFAULT 0,
+        buy_price NUMERIC NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_portfolio_assets_portfolio_id ON portfolio_assets (portfolio_id);
+      CREATE INDEX IF NOT EXISTS idx_portfolio_assets_secid ON portfolio_assets (secid);
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_portfolio_assets_portfolio_secid ON portfolio_assets (portfolio_id, secid);
+    `);
+  } catch (e) {
+    console.error('Failed to ensure portfolio_assets table', e);
+  }
+};
+
 app.get('/', (req, res) => {
   res.json({ message: 'Profit Case API is running' });
 });
@@ -77,6 +98,48 @@ app.get(['/currency-names', '/api/currency-names'], async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch currency names' });
+  }
+});
+
+app.get(['/quotes', '/api/quotes'], async (req, res) => {
+  try {
+    const q = String((req.query as any)?.q || '').trim();
+    const limitParam = parseInt(String((req.query as any)?.limit || '100'), 10);
+    const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 100)) : 100;
+
+    let rows: any[] = [];
+    if (q) {
+      const term = `%${q}%`;
+      const result = await query(
+        'SELECT * FROM quotes WHERE secid ILIKE $1 OR shortname ILIKE $1 ORDER BY secid LIMIT $2',
+        [term, limit]
+      );
+      rows = result.rows;
+    } else {
+      const result = await query('SELECT * FROM quotes ORDER BY secid LIMIT $1', [limit]);
+      rows = result.rows;
+    }
+
+    const data = rows
+      .map(row => ({
+        secid: row.secid,
+        shortname: row.shortname,
+        price: row.price != null ? parseFloat(row.price) : null,
+        high: row.high != null ? parseFloat(row.high) : null,
+        low: row.low != null ? parseFloat(row.low) : null,
+        change: row.change != null ? parseFloat(row.change) : null,
+        change_pct: row.change_pct != null ? parseFloat(row.change_pct) : null,
+        volume: row.volume != null ? parseInt(String(row.volume), 10) : 0,
+        lot_size: row.lot_size != null ? parseInt(String(row.lot_size), 10) : 0,
+        type: row.type || 'share',
+        isin: row.isin || null
+      }))
+      .filter((quote: any) => !(quote.type === 'currency' && (quote.price == null || quote.price <= 0)));
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch quotes' });
   }
 });
 
@@ -358,6 +421,344 @@ app.delete(['/portfolios/:uuid', '/api/portfolios/:uuid'], async (req: any, res)
   }
 });
 
+app.get(['/portfolios/:uuid/assets', '/api/portfolios/:uuid/assets'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+
+    const portfolioResult = await query(
+      `SELECT p.id FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (portfolioResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    const portfolioId = portfolioResult.rows[0].id;
+
+    let rows: any[] = [];
+    try {
+      const result = await query(
+        `SELECT pa.secid,
+                COALESCE(pa.shortname, q.shortname) AS shortname,
+                pa.quantity,
+                pa.buy_price,
+                q.price AS current_price,
+                q.isin
+         FROM portfolio_assets pa
+         LEFT JOIN quotes q ON q.secid = pa.secid
+         WHERE pa.portfolio_id = $1
+         ORDER BY shortname ASC`,
+        [portfolioId]
+      );
+      rows = result.rows;
+    } catch (e: any) {
+      if (String(e?.message || '').includes('relation "portfolio_assets" does not exist')) {
+        await ensurePortfolioAssetsTable();
+        rows = [];
+      } else {
+        throw e;
+      }
+    }
+
+    const data = rows.map((r) => {
+      const quantity = parseFloat(r.quantity || 0);
+      const buyPrice = parseFloat(r.buy_price || 0);
+      const currentPrice = r.current_price != null ? parseFloat(r.current_price) : null;
+      const purchaseCost = quantity && buyPrice ? quantity * buyPrice : null;
+      const currentCost = quantity && currentPrice != null ? quantity * currentPrice : null;
+      const changeAbs =
+        currentCost != null && purchaseCost != null ? currentCost - purchaseCost : null;
+      const changePct =
+        buyPrice > 0 && currentPrice != null ? ((currentPrice / buyPrice) - 1) * 100 : null;
+
+      return {
+        secid: r.secid,
+        shortname: r.shortname || r.secid,
+        isin: r.isin || null,
+        quantity: quantity || 0,
+        buy_price: buyPrice || 0,
+        purchase_cost: purchaseCost,
+        current_price: currentPrice,
+        current_cost: currentCost,
+        change_abs: changeAbs,
+        change_pct: changePct
+      };
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch portfolio assets' });
+  }
+});
+
+app.post(['/portfolios/:uuid/assets', '/api/portfolios/:uuid/assets'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+    const { secid, quantity, buy_price, shortname } = req.body || {};
+
+    const secidValue = String(secid || '').trim().toUpperCase();
+    const quantityValue = Number(quantity);
+    const buyPriceValue = Number(buy_price);
+
+    if (!secidValue) {
+      res.status(400).json({ error: 'secid is required' });
+      return;
+    }
+    if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
+      res.status(400).json({ error: 'quantity must be a positive number' });
+      return;
+    }
+    if (!Number.isFinite(buyPriceValue) || buyPriceValue <= 0) {
+      res.status(400).json({ error: 'buy_price must be a positive number' });
+      return;
+    }
+
+    const portfolioResult = await query(
+      `SELECT p.id FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (portfolioResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    const portfolioId = portfolioResult.rows[0].id;
+    await ensurePortfolioAssetsTable();
+
+    const result = await query(
+      `INSERT INTO portfolio_assets (portfolio_id, secid, shortname, quantity, buy_price)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (portfolio_id, secid)
+       DO UPDATE SET
+         shortname = COALESCE(EXCLUDED.shortname, portfolio_assets.shortname),
+         buy_price = CASE
+           WHEN (portfolio_assets.quantity + EXCLUDED.quantity) = 0 THEN portfolio_assets.buy_price
+           ELSE ((portfolio_assets.quantity * portfolio_assets.buy_price) + (EXCLUDED.quantity * EXCLUDED.buy_price)) / (portfolio_assets.quantity + EXCLUDED.quantity)
+         END,
+         quantity = portfolio_assets.quantity + EXCLUDED.quantity
+       RETURNING id, portfolio_id, secid, shortname, quantity, buy_price, created_at`,
+      [portfolioId, secidValue, shortname ? String(shortname) : null, quantityValue, buyPriceValue]
+    );
+
+    const row = result.rows[0];
+    res.status(201).json({
+      id: row.id,
+      secid: row.secid,
+      shortname: row.shortname || row.secid,
+      quantity: parseFloat(row.quantity || 0),
+      buy_price: parseFloat(row.buy_price || 0),
+      created_at: row.created_at
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to add portfolio asset' });
+  }
+});
+
+app.put(['/portfolios/:uuid/assets/:secid', '/api/portfolios/:uuid/assets/:secid'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid, secid } = req.params;
+    const { quantity, buy_price, shortname } = req.body || {};
+
+    const secidValue = String(secid || '').trim().toUpperCase();
+    const quantityValue = Number(quantity);
+    const buyPriceValue = Number(buy_price);
+
+    if (!secidValue) {
+      res.status(400).json({ error: 'secid is required' });
+      return;
+    }
+    if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
+      res.status(400).json({ error: 'quantity must be a positive number' });
+      return;
+    }
+    if (!Number.isFinite(buyPriceValue) || buyPriceValue <= 0) {
+      res.status(400).json({ error: 'buy_price must be a positive number' });
+      return;
+    }
+
+    const portfolioResult = await query(
+      `SELECT p.id FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (portfolioResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    const portfolioId = portfolioResult.rows[0].id;
+    await ensurePortfolioAssetsTable();
+
+    const updateResult = await query(
+      `UPDATE portfolio_assets
+       SET quantity = $3,
+           buy_price = $4,
+           shortname = COALESCE($5, shortname)
+       WHERE portfolio_id = $1 AND secid = $2
+       RETURNING id, portfolio_id, secid, shortname, quantity, buy_price, created_at`,
+      [portfolioId, secidValue, quantityValue, buyPriceValue, shortname ? String(shortname) : null]
+    );
+
+    if (updateResult.rows.length === 0) {
+      res.status(404).json({ error: 'Asset not found' });
+      return;
+    }
+
+    const row = updateResult.rows[0];
+    res.json({
+      id: row.id,
+      secid: row.secid,
+      shortname: row.shortname || row.secid,
+      quantity: parseFloat(row.quantity || 0),
+      buy_price: parseFloat(row.buy_price || 0),
+      created_at: row.created_at
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update portfolio asset' });
+  }
+});
+
+app.post(['/portfolios/:uuid/assets/delete', '/api/portfolios/:uuid/assets/delete'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res.status(500).json({ error: 'Internal server configuration error' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch {
+      res.status(401).json({ error: 'Invalid token' });
+      return;
+    }
+
+    const email = decoded.email;
+    const { uuid } = req.params;
+    const { secids } = req.body || {};
+
+    const list = Array.isArray(secids) ? secids : [];
+    const normalized = Array.from(
+      new Set(
+        list
+          .map((s) => String(s || '').trim().toUpperCase())
+          .filter(Boolean)
+      )
+    );
+
+    if (normalized.length === 0) {
+      res.status(400).json({ error: 'secids must be a non-empty array' });
+      return;
+    }
+
+    const portfolioResult = await query(
+      `SELECT p.id FROM portfolios p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE u.email = $1 AND p.uuid = $2`,
+      [email, uuid]
+    );
+
+    if (portfolioResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied or portfolio not found' });
+      return;
+    }
+
+    const portfolioId = portfolioResult.rows[0].id;
+    await ensurePortfolioAssetsTable();
+
+    const result = await query(
+      'DELETE FROM portfolio_assets WHERE portfolio_id = $1 AND secid = ANY($2::text[])',
+      [portfolioId, normalized]
+    );
+
+    res.json({ deleted: result.rowCount || 0 });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete portfolio assets' });
+  }
+});
 app.get(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: any, res) => {
   try {
     const token = req.cookies?.token;
@@ -1231,3 +1632,8 @@ wss.on('connection', (ws) => {
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
+// Ensure required tables exist
+(async () => {
+  await ensurePortfolioAssetsTable();
+})();

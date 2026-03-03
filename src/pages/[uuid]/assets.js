@@ -6,14 +6,18 @@ import {
   Typography, 
   CircularProgress, 
   Alert, 
-  Button,
-  Grid
+  Grid,
+  Button
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { DashboardLayout } from '../../components/dashboard-layout';
 import { useAuthContext } from '../../contexts/auth-context';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { PortfolioSidebar } from '../../components/portfolios/details/portfolio-sidebar';
+import { PortfolioAssetsTable } from '../../components/portfolios/assets/portfolio-assets-table';
+import { AddAssetDialog } from '../../components/portfolios/assets/add-asset-dialog';
+import { EditAssetDialog } from '../../components/portfolios/assets/edit-asset-dialog';
 
 const PortfolioAssets = () => {
   const router = useRouter();
@@ -22,6 +26,14 @@ const PortfolioAssets = () => {
   const [portfolio, setPortfolio] = useState(null);
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [assetsRefreshKey, setAssetsRefreshKey] = useState(0);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editAsset, setEditAsset] = useState(null);
+
+  const handleAddAsset = () => {
+    setAddOpen(true);
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -81,12 +93,39 @@ const PortfolioAssets = () => {
                 <Alert severity="error">{error}</Alert>
               ) : (
                 <>
-                  <Typography variant="h4" sx={{ mb: 3 }}>
-                    Бумаги в портфеле
-                  </Typography>
-                  <Typography variant="body1">
-                    Здесь будет список активов для портфеля «{portfolio?.title}».
-                  </Typography>
+                  <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h4">
+                      Бумаги
+                    </Typography>
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<AddIcon />} 
+                      onClick={handleAddAsset}
+                    >
+                      Добавить
+                    </Button>
+                  </Box>
+                  <PortfolioAssetsTable
+                    uuid={uuid}
+                    refreshKey={assetsRefreshKey}
+                    onEdit={(asset) => {
+                      setEditAsset(asset);
+                      setEditOpen(true);
+                    }}
+                  />
+                  <AddAssetDialog
+                    open={addOpen}
+                    onClose={() => setAddOpen(false)}
+                    onAdded={() => setAssetsRefreshKey((v) => v + 1)}
+                    uuid={uuid}
+                  />
+                  <EditAssetDialog
+                    open={editOpen}
+                    onClose={() => setEditOpen(false)}
+                    onUpdated={() => setAssetsRefreshKey((v) => v + 1)}
+                    uuid={uuid}
+                    asset={editAsset}
+                  />
                 </>
               )}
             </Grid>
