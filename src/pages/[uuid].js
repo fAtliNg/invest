@@ -1,11 +1,11 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  CircularProgress, 
-  Alert, 
+import {
+  Box,
+  Container,
+  Typography,
+  CircularProgress,
+  Alert,
   Button,
   Dialog,
   DialogTitle,
@@ -60,7 +60,7 @@ const PortfolioDetails = () => {
   useEffect(() => {
     const fetchPortfolio = async () => {
       if (!uuid) return;
-      
+
       try {
         const response = await axios.get(`/api/portfolios/${uuid}`);
         setPortfolio(response.data);
@@ -151,9 +151,9 @@ const PortfolioDetails = () => {
       <Box
         component="main"
         sx={{
-          flexGrow: 1,
-          py: 8
+          flexGrow: 1
         }}
+        style={{ paddingTop: 80, paddingBottom: 64 }}
       >
         <Container maxWidth={false} sx={{ px: 3 }}>
           <Grid container spacing={3}>
@@ -167,11 +167,11 @@ const PortfolioDetails = () => {
                 </Box>
               ) : error && !portfolio ? (
                 <Box sx={{ mt: 3 }}>
-                  <Alert 
+                  <Alert
                     severity="error"
                     action={
-                      <Button 
-                        color="inherit" 
+                      <Button
+                        color="inherit"
                         size="small"
                         onClick={() => router.push('/portfolios')}
                       >
@@ -185,7 +185,7 @@ const PortfolioDetails = () => {
               ) : (
                 <Box>
                   {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-                  
+
                   <Card variant="outlined" sx={{ mb: 3 }}>
                     <CardContent>
                       <form onSubmit={formik.handleSubmit}>
@@ -314,15 +314,15 @@ const PortfolioDetails = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button 
-            onClick={() => setDeleteDialogOpen(false)} 
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
             disabled={isDeleting}
           >
             Отмена
           </Button>
-          <Button 
-            onClick={handleDelete} 
-            color="error" 
+          <Button
+            onClick={handleDelete}
+            color="error"
             variant="contained"
             disabled={isDeleting}
             startIcon={isDeleting ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}

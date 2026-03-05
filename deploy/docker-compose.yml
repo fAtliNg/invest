@@ -32,6 +32,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_PORT: 5432
       PORT: 5001
+      JWT_SECRET: ${JWT_SECRET}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
     ports:
       - "5001:5001"
     depends_on:
@@ -50,7 +52,7 @@ services:
     restart: always
     environment:
       PORT: 5002
-      JWT_SECRET: ${JWT_SECRET:-dev_secret_key}
+      JWT_SECRET: ${JWT_SECRET}
       DB_USER: ${DB_USER:-postgres}
       DB_HOST: db
       DB_NAME: ${DB_NAME:-invest}

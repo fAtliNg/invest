@@ -12,6 +12,11 @@ import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import { fetchMoexData, updateQuotesInDb, getQuotesFromDb } from './services/moex';
 import { getSystemPrompt } from './prompts';
+import { parse as csvParse } from 'csv-parse/sync';
+import * as XLSX from 'xlsx';
+// @ts-ignore
+import pdfParse from 'pdf-parse';
+import Tesseract from 'tesseract.js';
 
 dotenv.config();
 
@@ -87,7 +92,7 @@ const buildPortfolioAssetsSummary = async (portfolioId: number) => {
   const fmtPct = (n: number | null) =>
     n == null ? '-' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
 
-  const header = `### Состав портфеля (актуально на ${new Date().toISOString()})`;
+  const header = `### Состав портфеля (актуально на ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })})`;
   const tableHeader =
     '| Тикер | Бумага | Кол-во | Покупка, ₽ | Текущая, ₽ | Стоимость покупки, ₽ | Текущая стоимость, ₽ | Изм., ₽ | Изм., % |\n' +
     '|---|---|---:|---:|---:|---:|---:|---:|---:|';
@@ -133,6 +138,290 @@ const appendPortfolioSystemMessage = async (portfolioId: number, content: string
     [portfolioId, 'system', content]
   );
 };
+
+// Shared tool definitions for AI chat
+const getToolDefinitions = () => [
+  {
+    type: 'function',
+    function: {
+      name: 'set_strategy',
+      description: 'Сохранить согласованную стратегию инвестирования для портфеля.',
+      parameters: {
+        type: 'object',
+        properties: {
+          strategy: {
+            type: 'string',
+            description: 'Полный текст стратегии в формате Markdown.'
+          }
+        },
+        required: ['strategy']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'add_asset',
+      description: 'Добавить бумагу в портфель. Если бумага уже есть, её количество будет увеличено, а средняя цена покупки пересчитана.',
+      parameters: {
+        type: 'object',
+        properties: {
+          secid: {
+            type: 'string',
+            description: 'Тикер бумаги на Московской Бирже (заглавными буквами, например SBER, GAZP, LKOH).'
+          },
+          quantity: {
+            type: 'number',
+            description: 'Количество бумаг для добавления (положительное число).'
+          },
+          buy_price: {
+            type: 'number',
+            description: 'Цена покупки одной бумаги в рублях.'
+          },
+          shortname: {
+            type: 'string',
+            description: 'Краткое название бумаги (необязательно).'
+          }
+        },
+        required: ['secid', 'quantity', 'buy_price']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'edit_asset',
+      description: 'Изменить количество или цену покупки существующей бумаги в портфеле.',
+      parameters: {
+        type: 'object',
+        properties: {
+          secid: {
+            type: 'string',
+            description: 'Тикер бумаги (заглавными буквами).'
+          },
+          quantity: {
+            type: 'number',
+            description: 'Новое количество бумаг (положительное число).'
+          },
+          buy_price: {
+            type: 'number',
+            description: 'Новая цена покупки одной бумаги в рублях.'
+          }
+        },
+        required: ['secid', 'quantity', 'buy_price']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'remove_asset',
+      description: 'Удалить бумагу из портфеля. Вызывать только после явного подтверждения пользователя.',
+      parameters: {
+        type: 'object',
+        properties: {
+          secid: {
+            type: 'string',
+            description: 'Тикер бумаги для удаления (заглавными буквами).'
+          }
+        },
+        required: ['secid']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'bulk_add_assets',
+      description: 'Добавить несколько бумаг в портфель одним вызовом. Используй этот инструмент, когда нужно добавить 2 и более бумаг (например, из файла или списка).',
+      parameters: {
+        type: 'object',
+        properties: {
+          assets: {
+            type: 'array',
+            description: 'Массив бумаг для добавления.',
+            items: {
+              type: 'object',
+              properties: {
+                secid: {
+                  type: 'string',
+                  description: 'Тикер бумаги (заглавными буквами).'
+                },
+                quantity: {
+                  type: 'number',
+                  description: 'Количество бумаг.'
+                },
+                buy_price: {
+                  type: 'number',
+                  description: 'Цена покупки одной бумаги в рублях.'
+                },
+                shortname: {
+                  type: 'string',
+                  description: 'Краткое название бумаги (необязательно).'
+                }
+              },
+              required: ['secid', 'quantity', 'buy_price']
+            }
+          }
+        },
+        required: ['assets']
+      }
+    }
+  }
+];
+
+// Execute asset-related tool calls, returns a summary string or null
+// sendNotification writes raw JSON object to SSE (not double-encoded by send())
+const executeAssetToolCall = async (
+  toolCallName: string,
+  toolCallArguments: string,
+  portfolioId: number,
+  sendNotification?: (notification: object) => void
+): Promise<string | null> => {
+  try {
+    const args = JSON.parse(toolCallArguments);
+
+    if (toolCallName === 'add_asset') {
+      const secid = String(args.secid || '').trim().toUpperCase();
+      const qty = Number(args.quantity);
+      const price = Number(args.buy_price);
+      const shortname = args.shortname ? String(args.shortname) : null;
+
+      if (!secid || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price <= 0) {
+        console.error('Invalid add_asset args:', args);
+        return null;
+      }
+
+      await ensurePortfolioAssetsTable();
+      await query(
+        `INSERT INTO portfolio_assets (portfolio_id, secid, shortname, quantity, buy_price)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (portfolio_id, secid)
+         DO UPDATE SET
+           shortname = COALESCE(EXCLUDED.shortname, portfolio_assets.shortname),
+           buy_price = CASE
+             WHEN (portfolio_assets.quantity + EXCLUDED.quantity) = 0 THEN portfolio_assets.buy_price
+             ELSE ((portfolio_assets.quantity * portfolio_assets.buy_price) + (EXCLUDED.quantity * EXCLUDED.buy_price)) / (portfolio_assets.quantity + EXCLUDED.quantity)
+           END,
+           quantity = portfolio_assets.quantity + EXCLUDED.quantity`,
+        [portfolioId, secid, shortname, qty, price]
+      );
+
+      console.log(`Asset added via chat: ${secid} qty=${qty} price=${price}`);
+      if (sendNotification) sendNotification({ type: 'asset_updated', message: `Бумага ${secid} добавлена в портфель (${qty} шт. по ${price} ₽)` });
+
+      const summary = await buildPortfolioAssetsSummary(portfolioId);
+      await appendPortfolioSystemMessage(portfolioId, `Обновление портфеля: добавлена позиция ${secid}.\n\n${summary}`);
+      return `Добавлено: ${secid}`;
+    }
+
+    if (toolCallName === 'edit_asset') {
+      const secid = String(args.secid || '').trim().toUpperCase();
+      const qty = Number(args.quantity);
+      const price = Number(args.buy_price);
+
+      if (!secid || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price <= 0) {
+        console.error('Invalid edit_asset args:', args);
+        return null;
+      }
+
+      await ensurePortfolioAssetsTable();
+      const updateResult = await query(
+        `UPDATE portfolio_assets
+         SET quantity = $3, buy_price = $4
+         WHERE portfolio_id = $1 AND secid = $2
+         RETURNING id`,
+        [portfolioId, secid, qty, price]
+      );
+
+      if (updateResult.rows.length === 0) {
+        console.error(`Asset ${secid} not found for edit`);
+        return null;
+      }
+
+      console.log(`Asset edited via chat: ${secid} qty=${qty} price=${price}`);
+      if (sendNotification) sendNotification({ type: 'asset_updated', message: `Бумага ${secid} изменена (${qty} шт. по ${price} ₽)` });
+
+      const summary = await buildPortfolioAssetsSummary(portfolioId);
+      await appendPortfolioSystemMessage(portfolioId, `Обновление портфеля: изменена позиция ${secid}.\n\n${summary}`);
+      return `Изменено: ${secid}`;
+    }
+
+    if (toolCallName === 'remove_asset') {
+      const secid = String(args.secid || '').trim().toUpperCase();
+
+      if (!secid) {
+        console.error('Invalid remove_asset args:', args);
+        return null;
+      }
+
+      await ensurePortfolioAssetsTable();
+      await query(
+        'DELETE FROM portfolio_assets WHERE portfolio_id = $1 AND secid = $2',
+        [portfolioId, secid]
+      );
+
+      console.log(`Asset removed via chat: ${secid}`);
+      if (sendNotification) sendNotification({ type: 'asset_updated', message: `Бумага ${secid} удалена из портфеля` });
+
+      const summary = await buildPortfolioAssetsSummary(portfolioId);
+      await appendPortfolioSystemMessage(portfolioId, `Обновление портфеля: удалена позиция ${secid}.\n\n${summary}`);
+      return `Удалено: ${secid}`;
+    }
+
+    if (toolCallName === 'bulk_add_assets') {
+      const assets = args.assets;
+      if (!Array.isArray(assets) || assets.length === 0) {
+        console.error('Invalid bulk_add_assets args:', args);
+        return null;
+      }
+
+      await ensurePortfolioAssetsTable();
+      const added: string[] = [];
+
+      for (const asset of assets) {
+        const secid = String(asset.secid || '').trim().toUpperCase();
+        const qty = Number(asset.quantity);
+        const price = Number(asset.buy_price);
+        const shortname = asset.shortname ? String(asset.shortname) : null;
+
+        if (!secid || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price <= 0) {
+          console.error('Skipping invalid asset in bulk:', asset);
+          continue;
+        }
+
+        await query(
+          `INSERT INTO portfolio_assets (portfolio_id, secid, shortname, quantity, buy_price)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (portfolio_id, secid)
+           DO UPDATE SET
+             shortname = COALESCE(EXCLUDED.shortname, portfolio_assets.shortname),
+             buy_price = CASE
+               WHEN (portfolio_assets.quantity + EXCLUDED.quantity) = 0 THEN portfolio_assets.buy_price
+               ELSE ((portfolio_assets.quantity * portfolio_assets.buy_price) + (EXCLUDED.quantity * EXCLUDED.buy_price)) / (portfolio_assets.quantity + EXCLUDED.quantity)
+             END,
+             quantity = portfolio_assets.quantity + EXCLUDED.quantity`,
+          [portfolioId, secid, shortname, qty, price]
+        );
+        added.push(secid);
+        console.log(`Bulk asset added: ${secid} qty=${qty} price=${price}`);
+      }
+
+      if (added.length > 0) {
+        if (sendNotification) sendNotification({ type: 'asset_updated', message: `Добавлено ${added.length} бумаг: ${added.join(', ')}` });
+        const summary = await buildPortfolioAssetsSummary(portfolioId);
+        await appendPortfolioSystemMessage(portfolioId, `Массовое обновление портфеля: добавлены позиции ${added.join(', ')}.\n\n${summary}`);
+      }
+      return `Добавлено: ${added.join(', ')}`;
+    }
+
+    return null;
+  } catch (e) {
+    console.error('Failed to execute asset tool call:', e);
+    return null;
+  }
+};
+
 
 app.get('/', (req, res) => {
   res.json({ message: 'Profit Case API is running' });
@@ -241,8 +530,17 @@ app.get(['/portfolios', '/api/portfolios'], async (req: any, res) => {
     }
 
     const result = await query(
-      `SELECT p.* FROM portfolios p 
+      `SELECT p.*, 
+              COALESCE(agg.total_value, 0) AS computed_value
+       FROM portfolios p 
        JOIN users u ON p.user_id = u.id 
+       LEFT JOIN (
+         SELECT pa.portfolio_id, 
+                SUM(pa.quantity * COALESCE(q.price, pa.buy_price)) AS total_value
+         FROM portfolio_assets pa
+         LEFT JOIN quotes q ON q.secid = pa.secid
+         GROUP BY pa.portfolio_id
+       ) agg ON agg.portfolio_id = p.id
        WHERE u.email = $1 
        ORDER BY p.created_at ASC`,
       [email]
@@ -254,7 +552,7 @@ app.get(['/portfolios', '/api/portfolios'], async (req: any, res) => {
       title: row.title,
       description: row.description,
       image: row.image_url,
-      value: parseFloat(row.current_value)
+      value: parseFloat(row.computed_value) || 0
     })));
   } catch (err) {
     console.error(err);
@@ -1416,6 +1714,115 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
   }
 });
 
+// --- File upload for chat analysis ---
+const chatUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.csv', '.xlsx', '.xls', '.txt', '.md', '.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Неподдерживаемый формат файла: ${ext}. Допустимые: ${allowed.join(', ')}`));
+    }
+  }
+});
+
+async function extractTextFromFile(buffer: Buffer, originalname: string): Promise<string> {
+  const ext = path.extname(originalname).toLowerCase();
+
+  if (ext === '.csv') {
+    const text = buffer.toString('utf-8');
+    try {
+      const records = csvParse(text, { delimiter: [',', ';', '\t'], relax_column_count: true, skip_empty_lines: true });
+      return records.map((row: string[]) => row.join(' | ')).join('\n');
+    } catch {
+      return text; // return raw text if CSV parsing fails
+    }
+  }
+
+  if (ext === '.xlsx' || ext === '.xls') {
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const lines: string[] = [];
+    for (const sheetName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sheetName];
+      const csv = XLSX.utils.sheet_to_csv(sheet, { FS: ' | ' });
+      if (workbook.SheetNames.length > 1) {
+        lines.push(`--- Лист: ${sheetName} ---`);
+      }
+      lines.push(csv);
+    }
+    return lines.join('\n');
+  }
+
+  // .txt, .md — plain text
+  if (ext === '.txt' || ext === '.md') {
+    return buffer.toString('utf-8');
+  }
+
+  // .pdf
+  if (ext === '.pdf') {
+    const data = await pdfParse(buffer);
+    return data.text || '';
+  }
+
+  return buffer.toString('utf-8');
+}
+
+app.post(['/portfolios/:uuid/chat/upload', '/api/portfolios/:uuid/chat/upload'], (req: any, res, next) => {
+  chatUpload.single('file')(req, res, (err: any) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'Файл слишком большой. Максимум 5 МБ.' });
+      }
+      return res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });
+    }
+    next();
+  });
+}, async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) { res.status(500).json({ error: 'Internal server configuration error' }); return; }
+
+    try { jwt.verify(token, JWT_SECRET); } catch { res.status(401).json({ error: 'Invalid token' }); return; }
+
+    if (!req.file) {
+      res.status(400).json({ error: 'Файл не загружен' });
+      return;
+    }
+
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+
+    if (imageExts.includes(ext)) {
+      // OCR: extract text from image
+      try {
+        const { data: { text: ocrText } } = await Tesseract.recognize(req.file.buffer, 'rus+eng');
+        res.json({
+          fileName: req.file.originalname,
+          text: (ocrText || '').trim().slice(0, 15000)
+        });
+      } catch (ocrErr) {
+        console.error('OCR error:', ocrErr);
+        res.status(500).json({ error: 'Не удалось распознать текст на изображении' });
+      }
+    } else {
+      const text = await extractTextFromFile(req.file.buffer, req.file.originalname);
+      res.json({
+        fileName: req.file.originalname,
+        text: text.slice(0, 15000)
+      });
+    }
+  } catch (err) {
+    console.error('File upload error:', err);
+    res.status(500).json({ error: 'Ошибка при обработке файла' });
+  }
+});
+
 app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], async (req: any, res) => {
   try {
     const token = req.cookies?.token;
@@ -1440,11 +1847,20 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
 
     const email = decoded.email;
     const { uuid } = req.params;
-    const { content } = req.body || {};
+    const { content, fileContent, fileName } = req.body || {};
 
-    if (!content || typeof content !== 'string' || !content.trim()) {
+    if ((!content || typeof content !== 'string' || !content.trim()) && !fileContent) {
       res.status(400).json({ error: 'Message content is required' });
       return;
+    }
+
+    // Build the actual message: file content + user text
+    let userMessage = (content || '').trim();
+    if (fileContent && typeof fileContent === 'string') {
+      const filePart = `Пользователь отправил файл «${fileName || 'файл'}»:\n\n${fileContent}`;
+      userMessage = userMessage
+        ? `${filePart}\n\nКомментарий пользователя: ${userMessage}`
+        : filePart;
     }
 
     const portfolioResult = await query(
@@ -1464,7 +1880,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
 
     await query(
       'INSERT INTO portfolio_chats (portfolio_id, role, content) VALUES ($1, $2, $3)',
-      [portfolioId, 'user', content]
+      [portfolioId, 'user', userMessage]
     );
 
     const chatHistory = await query(
@@ -1524,7 +1940,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
       console.error('Failed to build portfolio summary for prompt:', e);
     }
 
-    const messages = [
+    const messages: any[] = [
       {
         role: 'system',
         content: `${getSystemPrompt(portfolio)}\n\n${portfolioContext ? `Состав портфеля (актуально):\n${portfolioContext}` : ''}`.trim()
@@ -1532,26 +1948,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
       ...cleanHistory
     ];
 
-    // Define tools
-    const tools = [
-      {
-        type: 'function',
-        function: {
-          name: 'set_strategy',
-          description: 'Сохранить согласованную стратегию инвестирования для портфеля.',
-          parameters: {
-            type: 'object',
-            properties: {
-              strategy: {
-                type: 'string',
-                description: 'Полный текст стратегии в формате Markdown.'
-              }
-            },
-            required: ['strategy']
-          }
-        }
-      }
-    ];
+    const tools = getToolDefinitions();
 
     try {
       const aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -1612,8 +2009,8 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
       }
 
       let buffer = '';
-      let toolCallArguments = '';
-      let toolCallName = '';
+      // Accumulate multiple tool calls by index
+      const toolCalls: Record<number, { name: string; arguments: string }> = {};
 
       const reader = (aiResponse.body as ReadableStream).getReader();
       const decoder = new TextDecoder('utf-8');
@@ -1641,13 +2038,17 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
 
                 if (delta.tool_calls) {
                   delta.tool_calls.forEach((toolCall: any) => {
+                    const idx = toolCall.index ?? 0;
+                    if (!toolCalls[idx]) {
+                      toolCalls[idx] = { name: '', arguments: '' };
+                    }
                     if (toolCall.function) {
                       if (toolCall.function.name) {
-                        toolCallName = toolCall.function.name;
-                        console.log('Stream Tool call:', toolCallName);
+                        toolCalls[idx].name = toolCall.function.name;
+                        console.log(`Stream Tool call [${idx}]:`, toolCalls[idx].name);
                       }
                       if (toolCall.function.arguments) {
-                        toolCallArguments += toolCall.function.arguments;
+                        toolCalls[idx].arguments += toolCall.function.arguments;
                       }
                     }
                   });
@@ -1660,25 +2061,34 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
         }
       }
 
-      // Process tool calls if any
-      if (toolCallName) {
-        console.log('Final tool call detected:', toolCallName);
-        console.log('Tool call arguments:', toolCallArguments);
-
-        if (toolCallName === 'set_strategy') {
+      // Process all tool calls
+      const toolCallEntries = Object.values(toolCalls).filter(tc => tc.name);
+      if (toolCallEntries.length > 0) {
+        console.log(`Processing ${toolCallEntries.length} tool call(s)`);
+        const sendNotification = (notification: object) => {
+          if (clientDisconnected) return;
           try {
-            const args = JSON.parse(toolCallArguments);
-            if (args.strategy) {
-              console.log('Updating strategy via tool call');
-              await query(
-                'UPDATE portfolios SET strategy = $1 WHERE id = $2',
-                [args.strategy, portfolioId]
-              );
-            } else {
-              console.error('Missing strategy argument in tool call');
+            res.write(`data: ${JSON.stringify(notification)}\n\n`);
+          } catch (e) { clientDisconnected = true; }
+        };
+
+        for (const tc of toolCallEntries) {
+          console.log('Executing tool call:', tc.name, tc.arguments);
+          if (tc.name === 'set_strategy') {
+            try {
+              const args = JSON.parse(tc.arguments);
+              if (args.strategy) {
+                console.log('Updating strategy via tool call');
+                await query(
+                  'UPDATE portfolios SET strategy = $1 WHERE id = $2',
+                  [args.strategy, portfolioId]
+                );
+              }
+            } catch (e) {
+              console.error('Failed to parse tool arguments:', e);
             }
-          } catch (e) {
-            console.error('Failed to parse tool arguments:', e);
+          } else if (['add_asset', 'edit_asset', 'remove_asset', 'bulk_add_assets'].includes(tc.name)) {
+            await executeAssetToolCall(tc.name, tc.arguments, portfolioId, sendNotification);
           }
         }
       } else {
@@ -1850,26 +2260,7 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
       ...cleanHistory
     ];
 
-    // Define tools
-    const tools = [
-      {
-        type: 'function',
-        function: {
-          name: 'set_strategy',
-          description: 'Сохранить согласованную стратегию инвестирования для портфеля.',
-          parameters: {
-            type: 'object',
-            properties: {
-              strategy: {
-                type: 'string',
-                description: 'Полный текст стратегии в формате Markdown.'
-              }
-            },
-            required: ['strategy']
-          }
-        }
-      }
-    ];
+    const tools = getToolDefinitions();
 
     try {
       const aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -1908,8 +2299,8 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
       if (res.flushHeaders) res.flushHeaders();
 
       let assistantContent = '';
-      let toolCallArguments = '';
-      let toolCallName = '';
+      // Accumulate multiple tool calls by index
+      const toolCalls: Record<number, { name: string; arguments: string }> = {};
       let buffer = '';
 
       console.log('Starting stream from DeepSeek...');
@@ -1942,13 +2333,17 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
                 // Handle tool calls
                 if (delta.tool_calls) {
                   delta.tool_calls.forEach((toolCall: any) => {
+                    const idx = toolCall.index ?? 0;
+                    if (!toolCalls[idx]) {
+                      toolCalls[idx] = { name: '', arguments: '' };
+                    }
                     if (toolCall.function) {
                       if (toolCall.function.name) {
-                        toolCallName = toolCall.function.name;
-                        console.log('Tool call name received:', toolCallName);
+                        toolCalls[idx].name = toolCall.function.name;
+                        console.log(`Tool call name received [${idx}]:`, toolCalls[idx].name);
                       }
                       if (toolCall.function.arguments) {
-                        toolCallArguments += toolCall.function.arguments;
+                        toolCalls[idx].arguments += toolCall.function.arguments;
                       }
                     }
                   });
@@ -1961,25 +2356,27 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
         }
       }
 
-      // Process tool calls if any
-      if (toolCallName) {
-        console.log('Final tool call detected:', toolCallName);
-        console.log('Tool call arguments:', toolCallArguments);
-
-        if (toolCallName === 'set_strategy') {
-          try {
-            const args = JSON.parse(toolCallArguments);
-            if (args.strategy) {
-              console.log('Updating strategy via tool call');
-              await query(
-                'UPDATE portfolios SET strategy = $1 WHERE id = $2',
-                [args.strategy, portfolioId]
-              );
-            } else {
-              console.error('Missing strategy argument in tool call');
+      // Process all tool calls
+      const toolCallEntries = Object.values(toolCalls).filter(tc => tc.name);
+      if (toolCallEntries.length > 0) {
+        console.log(`Processing ${toolCallEntries.length} tool call(s)`);
+        for (const tc of toolCallEntries) {
+          console.log('Executing tool call:', tc.name, tc.arguments);
+          if (tc.name === 'set_strategy') {
+            try {
+              const args = JSON.parse(tc.arguments);
+              if (args.strategy) {
+                console.log('Updating strategy via tool call');
+                await query(
+                  'UPDATE portfolios SET strategy = $1 WHERE id = $2',
+                  [args.strategy, portfolioId]
+                );
+              }
+            } catch (e) {
+              console.error('Failed to parse tool arguments:', e);
             }
-          } catch (e) {
-            console.error('Failed to parse tool arguments:', e);
+          } else if (['add_asset', 'edit_asset', 'remove_asset', 'bulk_add_assets'].includes(tc.name)) {
+            await executeAssetToolCall(tc.name, tc.arguments, portfolioId);
           }
         }
       } else {

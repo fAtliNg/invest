@@ -5,10 +5,15 @@ import {
   IconButton,
   Paper,
   Stack,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert,
+  Chip
 } from '@mui/material';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import CloseIcon from '@mui/icons-material/Close';
+import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
@@ -16,7 +21,6 @@ import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import rehypeKatex from 'rehype-katex';
-import Head from 'next/head';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
@@ -32,7 +36,7 @@ const preprocessLaTeX = (content) => {
   return inlineReplaced;
 };
 
-export const AIChat = ({ portfolioName, uuid }) => {
+export const AIChat = ({ portfolioName, uuid, onAssetUpdated }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,9 +45,15 @@ export const AIChat = ({ portfolioName, uuid }) => {
   const messagesContainerRef = useRef(null);
   const abortControllerRef = useRef(null);
   const isNearBottomRef = useRef(true);
+  const [assetNotification, setAssetNotification] = useState({ open: false, message: '' });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = messagesContainerRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
   };
 
   // Track whether user is near bottom of scroll
@@ -97,11 +107,26 @@ export const AIChat = ({ portfolioName, uuid }) => {
   const processLine = (line, assistantContentRef) => {
     if (!line.trim()) return;
     if (line === 'data: [DONE]') return 'DONE';
+    if (line === 'data: [ASSET_UPDATED]') {
+      if (onAssetUpdated) onAssetUpdated();
+      setAssetNotification({ open: true, message: 'Портфель обновлен' });
+      return null;
+    }
     if (line.startsWith('data: ')) {
       let data = line.slice(6);
       try {
         const parsed = JSON.parse(data);
         if (parsed === '[DONE]') return 'DONE';
+        if (parsed === '[ASSET_UPDATED]') {
+          if (onAssetUpdated) onAssetUpdated();
+          setAssetNotification({ open: true, message: 'Портфель обновлен' });
+          return null;
+        }
+        if (typeof parsed === 'object' && parsed.type === 'asset_updated') {
+          if (onAssetUpdated) onAssetUpdated();
+          setAssetNotification({ open: true, message: parsed.message || 'Портфель обновлен' });
+          return null;
+        }
         if (typeof parsed === 'string') {
           data = parsed;
         }
@@ -123,11 +148,18 @@ export const AIChat = ({ portfolioName, uuid }) => {
   };
 
   const handleSendMessage = async () => {
-    if (!message.trim() || isSending) return;
+    if ((!message.trim() && !selectedFile) || isSending) return;
 
-    const userMessage = { role: 'user', content: message };
+    const displayContent = selectedFile
+      ? (message.trim() ? `📎 ${selectedFile.name}\n\n${message}` : `📎 ${selectedFile.name}`)
+      : message;
+    const userMessage = { role: 'user', content: displayContent };
     setMessages(prev => [...prev, userMessage, { role: 'assistant', content: '' }]);
+    const userText = message;
     setMessage('');
+    const file = selectedFile;
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setIsSending(true);
 
     // Abort previous request if any
@@ -141,10 +173,32 @@ export const AIChat = ({ portfolioName, uuid }) => {
     const timeoutId = setTimeout(() => controller.abort(), 90000);
 
     try {
+      // Upload file first if attached
+      let fileContent = null;
+      let fileName = null;
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadRes = await fetch(`/api/portfolios/${uuid}/chat/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json().catch(() => ({}));
+          throw new Error(errData.error || 'Ошибка загрузки файла');
+        }
+        const uploadData = await uploadRes.json();
+        fileContent = uploadData.text || null;
+        fileName = uploadData.fileName;
+      }
+
       const response = await fetch(`/api/portfolios/${uuid}/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: userMessage.content }),
+        body: JSON.stringify({
+          content: userText,
+          ...(fileContent ? { fileContent, fileName } : {})
+        }),
         signal: controller.signal
       });
       if (!response.ok || !response.body) {
@@ -199,6 +253,23 @@ export const AIChat = ({ portfolioName, uuid }) => {
     }
   };
 
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setAssetNotification({ open: true, message: 'Файл слишком большой. Максимум 5 МБ.' });
+      e.target.value = '';
+      return;
+    }
+    setSelectedFile(file);
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const visibleMessages = messages.filter(msg => msg.role !== 'system');
 
   return (
@@ -214,12 +285,7 @@ export const AIChat = ({ portfolioName, uuid }) => {
         height: '100%'
       }}
     >
-      <Head>
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/katex@0.16.33/dist/katex.min.css"
-        />
-      </Head>
+
 
       {/* Messages Area */}
       <Box
@@ -432,22 +498,49 @@ export const AIChat = ({ portfolioName, uuid }) => {
           />
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <IconButton size="small" sx={{ color: 'text.secondary' }}>
-              <AttachFileIcon />
-            </IconButton>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                accept=".csv,.xlsx,.xls,.txt,.md,.pdf,.png,.jpg,.jpeg,.gif,.webp,image/*"
+                style={{ display: 'none' }}
+              />
+              <IconButton
+                size="small"
+                sx={{ color: 'text.secondary' }}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSending}
+              >
+                <AttachFileIcon />
+              </IconButton>
+              {selectedFile && (
+                <Chip
+                  icon={<InsertDriveFileOutlinedIcon sx={{ fontSize: 16 }} />}
+                  label={selectedFile.name}
+                  size="small"
+                  onDelete={handleRemoveFile}
+                  deleteIcon={<CloseIcon sx={{ fontSize: 14 }} />}
+                  sx={{
+                    maxWidth: 200,
+                    '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' }
+                  }}
+                />
+              )}
+            </Box>
 
             <IconButton
               size="small"
               onClick={handleSendMessage}
               sx={{
-                backgroundColor: message.trim() && !isSending ? 'primary.main' : 'neutral.300',
+                backgroundColor: (message.trim() || selectedFile) && !isSending ? 'primary.main' : 'neutral.300',
                 color: '#fff',
                 '&:hover': {
-                  backgroundColor: message.trim() && !isSending ? 'primary.dark' : 'neutral.400'
+                  backgroundColor: (message.trim() || selectedFile) && !isSending ? 'primary.dark' : 'neutral.400'
                 },
                 transition: 'all 0.2s'
               }}
-              disabled={!message.trim() || isSending}
+              disabled={(!message.trim() && !selectedFile) || isSending}
             >
               <ArrowUpwardIcon fontSize="small" />
             </IconButton>
@@ -465,6 +558,20 @@ export const AIChat = ({ portfolioName, uuid }) => {
           Сгенерировано ИИ, только для справки
         </Typography>
       </Box>
+      <Snackbar
+        open={assetNotification.open}
+        autoHideDuration={4000}
+        onClose={() => setAssetNotification({ ...assetNotification, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setAssetNotification({ ...assetNotification, open: false })}
+          severity="success"
+          sx={{ width: '100%' }}
+        >
+          {assetNotification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -15,5 +15,7 @@
   <include file="sql/08_add_user_details.sql" relativeToChangelogFile="true"/>
   <include file="sql/09_create_portfolios_table.sql" relativeToChangelogFile="true"/>
   <include file="sql/10_create_portfolio_chats_table.sql" relativeToChangelogFile="true"/>
+  <include file="sql/11_add_portfolio_uuid.sql" relativeToChangelogFile="true"/>
+  <include file="sql/12_add_chat_status.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

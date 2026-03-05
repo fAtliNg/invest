@@ -52,10 +52,14 @@ class CustomDocument extends Document {
           {process.env.NEXT_PUBLIC_IS_DEV === 'true' && (
             <meta name="robots" content="noindex, nofollow" />
           )}
+          <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/katex@0.16.33/dist/katex.min.css"
+          />
         </Head>
         <body>
-        <Main />
-        <NextScript />
+          <Main />
+          <NextScript />
         </body>
       </Html>
     );

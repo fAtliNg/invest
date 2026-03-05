@@ -67,7 +67,8 @@ const PortfolioDynamics = () => {
   const [error, setError] = useState(null);
 
   const [period, setPeriod] = useState('1Y');
-  const [dynamicsData, setDynamicsData] = useState(null);
+  const [summaryData, setSummaryData] = useState(null);
+  const [chartPoints, setChartPoints] = useState([]);
   const [chartLoading, setChartLoading] = useState(false);
   const [assets, setAssets] = useState([]);
   const wsRef = useRef(null);
@@ -98,25 +99,44 @@ const PortfolioDynamics = () => {
     }
   }, [isAuthenticated, uuid]);
 
-  const fetchDynamics = useCallback(async (selectedPeriod) => {
+  const fetchDynamics = useCallback(async (selectedPeriod, isInitial = false) => {
     if (!uuid) return;
     setChartLoading(true);
     try {
       const res = await axios.get(`/api/portfolios/${uuid}/dynamics?period=${selectedPeriod}`);
-      setDynamicsData(res.data);
+      setChartPoints(res.data.points || []);
+      // Only update summary on initial load
+      if (isInitial || !summaryData) {
+        setSummaryData({
+          totalCurrent: res.data.totalCurrent,
+          totalPurchase: res.data.totalPurchase,
+          changeAbs: res.data.changeAbs,
+          changePct: res.data.changePct
+        });
+      }
     } catch (err) {
       console.error('Failed to fetch dynamics:', err);
-      setDynamicsData(null);
+      setChartPoints([]);
     } finally {
       setChartLoading(false);
     }
-  }, [uuid]);
+  }, [uuid, summaryData]);
 
+  // Fetch summary once on page load
   useEffect(() => {
     if (isAuthenticated && uuid) {
+      fetchDynamics(period, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, uuid]);
+
+  // Fetch chart points when period changes
+  useEffect(() => {
+    if (isAuthenticated && uuid && summaryData) {
       fetchDynamics(period);
     }
-  }, [isAuthenticated, uuid, period, fetchDynamics]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period]);
 
   // Fetch portfolio assets for WS tracking
   useEffect(() => {
@@ -187,19 +207,21 @@ const PortfolioDynamics = () => {
         }
         totalCurrent = Math.round(totalCurrent * 100) / 100;
 
-        setDynamicsData((prev) => {
+        // Update summary cards
+        setSummaryData((prev) => {
           if (!prev) return prev;
-
           const totalPurchase = prev.totalPurchase;
           const changeAbs = Math.round((totalCurrent - totalPurchase) * 100) / 100;
           const changePct = totalPurchase > 0
             ? Math.round(((totalCurrent / totalPurchase) - 1) * 10000) / 100
             : 0;
+          return { ...prev, totalCurrent, changeAbs, changePct };
+        });
 
-          // Only update chart points when period is '1D'
-          let points = prev.points;
-          if (period === '1D') {
-            points = [...prev.points];
+        // Only update chart points when period is '1D'
+        if (period === '1D') {
+          setChartPoints((prev) => {
+            const points = [...prev];
             if (points.length === 0) {
               points.push({ date: new Date().toISOString(), value: totalCurrent });
             } else {
@@ -207,17 +229,15 @@ const PortfolioDynamics = () => {
               const lastTime = new Date(lastPoint.date).getTime();
               const now = Date.now();
               const intervalMs = 10 * 60 * 1000; // 10 minutes
-
               if (now - lastTime >= intervalMs) {
                 points.push({ date: new Date().toISOString(), value: totalCurrent });
               } else {
                 points[points.length - 1] = { ...lastPoint, value: totalCurrent };
               }
             }
-          }
-
-          return { ...prev, points, totalCurrent, changeAbs, changePct };
-        });
+            return points;
+          });
+        }
       } catch (err) {
         console.error('Failed to parse WS message', err);
       }
@@ -242,11 +262,18 @@ const PortfolioDynamics = () => {
     setPeriod(newPeriod);
   };
 
-  const isPositive = dynamicsData ? dynamicsData.changeAbs >= 0 : true;
+  const isPositive = summaryData ? summaryData.changeAbs >= 0 : true;
   const chartColor = isPositive ? theme.palette.success.main : theme.palette.error.main;
 
-  const chartData = dynamicsData && dynamicsData.points.length > 0 ? {
-    labels: dynamicsData.points.map((p) => {
+  // Ensure at least 2 points for chart to draw a line
+  const displayPoints = chartPoints.length > 0
+    ? (chartPoints.length === 1
+      ? [chartPoints[0], { ...chartPoints[0] }]
+      : chartPoints)
+    : [];
+
+  const chartData = displayPoints.length > 0 ? {
+    labels: displayPoints.map((p) => {
       if (period === '1D') {
         const date = new Date(p.date);
         return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -256,7 +283,7 @@ const PortfolioDynamics = () => {
     }),
     datasets: [{
       label: 'Стоимость портфеля',
-      data: dynamicsData.points.map((p) => p.value),
+      data: displayPoints.map((p) => p.value),
       borderColor: chartColor,
       backgroundColor: (context) => {
         const ctx = context.chart.ctx;
@@ -266,7 +293,7 @@ const PortfolioDynamics = () => {
         return gradient;
       },
       borderWidth: 2,
-      pointRadius: 0,
+      pointRadius: displayPoints.length <= 3 ? 3 : 0,
       pointHoverRadius: 4,
       tension: 0.1,
       fill: true
@@ -300,6 +327,7 @@ const PortfolioDynamics = () => {
     }
   };
 
+
   if (isLoading || !isAuthenticated) {
     return null;
   }
@@ -314,12 +342,9 @@ const PortfolioDynamics = () => {
       <Box
         component="main"
         sx={{
-          flexGrow: 1,
-          height: 'calc(100vh - 16px)',
-          overflow: 'hidden',
-          pt: 8,
-          pb: 2
+          flexGrow: 1
         }}
+        style={{ paddingTop: 80, paddingBottom: 16, height: '100vh', overflow: 'hidden', boxSizing: 'border-box' }}
       >
         <Container maxWidth={false} sx={{ px: 3, height: '100%', overflow: 'hidden' }}>
           <Grid container spacing={3} sx={{ height: '100%', minHeight: 0 }}>
@@ -340,7 +365,7 @@ const PortfolioDynamics = () => {
                   </Typography>
 
                   {/* Summary cards */}
-                  {dynamicsData && (
+                  {summaryData && (
                     <Box sx={{ display: 'flex', gap: 3, mb: 3, flexWrap: 'wrap' }}>
                       <Card sx={{ minWidth: 180, flex: 1 }}>
                         <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
@@ -348,7 +373,7 @@ const PortfolioDynamics = () => {
                             Текущая стоимость
                           </Typography>
                           <Typography variant="h5" fontWeight={600}>
-                            {formatPrice(dynamicsData.totalCurrent)}
+                            {formatPrice(summaryData.totalCurrent)}
                           </Typography>
                         </CardContent>
                       </Card>
@@ -358,7 +383,7 @@ const PortfolioDynamics = () => {
                             Стоимость покупки
                           </Typography>
                           <Typography variant="h5" fontWeight={600}>
-                            {formatPrice(dynamicsData.totalPurchase)}
+                            {formatPrice(summaryData.totalPurchase)}
                           </Typography>
                         </CardContent>
                       </Card>
@@ -370,15 +395,15 @@ const PortfolioDynamics = () => {
                           <Typography
                             variant="h5"
                             fontWeight={600}
-                            color={dynamicsData.changeAbs >= 0 ? 'success.main' : 'error.main'}
+                            color={summaryData.changeAbs >= 0 ? 'success.main' : 'error.main'}
                           >
-                            {formatPrice(dynamicsData.changeAbs)}{' '}
+                            {formatPrice(summaryData.changeAbs)}{' '}
                             <Typography
                               component="span"
                               variant="body1"
-                              color={dynamicsData.changePct >= 0 ? 'success.main' : 'error.main'}
+                              color={summaryData.changePct >= 0 ? 'success.main' : 'error.main'}
                             >
-                              ({formatPercent(dynamicsData.changePct)})
+                              ({formatPercent(summaryData.changePct)})
                             </Typography>
                           </Typography>
                         </CardContent>
@@ -420,7 +445,7 @@ const PortfolioDynamics = () => {
                         ) : (
                           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                             <Typography color="text.secondary">
-                              {dynamicsData && dynamicsData.points.length === 0
+                              {chartPoints.length === 0
                                 ? 'Нет данных для отображения. Добавьте бумаги в портфель.'
                                 : 'Не удалось загрузить данные динамики.'}
                             </Typography>

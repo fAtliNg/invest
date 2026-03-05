@@ -55,6 +55,7 @@ const PortfolioStrategy = () => {
     }
   }, [isAuthenticated, uuid]);
 
+
   if (isLoading || !isAuthenticated) {
     return null;
   }
@@ -69,12 +70,9 @@ const PortfolioStrategy = () => {
       <Box
         component="main"
         sx={{
-          flexGrow: 1,
-          height: 'calc(100vh - 16px)',
-          overflow: 'hidden',
-          pt: 8,
-          pb: 2
+          flexGrow: 1
         }}
+        style={{ paddingTop: 80, paddingBottom: 16, height: '100vh', overflow: 'hidden', boxSizing: 'border-box' }}
       >
         <Container maxWidth={false} sx={{ px: 3, height: '100%', overflow: 'hidden' }}>
           <Grid container spacing={3} sx={{ height: '100%', minHeight: 0 }}>

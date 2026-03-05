@@ -1,11 +1,11 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  CircularProgress, 
-  Alert, 
+import {
+  Box,
+  Container,
+  Typography,
+  CircularProgress,
+  Alert,
   Button,
   Grid
 } from '@mui/material';
@@ -45,7 +45,7 @@ const PortfolioAssistant = () => {
   useEffect(() => {
     const fetchPortfolio = async () => {
       if (!uuid) return;
-      
+
       try {
         const response = await axios.get(`/api/portfolios/${uuid}`);
         setPortfolio(response.data);
@@ -62,6 +62,7 @@ const PortfolioAssistant = () => {
     }
   }, [isAuthenticated, uuid]);
 
+
   if (isLoading || !isAuthenticated) {
     return null;
   }
@@ -76,14 +77,11 @@ const PortfolioAssistant = () => {
       <Box
         component="main"
         sx={{
-          flexGrow: 1,
-          height: 'calc(100vh - 16px)',
-          overflow: 'hidden',
-          pt: 8,
-          pb: 2
+          flexGrow: 1
         }}
+        style={{ paddingTop: 80, paddingBottom: 64, height: '100vh', overflow: 'hidden', boxSizing: 'border-box' }}
       >
-        <Container maxWidth={false} sx={{ px: 3, height: '100%', overflow: 'hidden' }}>
+        <Container maxWidth={false} style={{ height: 'calc(100vh - 144px)', overflow: 'hidden', paddingLeft: 24, paddingRight: 24 }}>
           <Grid container spacing={3} sx={{ height: '100%', minHeight: 0 }}>
             <Grid item sx={{ display: 'flex' }}>
               <PortfolioSidebar />
@@ -101,9 +99,9 @@ const PortfolioAssistant = () => {
                     <Typography variant="h4">
                       Помощник
                     </Typography>
-                    <Button 
-                      variant="outlined" 
-                      startIcon={<AddIcon />} 
+                    <Button
+                      variant="outlined"
+                      startIcon={<AddIcon />}
                       onClick={handleNewChat}
                     >
                       Новый чат

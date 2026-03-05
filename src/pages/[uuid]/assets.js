@@ -1,11 +1,11 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  CircularProgress, 
-  Alert, 
+import {
+  Box,
+  Container,
+  Typography,
+  CircularProgress,
+  Alert,
   Grid,
   Button
 } from '@mui/material';
@@ -44,7 +44,7 @@ const PortfolioAssets = () => {
   useEffect(() => {
     const fetchPortfolio = async () => {
       if (!uuid) return;
-      
+
       try {
         const response = await axios.get(`/api/portfolios/${uuid}`);
         setPortfolio(response.data);
@@ -75,9 +75,9 @@ const PortfolioAssets = () => {
       <Box
         component="main"
         sx={{
-          flexGrow: 1,
-          py: 8
+          flexGrow: 1
         }}
+        style={{ paddingTop: 80, paddingBottom: 64 }}
       >
         <Container maxWidth={false} sx={{ px: 3 }}>
           <Grid container spacing={3}>
@@ -97,9 +97,9 @@ const PortfolioAssets = () => {
                     <Typography variant="h4">
                       Бумаги
                     </Typography>
-                    <Button 
-                      variant="outlined" 
-                      startIcon={<AddIcon />} 
+                    <Button
+                      variant="outlined"
+                      startIcon={<AddIcon />}
                       onClick={handleAddAsset}
                     >
                       Добавить
