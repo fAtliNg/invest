@@ -667,7 +667,8 @@ app.get(['/portfolios/:uuid', '/api/portfolios/:uuid'], async (req: any, res) =>
       description: row.description,
       image: row.image_url,
       strategy: row.strategy,
-      value: parseFloat(row.current_value)
+      value: parseFloat(row.current_value),
+      send_news_to_ai: row.send_news_to_ai !== false
     });
   } catch (err) {
     console.error(err);
@@ -787,6 +788,64 @@ app.delete(['/portfolios/:uuid', '/api/portfolios/:uuid'], async (req: any, res)
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete portfolio' });
+  }
+});
+
+// =================== PORTFOLIO SETTINGS ===================
+
+app.get(['/portfolios/:uuid/settings', '/api/portfolios/:uuid/settings'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) { res.status(401).json({ error: 'Unauthorized' }); return; }
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+    const { uuid } = req.params;
+
+    const result = await query(
+      `SELECT p.send_news_to_ai, p.send_fundamentals_to_ai, p.send_macro_to_ai, p.send_quotes_to_ai FROM portfolios p JOIN users u ON p.user_id = u.id WHERE u.email = $1 AND p.uuid = $2`,
+      [decoded.email, uuid]
+    );
+    if (result.rows.length === 0) { res.status(404).json({ error: 'Not found' }); return; }
+
+    res.json({ send_news_to_ai: result.rows[0].send_news_to_ai !== false, send_fundamentals_to_ai: result.rows[0].send_fundamentals_to_ai !== false, send_macro_to_ai: result.rows[0].send_macro_to_ai !== false, send_quotes_to_ai: result.rows[0].send_quotes_to_ai !== false });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+app.put(['/portfolios/:uuid/settings', '/api/portfolios/:uuid/settings'], async (req: any, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) { res.status(401).json({ error: 'Unauthorized' }); return; }
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+    const { uuid } = req.params;
+    const { send_news_to_ai, send_fundamentals_to_ai, send_macro_to_ai, send_quotes_to_ai } = req.body;
+
+    const result = await query(
+      `UPDATE portfolios SET send_news_to_ai = $1, send_fundamentals_to_ai = $2, send_macro_to_ai = $3, send_quotes_to_ai = $4 WHERE uuid = $5 AND user_id = (SELECT id FROM users WHERE email = $6) RETURNING send_news_to_ai, send_fundamentals_to_ai, send_macro_to_ai, send_quotes_to_ai`,
+      [send_news_to_ai, send_fundamentals_to_ai, send_macro_to_ai, send_quotes_to_ai, uuid, decoded.email]
+    );
+    if (result.rows.length === 0) { res.status(404).json({ error: 'Not found' }); return; }
+
+    res.json({ send_news_to_ai: result.rows[0].send_news_to_ai, send_fundamentals_to_ai: result.rows[0].send_fundamentals_to_ai, send_macro_to_ai: result.rows[0].send_macro_to_ai, send_quotes_to_ai: result.rows[0].send_quotes_to_ai });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+// =================== FUNDAMENTALS (Smart-lab) ===================
+
+import { getSmartLabData } from './smartlab-parser';
+
+app.get(['/fundamentals/:ticker', '/api/fundamentals/:ticker'], async (req: any, res) => {
+  try {
+    const { ticker } = req.params;
+    const data = await getSmartLabData(ticker.toUpperCase());
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch fundamentals' });
   }
 });
 
@@ -1478,7 +1537,7 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
 
     // Check ownership and get portfolio details
     const portfolioResult = await query(
-      `SELECT p.id, p.title, p.description, p.strategy FROM portfolios p 
+      `SELECT p.id, p.title, p.description, p.strategy, p.send_news_to_ai, p.send_fundamentals_to_ai, p.send_macro_to_ai, p.send_quotes_to_ai FROM portfolios p 
        JOIN users u ON p.user_id = u.id 
        WHERE u.email = $1 AND p.uuid = $2`,
       [email, uuid]
@@ -1539,8 +1598,11 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
     };
 
     let portfolioContext = '';
+    let portfolioTickers: string[] = [];
     try {
       portfolioContext = await buildPortfolioAssetsSummary(portfolioId);
+      const tickerResult = await query('SELECT secid FROM portfolio_assets WHERE portfolio_id = $1', [portfolioId]);
+      portfolioTickers = tickerResult.rows.map((r: any) => r.secid);
     } catch (e) {
       console.error('Failed to build portfolio summary for prompt:', e);
     }
@@ -1548,7 +1610,7 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
     const messages = [
       {
         role: 'system',
-        content: `${getSystemPrompt(portfolio)}\n\n${portfolioContext ? `Состав портфеля (актуально):\n${portfolioContext}` : ''}`.trim()
+        content: `${await getSystemPrompt(portfolio, portfolioTickers)}\n\n${portfolioContext ? `Состав портфеля (актуально):\n${portfolioContext}` : ''}`.trim()
       },
       ...chatHistory.rows.map(row => ({ role: row.role, content: row.content }))
     ];
@@ -1564,7 +1626,7 @@ app.get(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'], 
         body: JSON.stringify({
           model: 'deepseek-chat',
           messages,
-          max_tokens: 2000,
+          max_tokens: 4096,
           stream: true
         }),
         signal: controller.signal
@@ -1864,7 +1926,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
     }
 
     const portfolioResult = await query(
-      `SELECT p.id, p.title, p.description, p.strategy FROM portfolios p 
+      `SELECT p.id, p.title, p.description, p.strategy, p.send_news_to_ai, p.send_fundamentals_to_ai, p.send_macro_to_ai, p.send_quotes_to_ai FROM portfolios p 
        JOIN users u ON p.user_id = u.id 
        WHERE u.email = $1 AND p.uuid = $2`,
       [email, uuid]
@@ -1934,8 +1996,11 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
     }).filter(msg => msg.content.length > 0);
 
     let portfolioContext = '';
+    let portfolioTickers: string[] = [];
     try {
       portfolioContext = await buildPortfolioAssetsSummary(portfolioId);
+      const tickerResult = await query('SELECT secid FROM portfolio_assets WHERE portfolio_id = $1', [portfolioId]);
+      portfolioTickers = tickerResult.rows.map((r: any) => r.secid);
     } catch (e) {
       console.error('Failed to build portfolio summary for prompt:', e);
     }
@@ -1943,7 +2008,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
     const messages: any[] = [
       {
         role: 'system',
-        content: `${getSystemPrompt(portfolio)}\n\n${portfolioContext ? `Состав портфеля (актуально):\n${portfolioContext}` : ''}`.trim()
+        content: `${await getSystemPrompt(portfolio, portfolioTickers)}\n\n${portfolioContext ? `Состав портфеля (актуально):\n${portfolioContext}` : ''}`.trim()
       },
       ...cleanHistory
     ];
@@ -1961,7 +2026,7 @@ app.post(['/portfolios/:uuid/chat/stream', '/api/portfolios/:uuid/chat/stream'],
         body: JSON.stringify({
           model: 'deepseek-chat',
           messages,
-          max_tokens: 2000,
+          max_tokens: 4096,
           stream: true,
           tools: tools,
           tool_choice: 'auto'
@@ -2201,7 +2266,7 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
 
     // Check ownership and get portfolio details
     const portfolioResult = await query(
-      `SELECT p.id, p.title, p.description, p.strategy FROM portfolios p 
+      `SELECT p.id, p.title, p.description, p.strategy, p.send_news_to_ai, p.send_fundamentals_to_ai, p.send_macro_to_ai, p.send_quotes_to_ai FROM portfolios p 
        JOIN users u ON p.user_id = u.id 
        WHERE u.email = $1 AND p.uuid = $2`,
       [email, uuid]
@@ -2235,8 +2300,11 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
 
     // Build context prompt
     let portfolioContext = '';
+    let portfolioTickers: string[] = [];
     try {
       portfolioContext = await buildPortfolioAssetsSummary(portfolioId);
+      const tickerResult = await query('SELECT secid FROM portfolio_assets WHERE portfolio_id = $1', [portfolioId]);
+      portfolioTickers = tickerResult.rows.map((r: any) => r.secid);
     } catch (e) {
       console.error('Failed to build portfolio summary for prompt:', e);
     }
@@ -2255,7 +2323,7 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
     const messages = [
       {
         role: 'system',
-        content: `${getSystemPrompt(portfolio)}\n\n${portfolioContext ? `Состав портфеля (актуально):\n${portfolioContext}` : ''}`.trim()
+        content: `${await getSystemPrompt(portfolio, portfolioTickers)}\n\n${portfolioContext ? `Состав портфеля (актуально):\n${portfolioContext}` : ''}`.trim()
       },
       ...cleanHistory
     ];
@@ -2272,7 +2340,7 @@ app.post(['/portfolios/:uuid/chat', '/api/portfolios/:uuid/chat'], async (req: a
         body: JSON.stringify({
           model: 'deepseek-chat',
           messages: messages,
-          max_tokens: 2000,
+          max_tokens: 4096,
           stream: true,
           tools: tools,
           tool_choice: 'auto'

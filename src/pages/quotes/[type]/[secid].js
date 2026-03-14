@@ -1,15 +1,15 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { 
-  Box, 
-  Container, 
-  Grid, 
-  Typography, 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  Divider, 
+import {
+  Box,
+  Container,
+  Grid,
+  Typography,
+  Card,
+  CardContent,
+  CardHeader,
+  Divider,
   CircularProgress,
   Button,
   ToggleButton,
@@ -101,6 +101,7 @@ const QuoteDetails = () => {
   const [volumeStats, setVolumeStats] = useState(null);
   const [volumeLoading, setVolumeLoading] = useState(false);
   const [volumeError, setVolumeError] = useState(null);
+  const [fundamentals, setFundamentals] = useState(null);
   const wsRef = useRef(null);
 
   // Determine color based on price change
@@ -157,10 +158,10 @@ const QuoteDetails = () => {
     const till = new Date();
     const from = new Date();
     from.setDate(from.getDate() - periodConfig.duration);
-    
+
     const fromStr = from.toISOString().split('T')[0];
     const tillStr = till.toISOString().split('T')[0];
-    
+
     try {
       const res = await axios.get(`https://iss.moex.com/iss/engines/${engine}/markets/${market}/boards/${boardid}/securities/${secid}/candles.json?from=${fromStr}&till=${tillStr}&interval=${periodConfig.interval}`);
       const parsed = parseMoexData(res.data, 'candles');
@@ -199,13 +200,13 @@ const QuoteDetails = () => {
         const infoRes = await axios.get(`https://iss.moex.com/iss/securities/${secid}.json`);
         const boards = parseMoexData(infoRes.data, 'boards');
         const description = parseMoexData(infoRes.data, 'description');
-        
+
         let targetBoard = boards.find(b => b.is_primary === 1);
         if (!targetBoard) {
           targetBoard = boards.find(b => ['TQBR', 'TQCB', 'TQOB', 'TQTF'].includes(b.boardid));
         }
         if (!targetBoard && boards.length > 0) targetBoard = boards[0];
-        
+
         if (!targetBoard) throw new Error('Board not found');
 
         const { engine, market, boardid } = targetBoard;
@@ -233,49 +234,49 @@ const QuoteDetails = () => {
         };
 
         const secInfo = {
-            secid,
-            typeCode: rawType,
-            fullName: descMap['NAME'] || null,
-            shortname: descMap['SHORTNAME'] || descMap['NAME'] || secid,
-            description: typeMap[rawType] || rawType,
-            issuesize: descMap['ISSUESIZE'] ? Number(descMap['ISSUESIZE']) : null,
-            isin: descMap['ISIN'] || null,
-            regNumber: descMap['REGNUMBER'] || null,
-            faceValue: descMap['FACEVALUE'] ? Number(descMap['FACEVALUE']) : null,
-            faceUnit: descMap['FACEUNIT'] || null,
-            issueDate: descMap['ISSUEDATE'] || null,
-            listLevel: descMap['LISTLEVEL'] || null,
-            isQualifiedInvestors: descMap['ISQUALIFIEDINVESTORS'] || null,
-            morningSession: descMap['MORNINGSESSION'] || null,
-            eveningSession: descMap['EVENINGSESSION'] || null,
-            groupCode: descMap['GROUP'] || null,
-            emitentTitle: descMap['EMITENT_TITLE'] || null,
-            emitentInn: descMap['EMITENT_INN'] || null,
-            emitentOkved: descMap['EMITENT_OKVED'] || null,
-            ...targetBoard
+          secid,
+          typeCode: rawType,
+          fullName: descMap['NAME'] || null,
+          shortname: descMap['SHORTNAME'] || descMap['NAME'] || secid,
+          description: typeMap[rawType] || rawType,
+          issuesize: descMap['ISSUESIZE'] ? Number(descMap['ISSUESIZE']) : null,
+          isin: descMap['ISIN'] || null,
+          regNumber: descMap['REGNUMBER'] || null,
+          faceValue: descMap['FACEVALUE'] ? Number(descMap['FACEVALUE']) : null,
+          faceUnit: descMap['FACEUNIT'] || null,
+          issueDate: descMap['ISSUEDATE'] || null,
+          listLevel: descMap['LISTLEVEL'] || null,
+          isQualifiedInvestors: descMap['ISQUALIFIEDINVESTORS'] || null,
+          morningSession: descMap['MORNINGSESSION'] || null,
+          eveningSession: descMap['EVENINGSESSION'] || null,
+          groupCode: descMap['GROUP'] || null,
+          emitentTitle: descMap['EMITENT_TITLE'] || null,
+          emitentInn: descMap['EMITENT_INN'] || null,
+          emitentOkved: descMap['EMITENT_OKVED'] || null,
+          ...targetBoard
         };
         setSecurityInfo(secInfo);
 
         const marketRes = await axios.get(`https://iss.moex.com/iss/engines/${engine}/markets/${market}/boards/${boardid}/securities/${secid}.json`);
         const marketDataParsed = parseMoexData(marketRes.data, 'marketdata');
         const securitiesParsed = parseMoexData(marketRes.data, 'securities');
-        
+
         const currentMarketData = {
-            ...(securitiesParsed.length > 0 ? securitiesParsed[0] : {}),
-            ...(marketDataParsed.length > 0 ? marketDataParsed[0] : {})
+          ...(securitiesParsed.length > 0 ? securitiesParsed[0] : {}),
+          ...(marketDataParsed.length > 0 ? marketDataParsed[0] : {})
         };
         setMarketData(currentMarketData);
 
         const candles1Y = await fetchCandles(engine, market, boardid, '1Y');
-        
+
         if (candles1Y.length > 0) {
-            const highs = candles1Y.map(c => c.high);
-            const lows = candles1Y.map(c => c.low);
-            setStats({
-                yearHigh: Math.max(...highs),
-                yearLow: Math.min(...lows)
-            });
-            setCandles(candles1Y);
+          const highs = candles1Y.map(c => c.high);
+          const lows = candles1Y.map(c => c.low);
+          setStats({
+            yearHigh: Math.max(...highs),
+            yearLow: Math.min(...lows)
+          });
+          setCandles(candles1Y);
         }
 
         try {
@@ -353,6 +354,13 @@ const QuoteDetails = () => {
     };
 
     fetchBaseData();
+
+    // Fetch fundamentals from Smart-lab (via backend)
+    if (type === 'share') {
+      axios.get(`/api/fundamentals/${secid}`)
+        .then(res => setFundamentals(res.data))
+        .catch(() => { });
+    }
   }, [secid, fetchCandles]);
 
   useEffect(() => {
@@ -584,7 +592,7 @@ const QuoteDetails = () => {
       try {
         const message = JSON.parse(event.data);
         if (message.type === 'QUOTES_UPDATE' && Array.isArray(message.data)) {
-          const quote = message.data.find((item) => 
+          const quote = message.data.find((item) =>
             item.secid && secid && item.secid.toLowerCase() === secid.toLowerCase()
           );
           if (quote) {
@@ -691,7 +699,7 @@ const QuoteDetails = () => {
   const handlePeriodChange = async (event, newPeriod) => {
     if (!newPeriod || !securityInfo) return;
     setPeriod(newPeriod);
-    
+
     // Fetch new candles
     const { engine, market, boardid } = securityInfo;
     const newCandles = await fetchCandles(engine, market, boardid, newPeriod);
@@ -700,16 +708,16 @@ const QuoteDetails = () => {
 
   if (loading) {
     return (
-        <DashboardLayout>
-            <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                minHeight: '100vh'
-            }}>
-                <CircularProgress />
-            </Box>
-        </DashboardLayout>
+      <DashboardLayout>
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh'
+        }}>
+          <CircularProgress />
+        </Box>
+      </DashboardLayout>
     );
   }
 
@@ -735,18 +743,18 @@ const QuoteDetails = () => {
     if (type) return `/quotes/${type}`;
     if (!securityInfo) return '/quotes/share';
     const typeCode = securityInfo.typeCode;
-    
+
     if (['common_share', 'preferred_share', 'depositary_receipt'].includes(typeCode)) return '/quotes/share';
     if (['exchange_bond', 'corporate_bond', 'government_bond', 'subfederal_bond', 'municipal_bond', 'ofz_bond'].includes(typeCode)) return '/quotes/bond';
     if (['etf', 'ppif', 'exchange_ppif', 'stock_ppif'].includes(typeCode)) return '/quotes/fund';
     if (['futures', 'option'].includes(typeCode)) return '/quotes/future';
     if (typeCode === 'currency' || securityInfo.groupCode === 'currency_selt') return '/quotes/currency';
-    
+
     return '/quotes/share';
   };
 
-  const marketCap = (marketData?.LAST && securityInfo?.issuesize) 
-    ? marketData.LAST * securityInfo.issuesize 
+  const marketCap = (marketData?.LAST && securityInfo?.issuesize)
+    ? marketData.LAST * securityInfo.issuesize
     : null;
 
   const lotSize = marketData?.LOTSIZE || 1;
@@ -757,21 +765,21 @@ const QuoteDetails = () => {
   const dividendYieldLast = dividends.last && marketData?.LAST
     ? (dividends.last / marketData.LAST) * 100
     : null;
-  
-  const typeCode = securityInfo?.typeCode || '';
-  
-  const isBond = ['exchange_bond', 'corporate_bond', 'government_bond', 'subfederal_bond', 'municipal_bond'].includes(typeCode) || 
-                 typeCode.includes('bond') || 
-                 (securityInfo?.description || '').toLowerCase().includes('облигация');
 
-  const isFund = ['etf', 'ppif', 'exchange_ppif', 'stock_ppif'].includes(typeCode) || 
-                 typeCode.includes('ppif') || 
-                 typeCode.includes('etf') || 
-                 ['фонд', 'пиф', 'etf', 'bpid', 'бпиф'].some(t => (securityInfo?.description || '').toLowerCase().includes(t));
-  
+  const typeCode = securityInfo?.typeCode || '';
+
+  const isBond = ['exchange_bond', 'corporate_bond', 'government_bond', 'subfederal_bond', 'municipal_bond'].includes(typeCode) ||
+    typeCode.includes('bond') ||
+    (securityInfo?.description || '').toLowerCase().includes('облигация');
+
+  const isFund = ['etf', 'ppif', 'exchange_ppif', 'stock_ppif'].includes(typeCode) ||
+    typeCode.includes('ppif') ||
+    typeCode.includes('etf') ||
+    ['фонд', 'пиф', 'etf', 'bpid', 'бпиф'].some(t => (securityInfo?.description || '').toLowerCase().includes(t));
+
   const isCurrency = typeCode === 'currency' || type === 'currency';
   const isFutures = ['futures', 'option'].includes(typeCode) || typeCode.includes('futures');
-                 
+
   const bondYield = isBond
     ? (marketData?.YIELD != null ? marketData.YIELD : marketData?.YIELDATPREVWAPRICE)
     : null;
@@ -781,8 +789,8 @@ const QuoteDetails = () => {
   const bondCouponValue = isBond && marketData?.COUPONVALUE != null ? marketData.COUPONVALUE : null;
   const bondCouponPercent = isBond
     ? (marketData?.COUPONPERCENT != null
-        ? marketData.COUPONPERCENT
-        : (coupons.list[0]?.valueprc != null ? coupons.list[0].valueprc : null))
+      ? marketData.COUPONPERCENT
+      : (coupons.list[0]?.valueprc != null ? coupons.list[0].valueprc : null))
     : null;
   const formatYesNo = (value) => {
     if (value === null || value === undefined || value === '') return '-';
@@ -802,12 +810,13 @@ const QuoteDetails = () => {
   const tradeDayText = `Данные отображаются за ${lastDayStats?.tradeDate ? formatDate(lastDayStats.tradeDate) : '-'}`;
   const tabs = [
     { value: 'security', label: 'Данные' },
-    { value: 'trading', label: 'Торговые' }
+    { value: 'trading', label: 'Торговые' },
+    ...(type === 'share' && fundamentals && Object.keys(fundamentals).length > 0 ? [{ value: 'fundamentals', label: 'Фундамент.' }] : [])
   ];
   const extraTabs = [
-    { 
-      value: isBond ? 'coupons' : (isFund ? 'fundInfo' : (isCurrency ? 'stats' : 'dividends')), 
-      label: isBond ? 'Купоны' : (isFund ? 'Информация' : (isCurrency ? 'Статистика' : 'Дивиденды')) 
+    {
+      value: isBond ? 'coupons' : (isFund ? 'fundInfo' : (isCurrency ? 'stats' : 'dividends')),
+      label: isBond ? 'Купоны' : (isFund ? 'Информация' : (isCurrency ? 'Статистика' : 'Дивиденды'))
     }
   ];
   const keyIndicatorTabs = isSmallScreen ? [...tabs, ...extraTabs] : tabs;
@@ -910,17 +919,17 @@ const QuoteDetails = () => {
         }}
       >
         <TableBody>
-           <TableRow>
-             <TableCell sx={{ color: 'text.secondary', border: 0 }}>Тип</TableCell>
-             <TableCell align="right" sx={{ border: 0 }}>{securityInfo?.description}</TableCell>
+          <TableRow>
+            <TableCell sx={{ color: 'text.secondary', border: 0 }}>Тип</TableCell>
+            <TableCell align="right" sx={{ border: 0 }}>{securityInfo?.description}</TableCell>
           </TableRow>
-           <TableRow>
-             <TableCell sx={{ color: 'text.secondary', border: 0 }}>ISIN</TableCell>
-             <TableCell align="right" sx={{ border: 0 }}>{securityInfo?.isin}</TableCell>
+          <TableRow>
+            <TableCell sx={{ color: 'text.secondary', border: 0 }}>ISIN</TableCell>
+            <TableCell align="right" sx={{ border: 0 }}>{securityInfo?.isin}</TableCell>
           </TableRow>
-           <TableRow>
-             <TableCell sx={{ color: 'text.secondary', border: 0 }}>Валюта</TableCell>
-             <TableCell align="right" sx={{ border: 0 }}>{marketData?.CURRENCYID || 'RUB'}</TableCell>
+          <TableRow>
+            <TableCell sx={{ color: 'text.secondary', border: 0 }}>Валюта</TableCell>
+            <TableCell align="right" sx={{ border: 0 }}>{marketData?.CURRENCYID || 'RUB'}</TableCell>
           </TableRow>
           {marketData?.ETFSETTLEPRICE && (
             <TableRow>
@@ -928,9 +937,9 @@ const QuoteDetails = () => {
               <TableCell align="right" sx={{ border: 0 }}>{formatPrice(marketData.ETFSETTLEPRICE)}</TableCell>
             </TableRow>
           )}
-           <TableRow>
-             <TableCell sx={{ color: 'text.secondary', border: 0 }}>Дата начала</TableCell>
-             <TableCell align="right" sx={{ border: 0 }}>{formatDate(securityInfo?.issueDate)}</TableCell>
+          <TableRow>
+            <TableCell sx={{ color: 'text.secondary', border: 0 }}>Дата начала</TableCell>
+            <TableCell align="right" sx={{ border: 0 }}>{formatDate(securityInfo?.issueDate)}</TableCell>
           </TableRow>
         </TableBody>
       </Table>
@@ -973,7 +982,7 @@ const QuoteDetails = () => {
         <Grid item xs={6} sx={{ textAlign: 'right' }}>
           <Typography variant="body2">{marketData?.ASSETCODE || '-'}</Typography>
         </Grid>
-        
+
         <Grid item xs={6}>
           <Typography variant="body2" color="textSecondary">Наименование</Typography>
         </Grid>
@@ -1032,8 +1041,8 @@ const QuoteDetails = () => {
         <Typography variant="body2" color="textSecondary" sx={{ mr: 2 }}>
           {label}
         </Typography>
-        <Typography 
-          variant={isSmallScreen ? "body2" : "body1"} 
+        <Typography
+          variant={isSmallScreen ? "body2" : "body1"}
           sx={{ fontWeight: isSmallScreen ? 500 : 400, textAlign: 'right' }}
         >
           {value}
@@ -1047,8 +1056,8 @@ const QuoteDetails = () => {
       setDetailTab(newValue);
     }
   };
-  
-  
+
+
   const mobileHeaderContent = (
     <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' }, justifyContent: 'space-between', alignItems: 'center', ml: 1, overflow: 'hidden' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', overflow: 'hidden', mr: 1 }}>
@@ -1088,7 +1097,7 @@ const QuoteDetails = () => {
       </Box>
     </Box>
   );
-  
+
   return (
     <DashboardLayout controls={mobileHeaderContent}>
       <Head>
@@ -1142,7 +1151,7 @@ const QuoteDetails = () => {
                             sx={{ fontWeight: 'bold', lineHeight: 1.2 }}
                             noWrap
                           >
-                             {`${securityInfo?.shortname} (${securityInfo?.secid})`}
+                            {`${securityInfo?.shortname} (${securityInfo?.secid})`}
                           </Typography>
                           <Typography
                             color="textSecondary"
@@ -1288,175 +1297,194 @@ const QuoteDetails = () => {
               </Grid>
             </Grid>
             {(isSmallScreen || (!isBond && !isFund && !isCurrency)) && !isFutures && (
-            <Grid
-              item
-              xs={12}
-            >
-              <Card>
-                <CardHeader
-                  title="Ключевые показатели"
-                  action={
-                    isSmallScreen ? (
-                      <MuiTooltip title={tradeDayText}>
-                        <IconButton size="small">
-                          <InfoOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </MuiTooltip>
-                    ) : (
-                      <Typography
-                        variant="body2"
-                        color="textSecondary"
+              <Grid
+                item
+                xs={12}
+              >
+                <Card>
+                  <CardHeader
+                    title="Ключевые показатели"
+                    action={
+                      isSmallScreen ? (
+                        <MuiTooltip title={tradeDayText}>
+                          <IconButton size="small">
+                            <InfoOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </MuiTooltip>
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                        >
+                          {tradeDayText}
+                        </Typography>
+                      )
+                    }
+                    sx={{ '& .MuiCardHeader-action': { alignSelf: 'center' } }}
+                  />
+                  <Divider />
+                  <Box sx={{ px: 2 }}>
+                    <Tabs
+                      value={detailTab}
+                      onChange={handleDetailTabChange}
+                      variant="fullWidth"
+                    >
+                      {keyIndicatorTabs.map((tab) => (
+                        <Tab
+                          key={tab.value}
+                          value={tab.value}
+                          label={tab.label}
+                        />
+                      ))}
+                    </Tabs>
+                  </Box>
+                  <Divider />
+                  <CardContent>
+                    {detailTab === 'security' && (
+                      <Grid
+                        container
+                        spacing={isSmallScreen ? 1 : 3}
                       >
-                        {tradeDayText}
-                      </Typography>
-                    )
-                  }
-                  sx={{ '& .MuiCardHeader-action': { alignSelf: 'center' } }}
-                />
-                <Divider />
-                <Box sx={{ px: 2 }}>
-                  <Tabs
-                    value={detailTab}
-                    onChange={handleDetailTabChange}
-                    variant="fullWidth"
-                  >
-                    {keyIndicatorTabs.map((tab) => (
-                      <Tab
-                        key={tab.value}
-                        value={tab.value}
-                        label={tab.label}
-                      />
-                    ))}
-                  </Tabs>
-                </Box>
-                <Divider />
-                <CardContent>
-                  {detailTab === 'security' && (
-                    <Grid
-                      container
-                      spacing={isSmallScreen ? 1 : 3}
-                    >
-                      <IndicatorItem label="Код ценной бумаги" value={securityInfo?.secid || '-'} />
-                      <IndicatorItem label="ISIN код" value={securityInfo?.isin || '-'} />
-                      <IndicatorItem label="Идентификатор режима торгов" value={securityInfo?.boardid || '-'} />
-                      <IndicatorItem label="Уровень листинга" value={securityInfo?.listLevel || '-'} />
-                      <IndicatorItem label="Режим торгов" value={securityInfo?.board_title || '-'} />
-                      <IndicatorItem label="Лотность" value={formatNumber(lotSize)} />
-                      <IndicatorItem label="Бумаги для квалифицированных инвесторов" value={formatYesNo(securityInfo?.isQualifiedInvestors)} />
-                      <IndicatorItem label="Дата начала торгов" value={formatDate(securityInfo?.issueDate)} />
-                      <IndicatorItem label="Полное наименование" value={securityInfo?.fullName || securityInfo?.emitentTitle || securityInfo?.shortname || '-'} />
-                      <IndicatorItem label="Допуск к утренней дополнительной торговой сессии" value={formatYesNo(securityInfo?.morningSession)} />
-                      <IndicatorItem label="Краткое наименование" value={securityInfo?.shortname || '-'} />
-                      <IndicatorItem label="Допуск к вечерней дополнительной торговой сессии" value={formatYesNo(securityInfo?.eveningSession)} />
-                      <IndicatorItem label="Номер государственной регистрации" value={securityInfo?.regNumber || '-'} />
-                      <IndicatorItem label="Допуск к дополнительной торговой сессии выходного дня" value={formatYesNo(securityInfo?.weekendSession)} />
-                      <IndicatorItem label="Номинальная стоимость" value={securityInfo?.faceValue != null ? formatPrice(securityInfo.faceValue) : '-'} />
-                      <IndicatorItem label='Индикатор "торговые операции разрешены/запрещены"' value={marketData?.STATUS || '-'} />
-                      <IndicatorItem label="Валюта номинала" value={securityInfo?.faceUnit || '-'} />
-                      <IndicatorItem label="Группа инструментов" value={securityInfo?.groupCode || '-'} />
-                      <IndicatorItem label="Объем выпуска" value={formatLargeNumber(securityInfo?.issuesize)} />
-                      <IndicatorItem label="Дата расчетов сделки" value={formatDate(marketData?.SETTLEDATE)} />
-                    </Grid>
-                  )}
-                  {detailTab === 'trading' && (
-                    <Grid
-                      container
-                      spacing={isSmallScreen ? 1 : 3}
-                    >
-                      <IndicatorItem label="Цена закрытия пред. дня" value={lastDayStats?.close != null ? formatPrice(lastDayStats.close) : '-'} />
-                      <IndicatorItem label="Цена открытия" value={lastDayStats?.open != null ? formatPrice(lastDayStats.open) : '-'} />
-                      <IndicatorItem label="Мин. цена" value={lastDayStats?.low != null ? formatPrice(lastDayStats.low) : '-'} />
-                      <IndicatorItem label="Макс. цена" value={lastDayStats?.high != null ? formatPrice(lastDayStats.high) : '-'} />
-                      <IndicatorItem label="Объем сделок за день, руб." value={lastDayStats?.value != null ? formatLargeNumber(lastDayStats.value) : '-'} />
-                      <IndicatorItem label="Объем сделок за день, шт." value={lastDayStats?.volume != null ? formatLargeNumber(lastDayStats.volume) : '-'} />
-                      <IndicatorItem label="Цена последней сделки" value={lastDayStats?.close != null ? formatPrice(lastDayStats.close) : '-'} />
-                      <IndicatorItem label="Объем первой сделки" value="-" />
-                      <IndicatorItem label="Рыночная цена (2)" value={lastDayStats?.marketPrice2 != null ? formatPrice(lastDayStats.marketPrice2) : '-'} />
-                      <IndicatorItem label="Объем последней сделки" value="-" />
-                      <IndicatorItem label="Рыночная цена (3)" value={lastDayStats?.marketPrice3 != null ? formatPrice(lastDayStats.marketPrice3) : '-'} />
-                      <IndicatorItem label="Сделки для рыночной цены (2)" value={lastDayStats?.mp2ValTrd != null ? formatLargeNumber(lastDayStats.mp2ValTrd) : '-'} />
-                      <IndicatorItem label="Сделки для рыночной цены (3)" value={lastDayStats?.mp3TradesValue != null ? formatLargeNumber(lastDayStats.mp3TradesValue) : '-'} />
-                    </Grid>
-                  )}
-                  {detailTab === 'dividends' && isSmallScreen && !isBond && !isFund && dividendsContent}
-                  {detailTab === 'coupons' && isSmallScreen && isBond && couponsContent}
-                  {detailTab === 'stats' && isSmallScreen && isCurrency && statsContent}
-                  {detailTab === 'fundInfo' && isSmallScreen && isFund && fundContent}
-                </CardContent>
-              </Card>
-            </Grid>
+                        <IndicatorItem label="Код ценной бумаги" value={securityInfo?.secid || '-'} />
+                        <IndicatorItem label="ISIN код" value={securityInfo?.isin || '-'} />
+                        <IndicatorItem label="Идентификатор режима торгов" value={securityInfo?.boardid || '-'} />
+                        <IndicatorItem label="Уровень листинга" value={securityInfo?.listLevel || '-'} />
+                        <IndicatorItem label="Режим торгов" value={securityInfo?.board_title || '-'} />
+                        <IndicatorItem label="Лотность" value={formatNumber(lotSize)} />
+                        <IndicatorItem label="Бумаги для квалифицированных инвесторов" value={formatYesNo(securityInfo?.isQualifiedInvestors)} />
+                        <IndicatorItem label="Дата начала торгов" value={formatDate(securityInfo?.issueDate)} />
+                        <IndicatorItem label="Полное наименование" value={securityInfo?.fullName || securityInfo?.emitentTitle || securityInfo?.shortname || '-'} />
+                        <IndicatorItem label="Допуск к утренней дополнительной торговой сессии" value={formatYesNo(securityInfo?.morningSession)} />
+                        <IndicatorItem label="Краткое наименование" value={securityInfo?.shortname || '-'} />
+                        <IndicatorItem label="Допуск к вечерней дополнительной торговой сессии" value={formatYesNo(securityInfo?.eveningSession)} />
+                        <IndicatorItem label="Номер государственной регистрации" value={securityInfo?.regNumber || '-'} />
+                        <IndicatorItem label="Допуск к дополнительной торговой сессии выходного дня" value={formatYesNo(securityInfo?.weekendSession)} />
+                        <IndicatorItem label="Номинальная стоимость" value={securityInfo?.faceValue != null ? formatPrice(securityInfo.faceValue) : '-'} />
+                        <IndicatorItem label='Индикатор "торговые операции разрешены/запрещены"' value={marketData?.STATUS || '-'} />
+                        <IndicatorItem label="Валюта номинала" value={securityInfo?.faceUnit || '-'} />
+                        <IndicatorItem label="Группа инструментов" value={securityInfo?.groupCode || '-'} />
+                        <IndicatorItem label="Объем выпуска" value={formatLargeNumber(securityInfo?.issuesize)} />
+                        <IndicatorItem label="Дата расчетов сделки" value={formatDate(marketData?.SETTLEDATE)} />
+                      </Grid>
+                    )}
+                    {detailTab === 'trading' && (
+                      <Grid
+                        container
+                        spacing={isSmallScreen ? 1 : 3}
+                      >
+                        <IndicatorItem label="Цена закрытия пред. дня" value={lastDayStats?.close != null ? formatPrice(lastDayStats.close) : '-'} />
+                        <IndicatorItem label="Цена открытия" value={lastDayStats?.open != null ? formatPrice(lastDayStats.open) : '-'} />
+                        <IndicatorItem label="Мин. цена" value={lastDayStats?.low != null ? formatPrice(lastDayStats.low) : '-'} />
+                        <IndicatorItem label="Макс. цена" value={lastDayStats?.high != null ? formatPrice(lastDayStats.high) : '-'} />
+                        <IndicatorItem label="Объем сделок за день, руб." value={lastDayStats?.value != null ? formatLargeNumber(lastDayStats.value) : '-'} />
+                        <IndicatorItem label="Объем сделок за день, шт." value={lastDayStats?.volume != null ? formatLargeNumber(lastDayStats.volume) : '-'} />
+                        <IndicatorItem label="Цена последней сделки" value={lastDayStats?.close != null ? formatPrice(lastDayStats.close) : '-'} />
+                        <IndicatorItem label="Объем первой сделки" value="-" />
+                        <IndicatorItem label="Рыночная цена (2)" value={lastDayStats?.marketPrice2 != null ? formatPrice(lastDayStats.marketPrice2) : '-'} />
+                        <IndicatorItem label="Объем последней сделки" value="-" />
+                        <IndicatorItem label="Рыночная цена (3)" value={lastDayStats?.marketPrice3 != null ? formatPrice(lastDayStats.marketPrice3) : '-'} />
+                        <IndicatorItem label="Сделки для рыночной цены (2)" value={lastDayStats?.mp2ValTrd != null ? formatLargeNumber(lastDayStats.mp2ValTrd) : '-'} />
+                        <IndicatorItem label="Сделки для рыночной цены (3)" value={lastDayStats?.mp3TradesValue != null ? formatLargeNumber(lastDayStats.mp3TradesValue) : '-'} />
+                      </Grid>
+                    )}
+                    {detailTab === 'dividends' && isSmallScreen && !isBond && !isFund && dividendsContent}
+                    {detailTab === 'coupons' && isSmallScreen && isBond && couponsContent}
+                    {detailTab === 'stats' && isSmallScreen && isCurrency && statsContent}
+                    {detailTab === 'fundInfo' && isSmallScreen && isFund && fundContent}
+                    {detailTab === 'fundamentals' && fundamentals && (
+                      <Grid container spacing={isSmallScreen ? 1 : 3}>
+                        {fundamentals.p_e != null && <IndicatorItem label="P/E" value={fundamentals.p_e.toFixed(2)} />}
+                        {fundamentals.p_bv != null && <IndicatorItem label="P/BV" value={fundamentals.p_bv.toFixed(2)} />}
+                        {fundamentals.ev_ebitda != null && <IndicatorItem label="EV/EBITDA" value={fundamentals.ev_ebitda.toFixed(2)} />}
+                        {fundamentals.ebitda != null && <IndicatorItem label="EBITDA" value={`${formatLargeNumber(fundamentals.ebitda * 1e9)}`} />}
+                        {fundamentals.net_income != null && <IndicatorItem label="Чистая прибыль" value={`${formatLargeNumber(fundamentals.net_income * 1e9)}`} />}
+                        {fundamentals.fcf != null && <IndicatorItem label="FCF" value={`${formatLargeNumber(fundamentals.fcf * 1e9)}`} />}
+                        {fundamentals.revenue != null && <IndicatorItem label="Выручка" value={`${formatLargeNumber(fundamentals.revenue * 1e9)}`} />}
+                        {fundamentals.net_debt != null && <IndicatorItem label="Чистый долг" value={`${formatLargeNumber(fundamentals.net_debt * 1e9)}`} />}
+                        {fundamentals.net_debt_ebitda != null && <IndicatorItem label="Чистый долг / EBITDA" value={fundamentals.net_debt_ebitda.toFixed(2)} />}
+                        {fundamentals.roe != null && <IndicatorItem label="ROE" value={`${fundamentals.roe.toFixed(1)}%`} />}
+                        <Grid item xs={12}>
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                            Данные кешируются на 6 часов.
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
             )}
             {!isBond && !isCurrency && !isFutures && (
-            <Grid
-              item
-              xs={12}
-            >
-              <Card>
-                <CardHeader
-                  title="Объемы торгов"
-                  action={
-                    isSmallScreen ? (
-                      <MuiTooltip title={tradeDayText}>
-                        <IconButton size="small">
-                          <InfoOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </MuiTooltip>
-                    ) : (
+              <Grid
+                item
+                xs={12}
+              >
+                <Card>
+                  <CardHeader
+                    title="Объемы торгов"
+                    action={
+                      isSmallScreen ? (
+                        <MuiTooltip title={tradeDayText}>
+                          <IconButton size="small">
+                            <InfoOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </MuiTooltip>
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                        >
+                          {tradeDayText}
+                        </Typography>
+                      )
+                    }
+                    sx={{ '& .MuiCardHeader-action': { alignSelf: 'center' } }}
+                  />
+                  <Divider />
+                  <CardContent>
+                    {volumeLoading && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                        <CircularProgress size={24} />
+                      </Box>
+                    )}
+                    {!volumeLoading && volumeError && (
                       <Typography
+                        color="error"
                         variant="body2"
-                        color="textSecondary"
                       >
-                        {tradeDayText}
+                        {volumeError}
                       </Typography>
-                    )
-                  }
-                  sx={{ '& .MuiCardHeader-action': { alignSelf: 'center' } }}
-                />
-                <Divider />
-                <CardContent>
-                  {volumeLoading && (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                      <CircularProgress size={24} />
-                    </Box>
-                  )}
-                  {!volumeLoading && volumeError && (
-                    <Typography
-                      color="error"
-                      variant="body2"
-                    >
-                      {volumeError}
-                    </Typography>
-                  )}
-                  {!volumeLoading && !volumeError && (
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Рынок</TableCell>
-                          <TableCell align="right">Количество сделок</TableCell>
-                          <TableCell align="right">Объем сделок, шт.</TableCell>
-                          <TableCell align="right">Объем сделок</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {Array.isArray(volumeStats) && volumeStats.length > 0 ? (
-                          volumeStats.map((row) => (
-                            <TableRow key={row.key}>
-                              <TableCell sx={{ fontWeight: row.isTotal ? 600 : 400 }}>
-                                {row.label}
-                              </TableCell>
-                              <TableCell align="right">
-                                {row.numTrades != null ? formatLargeNumber(row.numTrades) : '-'}
-                              </TableCell>
-                              <TableCell align="right">
-                                {row.volume != null ? formatLargeNumber(row.volume) : '-'}
-                              </TableCell>
-                              <TableCell align="right">
-                                {row.value != null ? formatLargeNumber(row.value) : '-'}
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        ) : (
+                    )}
+                    {!volumeLoading && !volumeError && (
+                      <Table size="small">
+                        <TableHead>
                           <TableRow>
+                            <TableCell>Рынок</TableCell>
+                            <TableCell align="right">Количество сделок</TableCell>
+                            <TableCell align="right">Объем сделок, шт.</TableCell>
+                            <TableCell align="right">Объем сделок</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {Array.isArray(volumeStats) && volumeStats.length > 0 ? (
+                            volumeStats.map((row) => (
+                              <TableRow key={row.key}>
+                                <TableCell sx={{ fontWeight: row.isTotal ? 600 : 400 }}>
+                                  {row.label}
+                                </TableCell>
+                                <TableCell align="right">
+                                  {row.numTrades != null ? formatLargeNumber(row.numTrades) : '-'}
+                                </TableCell>
+                                <TableCell align="right">
+                                  {row.volume != null ? formatLargeNumber(row.volume) : '-'}
+                                </TableCell>
+                                <TableCell align="right">
+                                  {row.value != null ? formatLargeNumber(row.value) : '-'}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
                               <TableCell colSpan={4}>
                                 <Typography
                                   variant="body2"
@@ -1465,14 +1493,14 @@ const QuoteDetails = () => {
                                   Нет данных за выбранную дату.
                                 </Typography>
                               </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
             )}
           </Grid>
         </Container>

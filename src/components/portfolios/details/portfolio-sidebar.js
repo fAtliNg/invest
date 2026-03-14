@@ -1,11 +1,11 @@
 import { useRouter } from 'next/router';
-import { 
-  Box, 
-  List, 
-  ListItem, 
-  ListItemButton, 
-  ListItemIcon, 
-  ListItemText, 
+import {
+  Box,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
   Typography,
   Divider
 } from '@mui/material';
@@ -15,6 +15,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ListAltIcon from '@mui/icons-material/ListAlt';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 export const PortfolioSidebar = () => {
   const router = useRouter();
@@ -27,7 +28,8 @@ export const PortfolioSidebar = () => {
         { label: 'Описание', icon: <DescriptionIcon />, path: `/${uuid}` },
         { label: 'Бумаги', icon: <ListAltIcon />, path: `/${uuid}/assets` },
         { label: 'Стратегия', icon: <PsychologyIcon />, path: `/${uuid}/strategy` },
-        { label: 'Динамика', icon: <TrendingUpIcon />, path: `/${uuid}/dynamics` }
+        { label: 'Динамика', icon: <TrendingUpIcon />, path: `/${uuid}/dynamics` },
+        { label: 'Настройки', icon: <SettingsIcon />, path: `/${uuid}/settings` }
       ]
     },
     {
@@ -45,9 +47,9 @@ export const PortfolioSidebar = () => {
           <Typography
             color="textSecondary"
             variant="overline"
-            sx={{ 
-              px: 2, 
-              mb: 1, 
+            sx={{
+              px: 2,
+              mb: 1,
               display: 'block',
               fontWeight: 'bold',
               letterSpacing: 1.2
@@ -58,11 +60,11 @@ export const PortfolioSidebar = () => {
           <List disablePadding>
             {section.items.map((item) => {
               const active = router.asPath === item.path;
-              
+
               return (
-                <ListItem 
-                  key={item.label} 
-                  disablePadding 
+                <ListItem
+                  key={item.label}
+                  disablePadding
                   sx={{ mb: 0.5 }}
                 >
                   <ListItemButton
@@ -87,12 +89,12 @@ export const PortfolioSidebar = () => {
                     <ListItemIcon>
                       {item.icon}
                     </ListItemIcon>
-                    <ListItemText 
-                      primary={item.label} 
-                      primaryTypographyProps={{ 
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{
                         variant: 'body2',
                         fontWeight: active ? 'bold' : 'medium'
-                      }} 
+                      }}
                     />
                   </ListItemButton>
                 </ListItem>

@@ -34,6 +34,7 @@ services:
       PORT: 5001
       JWT_SECRET: ${JWT_SECRET}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      NEWS_SERVICE_URL: http://news-service:5004
     ports:
       - "5001:5001"
     depends_on:
@@ -92,6 +93,63 @@ services:
       - backend_network
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:5003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  news-service:
+    build:
+      context: ../news-service
+      dockerfile: ../deploy/news.Dockerfile
+    restart: always
+    environment:
+      PORT: 5004
+      DB_USER: ${DB_USER:-postgres}
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-invest}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_PORT: 5432
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+    ports:
+      - "5004:5004"
+    depends_on:
+      db:
+        condition: service_healthy
+      liquibase:
+        condition: service_completed_successfully
+    networks:
+      - backend_network
+      - frontend_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:5004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  fundamental-data-service:
+    build:
+      context: ../fundamental-data-service
+      dockerfile: ../deploy/fundamentals.Dockerfile
+    restart: always
+    environment:
+      PORT: 5005
+      DB_USER: ${DB_USER:-postgres}
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-invest}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_PORT: 5432
+    ports:
+      - "5005:5005"
+    depends_on:
+      db:
+        condition: service_healthy
+      liquibase:
+        condition: service_completed_successfully
+    networks:
+      - backend_network
+      - frontend_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:5005/health"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -1,4 +1,59 @@
-export const getSystemPrompt = (portfolio: { title: string; description?: string; strategy?: string }) => {
+// Fundamentals now fetched from fundamental-data-service via HTTP
+
+export const getSystemPrompt = async (portfolio: { title: string; description?: string; strategy?: string; send_news_to_ai?: boolean; send_fundamentals_to_ai?: boolean; send_macro_to_ai?: boolean; send_quotes_to_ai?: boolean }, tickers?: string[]) => {
+  let newsDigest = '';
+  if (portfolio.send_news_to_ai !== false) {
+    try {
+      const newsUrl = process.env.NEWS_SERVICE_URL || 'http://127.0.0.1:5004';
+      const res = await fetch(`${newsUrl}/digest`, { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        newsDigest = await res.text();
+      }
+    } catch (err) {
+      console.error('[PROMPT] Failed to fetch news digest:', err);
+    }
+  }
+
+  let fundamentalsText = '';
+  if (portfolio.send_fundamentals_to_ai !== false) {
+    try {
+      const fundamentalsUrl = process.env.FUNDAMENTALS_SERVICE_URL || 'http://127.0.0.1:5005';
+      const res = await fetch(`${fundamentalsUrl}/fundamentals`, { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        fundamentalsText = await res.text();
+      }
+    } catch (err) {
+      console.error('[PROMPT] Failed to fetch fundamentals:', err);
+    }
+  }
+
+  let macroText = '';
+  if (portfolio.send_macro_to_ai !== false) {
+    try {
+      const fundamentalsUrl = process.env.FUNDAMENTALS_SERVICE_URL || 'http://127.0.0.1:5005';
+      const res = await fetch(`${fundamentalsUrl}/macro`, { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        macroText = await res.text();
+      }
+    } catch (err) {
+      console.error('[PROMPT] Failed to fetch macro data:', err);
+    }
+  }
+
+  let quotesText = '';
+  if (portfolio.send_quotes_to_ai !== false && tickers && tickers.length > 0) {
+    try {
+      const fundamentalsUrl = process.env.FUNDAMENTALS_SERVICE_URL || 'http://127.0.0.1:5005';
+      const tickersParam = tickers.join(',');
+      const res = await fetch(`${fundamentalsUrl}/quotes?tickers=${tickersParam}`, { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        quotesText = await res.text();
+      }
+    } catch (err) {
+      console.error('[PROMPT] Failed to fetch quotes:', err);
+    }
+  }
+
   return `Ты — финансовый помощник. Отвечай строго на русском в чистом Markdown (GFM).
 
 ТВОЯ ЦЕЛЬ: Помогать пользователю с инвестициями, основываясь на его СТРАТЕГИИ.
@@ -48,8 +103,21 @@ export const getSystemPrompt = (portfolio: { title: string; description?: string
 Всегда возвращай только Markdown без дополнительных символов и эмодзи.
 Используй списки и заголовники по необходимости.
 Если ты показываешь пользователю состав портфеля, позиции или перечень бумаг, всегда выводи их в виде таблицы Markdown.
+ВАЖНО: Фундаментальные данные даны тебе для анализа. НЕ ВЫВОДИ все 200+ строк данных — отвечай по конкретным запросам пользователя, выбирая нужные компании. Если пользователь просит «все данные», выведи топ-10 или сгруппируй по секторам.
 
 Контекст: портфель "${portfolio.title}".
 Описание: "${portfolio.description || ''}".
-Текущая стратегия: "${portfolio.strategy || 'НЕ ОПРЕДЕЛЕНА'}"`;
+Текущая стратегия: "${portfolio.strategy || 'НЕ ОПРЕДЕЛЕНА'}"
+${fundamentalsText ? `\nФУНДАМЕНТАЛЬНЫЕ ПОКАЗАТЕЛИ КОМПАНИЙ (источник: Smart-lab, сводная таблица):
+ВАЖНЫЕ ПРАВИЛА ИНТЕРПРЕТАЦИИ ДАННЫХ:
+- Если Долг/EBITDA > 3.0 — компания высокорискованная при текущих ставках ЦБ.
+- Если Долг/EBITDA отрицательный — компания без долга с чистыми денежными средствами, выигрывает от высоких ставок.
+- Если дивидендная доходность > 40% — считай данные аномальными (разовая выплата или ошибка), не рекомендуй как стабильный дивидендный актив.
+- Для банков (SBER, VTBR, BSPB и др.) отсутствие EV/EBITDA и Долг/EBITDA — это нормально, банки оцениваются по P/E, P/B и ROE.
+${fundamentalsText}` : ''}
+${macroText ? `\nМАКРОЭКОНОМИЧЕСКИЕ ПОКАЗАТЕЛИ (обновляются каждые 10 минут):
+${macroText}` : ''}
+${quotesText ? `\nТЕКУЩИЕ КОТИРОВКИ БУМАГ ПОРТФЕЛЯ (MOEX, обновляются каждые 10 минут):
+${quotesText}` : ''}
+${newsDigest ? `\nАКТУАЛЬНЫЕ НОВОСТИ РЫНКА:\n${newsDigest}` : ''}`;
 };

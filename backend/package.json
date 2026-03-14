@@ -16,6 +16,7 @@
     "@types/multer": "^2.0.0",
     "@types/ws": "^8.18.1",
     "axios": "^1.13.2",
+    "cheerio": "^1.0.0-rc.12",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csv-parse": "^6.1.0",

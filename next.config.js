@@ -21,6 +21,14 @@ const nextConfig = {
         destination: 'http://127.0.0.1:5002/:path*',
       },
       {
+        source: '/api/news/:path*',
+        destination: 'http://127.0.0.1:5004/news/:path*',
+      },
+      {
+        source: '/api/categories',
+        destination: 'http://127.0.0.1:5004/categories',
+      },
+      {
         source: '/api/:path*',
         destination: 'http://127.0.0.1:5001/:path*',
       },

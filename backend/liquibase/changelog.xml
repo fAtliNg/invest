@@ -17,5 +17,11 @@
   <include file="sql/10_create_portfolio_chats_table.sql" relativeToChangelogFile="true"/>
   <include file="sql/11_add_portfolio_uuid.sql" relativeToChangelogFile="true"/>
   <include file="sql/12_add_chat_status.sql" relativeToChangelogFile="true"/>
+  <include file="sql/13_create_news_table.sql" relativeToChangelogFile="true"/>
+  <include file="sql/14_add_news_source.sql" relativeToChangelogFile="true"/>
+  <include file="sql/15_add_news_processing.sql" relativeToChangelogFile="true"/>
+  <include file="sql/16_add_portfolio_settings.sql" relativeToChangelogFile="true"/>
+  <include file="sql/17_create_fundamentals_table.sql" relativeToChangelogFile="true"/>
+  <include file="sql/18_add_fundamentals_setting.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
